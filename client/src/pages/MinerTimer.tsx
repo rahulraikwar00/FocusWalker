@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef, useCallback } from "react";
 import { Play, Pause, RotateCcw, Settings } from "lucide-react";
 import confetti from "canvas-confetti";
-import minerSprite from "@assets/generated_images/pixel_art_sprite_sheet_of_a_miner_character.png";
+import minerSprite from "@assets/generated_images/horizontal_sprite_strip_of_walking_miner.png";
 import { Button } from "@/components/ui/button";
 import { Slider } from "@/components/ui/slider";
 import {
@@ -261,14 +261,8 @@ export default function MinerTimer() {
               width: '100%',
               height: '100%',
               backgroundImage: `url(${minerSprite})`,
-              backgroundSize: '400% 300%', // Assuming 4 cols, 3 rows
-              // Logic: 
-              // Row 0: Idle (Top)
-              // Row 1: Walk (Middle)
-              // Row 2: Mine (Bottom)
-              backgroundPosition: isActive 
-                ? `-${frame * 100}% 50%` // Row 1 (Walk)
-                : `-${frame * 100}% 0%`, // Idle
+              backgroundSize: '400% 100%', // 4 frames, 1 row
+              backgroundPosition: `-${frame * 100}% 0%`,
             }}
           />
           
