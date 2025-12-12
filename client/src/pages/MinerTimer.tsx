@@ -38,6 +38,11 @@ export default function MinerTimer() {
   // Miner State
   const [minerPos, setMinerPos] = useState({ x: 0, y: 0, facingRight: true });
   const [frame, setFrame] = useState(0);
+  
+  // Custom Sprite Settings
+  const [spriteFrames, setSpriteFrames] = useState(4);
+  const [spriteSpeed, setSpriteSpeed] = useState(150);
+  const [minerScale, setMinerScale] = useState(1);
 
   // Particles State ref (for performance)
   const particlesRef = useRef<Particle[]>([]);
@@ -185,9 +190,9 @@ export default function MinerTimer() {
         const deltaTime = (time - lastTime) / 1000;
         setTimeLeft((prev) => Math.max(0, prev - deltaTime));
         
-        // Update Sprite Frame (every 150ms)
-        if (Math.floor(time / 150) % 4 !== frame) {
-          setFrame(Math.floor(time / 150) % 4);
+        // Update Sprite Frame
+        if (Math.floor(time / spriteSpeed) % spriteFrames !== frame) {
+          setFrame(Math.floor(time / spriteSpeed) % spriteFrames);
         }
       } else if (timeLeft <= 0 && isActive) {
         setIsActive(false);
@@ -298,6 +303,43 @@ export default function MinerTimer() {
                       className="py-4"
                     />
                   </div>
+                  
+                  <div className="space-y-4 pt-4 border-t border-border">
+                    <Label className="text-sm font-bold text-muted-foreground">SPRITE SETTINGS</Label>
+                    
+                    <div className="space-y-2">
+                      <Label>Frame Count: {spriteFrames}</Label>
+                      <Slider 
+                        value={[spriteFrames]} 
+                        min={1} 
+                        max={16} 
+                        step={1}
+                        onValueChange={(vals) => setSpriteFrames(vals[0])}
+                      />
+                    </div>
+
+                    <div className="space-y-2">
+                      <Label>Animation Speed: {spriteSpeed}ms</Label>
+                      <Slider 
+                        value={[spriteSpeed]} 
+                        min={50} 
+                        max={500} 
+                        step={10}
+                        onValueChange={(vals) => setSpriteSpeed(vals[0])}
+                      />
+                    </div>
+
+                    <div className="space-y-2">
+                      <Label>Miner Scale: {minerScale}x</Label>
+                      <Slider 
+                        value={[minerScale]} 
+                        min={0.5} 
+                        max={3} 
+                        step={0.1}
+                        onValueChange={(vals) => setMinerScale(vals[0])}
+                      />
+                    </div>
+                  </div>
                 </div>
               </DialogContent>
             </Dialog>
@@ -329,9 +371,9 @@ export default function MinerTimer() {
         <div 
           className="absolute z-20 pointer-events-none transition-transform duration-100 will-change-transform"
           style={{
-            width: `${MINER_SIZE}px`,
-            height: `${MINER_SIZE}px`,
-            transform: `translate(${minerPos.x}px, ${minerPos.y}px) scaleX(${minerPos.facingRight ? 1 : -1})`,
+            width: `${MINER_SIZE * minerScale}px`,
+            height: `${MINER_SIZE * minerScale}px`,
+            transform: `translate(${minerPos.x - (MINER_SIZE * (minerScale - 1)) / 2}px, ${minerPos.y - (MINER_SIZE * (minerScale - 1))}px) scaleX(${minerPos.facingRight ? 1 : -1})`,
             imageRendering: 'pixelated'
           }}
         >
@@ -341,7 +383,7 @@ export default function MinerTimer() {
               width: '100%',
               height: '100%',
               backgroundImage: `url(${minerSprite})`,
-              backgroundSize: '400% 100%', // 4 frames, 1 row
+              backgroundSize: `${spriteFrames * 100}% 100%`,
               backgroundPosition: `-${frame * 100}% 0%`,
             }}
           />
