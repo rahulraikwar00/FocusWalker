@@ -4,11 +4,13 @@ import { QueryClientProvider } from "@tanstack/react-query";
 import { Toaster } from "@/components/ui/toaster";
 import NotFound from "@/pages/not-found";
 import MinerTimer from "@/pages/MinerTimer";
+import MapTimer from "@/pages/MapTimer";
 
 function Router() {
   return (
     <Switch>
-      <Route path="/" component={MinerTimer} />
+      <Route path="/" component={MapTimer} />
+      <Route path="/miner" component={MinerTimer} />
       <Route component={NotFound} />
     </Switch>
   );
