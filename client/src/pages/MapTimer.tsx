@@ -1,4 +1,5 @@
-import React, { useState, useEffect, useRef } from "react";
+import * as React from "react";
+import { useState, useEffect, useRef } from "react";
 import {
   MapContainer,
   TileLayer,
@@ -10,6 +11,7 @@ import {
 } from "react-leaflet";
 import "leaflet/dist/leaflet.css";
 import L from "leaflet";
+
 import {
   Play,
   Pause,
@@ -19,6 +21,8 @@ import {
   Settings,
   Loader2,
   AlertCircle,
+  Maximize2,
+  Minimize2,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
@@ -80,14 +84,17 @@ export default function MapTimer() {
   const [progress, setProgress] = useState(0); // 0 to 1
 
   const [isSettingStart, setIsSettingStart] = useState(true);
-
+  const [isMinimized, setIsMinimized] = useState(false);
   // Refs for movement logic
   const animationRef = useRef<number | null>(null);
   const lastUpdateRef = useRef<number>(Date.now());
 
   // Constants
   const WALKING_SPEED_KMH = 5; // 5 km/h walking speed
-  const WALKING_SPEED_MS = (WALKING_SPEED_KMH * 1000) / 3600; // ~1.39 m/s
+  const WALKING_SPEED_MS = React.useMemo(
+    () => (WALKING_SPEED_KMH * 1000) / 3600,
+    []
+  );
   const METERS_PER_STEP = 0.75; // Average step length in meters
 
   const fetchRoute = async (start: LatLng, end: LatLng) => {
@@ -335,7 +342,7 @@ export default function MapTimer() {
     if (isActive && timeLeft > 0) {
       const interval = setInterval(() => {
         // This just updates the display, actual movement is handled by animation
-      }, 1000);
+      }, 500);
       return () => clearInterval(interval);
     } else if (timeLeft === 0 && isActive) {
       setIsActive(false);
@@ -494,168 +501,216 @@ export default function MapTimer() {
         </MapContainer>
       </div>
 
-      {/* HUD Overlay */}
+      {/* HUD Overlay with Minimize Toggle */}
       <div className="absolute top-6 left-1/2 -translate-x-1/2 z-10 w-[90%] max-w-md">
-        <Card className="p-4 bg-background/90 backdrop-blur-md shadow-2xl border-2 border-primary/20">
+        <Card
+          className={`p-4 bg-background/90 backdrop-blur-md shadow-2xl border-2 border-primary/20 transition-all duration-300 ${
+            isMinimized ? "opacity-80 hover:opacity-100 scale-95" : ""
+          }`}
+        >
           <div className="flex flex-col items-center gap-4">
-            <h1 className="text-xl font-bold tracking-tight text-primary flex items-center gap-2">
-              <Navigation className="w-5 h-5" />
-              MAP TIMER
-            </h1>
-
-            <div className="flex flex-col items-center">
-              <div className="text-5xl font-mono font-bold tracking-widest text-foreground tabular-nums">
-                {formatTime(timeLeft)}
+            {/* Header with minimize button */}
+            <div className="flex items-center justify-between w-full">
+              <div className="flex items-center gap-2">
+                <Navigation className="w-5 h-5" />
+                <h1 className="text-xl font-bold tracking-tight text-primary">
+                  MAP TIMER
+                </h1>
               </div>
-              {totalDuration > 0 && (
-                <div className="flex flex-col items-center mt-1">
-                  <span className="text-xs text-muted-foreground">
-                    {distanceText} · {formatTime(totalDuration)}
-                  </span>
-                  <span className="text-xs text-muted-foreground">
-                    Steps: {steps.toLocaleString()}
-                  </span>
-                  <span className="text-xs text-muted-foreground">
-                    Progress: {(progress * 100).toFixed(1)}%
-                  </span>
-                  {routeData && (
-                    <div className="w-full bg-gray-200 rounded-full h-2 mt-1">
-                      <div
-                        className="bg-blue-600 h-2 rounded-full transition-all duration-300"
-                        style={{ width: `${progress * 100}%` }}
-                      ></div>
+              <Button
+                variant="ghost"
+                size="sm"
+                className="h-8 w-8 p-0"
+                onClick={() => setIsMinimized(!isMinimized)}
+              >
+                {isMinimized ? (
+                  <Maximize2 className="w-4 h-4" />
+                ) : (
+                  <Minimize2 className="w-4 h-4" />
+                )}
+              </Button>
+            </div>
+
+            {/* Minimized View */}
+            {isMinimized ? (
+              <div
+                className="flex flex-col items-center w-full cursor-pointer"
+                onClick={() => setIsMinimized(false)}
+              >
+                <div className="text-3xl font-mono font-bold tracking-widest text-foreground tabular-nums">
+                  {formatTime(timeLeft)}
+                </div>
+                <div className="text-sm text-muted-foreground mt-1">
+                  Steps: {steps.toLocaleString()}
+                  {totalDuration > 0 && ` · ${(progress * 100).toFixed(0)}%`}
+                </div>
+              </div>
+            ) : (
+              <>
+                {/* Timer Display */}
+                <div className="flex flex-col items-center">
+                  <div className="text-5xl font-mono font-bold tracking-widest text-foreground tabular-nums">
+                    {formatTime(timeLeft)}
+                  </div>
+                  {totalDuration > 0 && (
+                    <div className="flex flex-col items-center mt-1">
+                      <span className="text-xs text-muted-foreground">
+                        {distanceText} · {formatTime(totalDuration)}
+                      </span>
+                      <span className="text-xs text-muted-foreground">
+                        Steps: {steps.toLocaleString()}
+                      </span>
+                      <span className="text-xs text-muted-foreground">
+                        Progress: {(progress * 100).toFixed(1)}%
+                      </span>
+                      {routeData && (
+                        <div className="w-full bg-gray-200 rounded-full h-2 mt-1">
+                          <div
+                            className="bg-blue-600 h-2 rounded-full transition-all duration-300"
+                            style={{ width: `${progress * 100}%` }}
+                          ></div>
+                        </div>
+                      )}
                     </div>
                   )}
                 </div>
-              )}
-            </div>
 
-            {/* Status Message */}
-            {!isActive && (
-              <div className="text-sm text-center bg-muted/50 p-2 rounded w-full min-h-[3.5rem] flex items-center justify-center">
-                {routeError && (
-                  <div className="flex items-start gap-2 text-amber-500">
-                    <AlertCircle className="w-4 h-4 mt-0.5 flex-shrink-0" />
-                    <span>{routeError}</span>
+                {/* Status Message */}
+                {!isActive && (
+                  <div className="text-sm text-center bg-muted/50 p-2 rounded w-full min-h-14] flex items-center justify-center">
+                    {routeError && (
+                      <div className="flex items-start gap-2 text-amber-500">
+                        <AlertCircle className="w-4 h-4 mt-0.5 shrink-0" />
+                        <span>{routeError}</span>
+                      </div>
+                    )}
+                    {isLoadingRoute && (
+                      <span className="flex items-center gap-2 text-blue-500">
+                        <Loader2 className="w-4 h-4 animate-spin" /> Calculating
+                        route...
+                      </span>
+                    )}
+                    {!isLoadingRoute && !routeError && !startPos && (
+                      <span className="text-green-600 font-bold animate-pulse">
+                        Tap map to set START
+                      </span>
+                    )}
+                    {!isLoadingRoute && !routeError && startPos && !endPos && (
+                      <span className="text-orange-500 font-bold animate-pulse">
+                        Tap map to set DESTINATION
+                      </span>
+                    )}
+                    {!isLoadingRoute &&
+                      !routeError &&
+                      startPos &&
+                      endPos &&
+                      routeData && (
+                        <div className="flex flex-col">
+                          <span className="font-semibold text-foreground">
+                            ✅ Route Ready!
+                          </span>
+                          <span className="text-xs">
+                            {distanceText} · {formatTime(totalDuration)} · ~
+                            {Math.floor(
+                              routeData.distance / METERS_PER_STEP
+                            ).toLocaleString()}{" "}
+                            steps
+                          </span>
+                        </div>
+                      )}
                   </div>
                 )}
-                {isLoadingRoute && (
-                  <span className="flex items-center gap-2 text-blue-500">
-                    <Loader2 className="w-4 h-4 animate-spin" /> Calculating
-                    route...
-                  </span>
-                )}
-                {!isLoadingRoute && !routeError && !startPos && (
-                  <span className="text-green-600 font-bold animate-pulse">
-                    Tap map to set START
-                  </span>
-                )}
-                {!isLoadingRoute && !routeError && startPos && !endPos && (
-                  <span className="text-orange-500 font-bold animate-pulse">
-                    Tap map to set DESTINATION
-                  </span>
-                )}
-                {!isLoadingRoute &&
-                  !routeError &&
-                  startPos &&
-                  endPos &&
-                  routeData && (
-                    <div className="flex flex-col">
-                      <span className="font-semibold text-foreground">
-                        ✅ Route Ready!
-                      </span>
-                      <span className="text-xs">
-                        {distanceText} · {formatTime(totalDuration)} · ~
-                        {Math.floor(
-                          routeData.distance / METERS_PER_STEP
-                        ).toLocaleString()}{" "}
-                        steps
-                      </span>
-                    </div>
-                  )}
-              </div>
-            )}
 
-            {/* Controls */}
-            <div className="flex items-center gap-3 w-full justify-center">
-              <Button
-                size="lg"
-                className={`w-16 h-16 rounded-full shadow-lg transition-all ${
-                  !startPos || !endPos || !routePath.length || isLoadingRoute
-                    ? "opacity-50 cursor-not-allowed"
-                    : "hover:scale-105"
-                }`}
-                disabled={
-                  !startPos || !endPos || !routePath.length || isLoadingRoute
-                }
-                onClick={toggleTimer}
-              >
-                {isActive ? (
-                  <Pause className="w-8 h-8" />
-                ) : (
-                  <Play className="w-8 h-8 ml-1" />
-                )}
-              </Button>
+                {/* Controls */}
+                <div className="flex items-center gap-3 w-full justify-center">
+                  <Button
+                    size="lg"
+                    className={`w-16 h-16 rounded-full shadow-lg transition-all ${
+                      !startPos ||
+                      !endPos ||
+                      !routePath.length ||
+                      isLoadingRoute
+                        ? "opacity-50 cursor-not-allowed"
+                        : "hover:scale-105"
+                    }`}
+                    disabled={
+                      !startPos ||
+                      !endPos ||
+                      !routePath.length ||
+                      isLoadingRoute
+                    }
+                    onClick={toggleTimer}
+                  >
+                    {isActive ? (
+                      <Pause className="w-8 h-8" />
+                    ) : (
+                      <Play className="w-8 h-8 ml-1" />
+                    )}
+                  </Button>
 
-              <Button
-                variant="outline"
-                size="icon"
-                className="w-12 h-12 rounded-full"
-                onClick={resetTimer}
-              >
-                <RotateCcw className="w-5 h-5" />
-              </Button>
-
-              <Dialog>
-                <DialogTrigger asChild>
                   <Button
                     variant="outline"
                     size="icon"
                     className="w-12 h-12 rounded-full"
+                    onClick={resetTimer}
                   >
-                    <Settings className="w-5 h-5" />
+                    <RotateCcw className="w-5 h-5" />
                   </Button>
-                </DialogTrigger>
-                <DialogContent>
-                  <DialogHeader>
-                    <DialogTitle>Settings</DialogTitle>
-                  </DialogHeader>
-                  <div className="py-4 space-y-6">
-                    <div className="space-y-2 text-sm">
-                      <p className="font-semibold">Route Info:</p>
-                      <p>
-                        Start:{" "}
-                        {startPos
-                          ? `${startPos.lat.toFixed(4)}, ${startPos.lng.toFixed(
-                              4
-                            )}`
-                          : "Not set"}
-                      </p>
-                      <p>
-                        End:{" "}
-                        {endPos
-                          ? `${endPos.lat.toFixed(4)}, ${endPos.lng.toFixed(4)}`
-                          : "Not set"}
-                      </p>
-                      <p>Distance: {distanceText}</p>
-                      <p>Duration: {formatTime(totalDuration)}</p>
-                      <p>Current Steps: {steps.toLocaleString()}</p>
-                      <p>
-                        Total Steps:{" "}
-                        {routeData
-                          ? Math.floor(
-                              routeData.distance / METERS_PER_STEP
-                            ).toLocaleString()
-                          : "0"}
-                      </p>
-                      <p>Progress: {(progress * 100).toFixed(1)}%</p>
-                      <p>Walking Speed: {WALKING_SPEED_KMH} km/h</p>
-                      <p>Step Length: {METERS_PER_STEP}m</p>
-                    </div>
-                  </div>
-                </DialogContent>
-              </Dialog>
-            </div>
+
+                  <Dialog>
+                    <DialogTrigger asChild>
+                      <Button
+                        variant="outline"
+                        size="icon"
+                        className="w-12 h-12 rounded-full"
+                      >
+                        <Settings className="w-5 h-5" />
+                      </Button>
+                    </DialogTrigger>
+                    <DialogContent>
+                      <DialogHeader>
+                        <DialogTitle>Settings</DialogTitle>
+                      </DialogHeader>
+                      <div className="py-4 space-y-6">
+                        <div className="space-y-2 text-sm">
+                          <p className="font-semibold">Route Info:</p>
+                          <p>
+                            Start:{" "}
+                            {startPos
+                              ? `${startPos.lat.toFixed(
+                                  4
+                                )}, ${startPos.lng.toFixed(4)}`
+                              : "Not set"}
+                          </p>
+                          <p>
+                            End:{" "}
+                            {endPos
+                              ? `${endPos.lat.toFixed(4)}, ${endPos.lng.toFixed(
+                                  4
+                                )}`
+                              : "Not set"}
+                          </p>
+                          <p>Distance: {distanceText}</p>
+                          <p>Duration: {formatTime(totalDuration)}</p>
+                          <p>Current Steps: {steps.toLocaleString()}</p>
+                          <p>
+                            Total Steps:{" "}
+                            {routeData
+                              ? Math.floor(
+                                  routeData.distance / METERS_PER_STEP
+                                ).toLocaleString()
+                              : "0"}
+                          </p>
+                          <p>Progress: {(progress * 100).toFixed(1)}%</p>
+                          <p>Walking Speed: {WALKING_SPEED_KMH} km/h</p>
+                          <p>Step Length: {METERS_PER_STEP}m</p>
+                        </div>
+                      </div>
+                    </DialogContent>
+                  </Dialog>
+                </div>
+              </>
+            )}
           </div>
         </Card>
       </div>

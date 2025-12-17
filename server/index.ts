@@ -12,13 +12,13 @@ declare module "http" {
   }
 }
 
-app.use((req, res, next) => {
-  const start = Date.now();
-  res.on("finish", () => {
-    console.log(`${req.method} ${req.url} - ${Date.now() - start}ms`);
-  });
-  next();
-});
+// app.use((req, res, next) => {
+//   const start = Date.now();
+//   res.on("finish", () => {
+//     console.log(`${req.method} ${req.url} - ${Date.now() - start}ms`);
+//   });
+//   next();
+// });
 
 app.use(express.urlencoded({ extended: false }));
 
