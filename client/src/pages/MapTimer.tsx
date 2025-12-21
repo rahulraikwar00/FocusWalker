@@ -17,31 +17,18 @@ import {
   Play,
   Pause,
   MapPin,
-  Zap,
-  Navigation,
-  Gauge,
-  Settings2,
-  Activity,
-  Info,
-  Ruler,
+  Search,
+  X,
+  Navigation2,
 } from "lucide-react";
 
-// UI Components (Shadcn UI patterns)
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
-import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-  DialogTrigger,
-  DialogDescription,
-} from "@/components/ui/dialog";
-import { Separator } from "@/components/ui/separator";
 import confetti from "canvas-confetti";
 import * as turf from "@turf/turf";
 
 const METERS_PER_STEP = 0.75;
+const WALKING_SPEED_KMH = 5.0;
 
 // #####################################################
 // # 1. CUSTOM HOOK: useRouteLogic
@@ -51,13 +38,15 @@ function useRouteLogic(speedKmh: number) {
   const [points, setPoints] = useState<{
     start: L.LatLng | null;
     end: L.LatLng | null;
-  }>({ start: null, end: null });
+  }>({
+    start: null,
+    end: null,
+  });
   const [route, setRoute] = useState<any>(null);
   const [currentPos, setCurrentPos] = useState<L.LatLng | null>(null);
   const [isActive, setIsActive] = useState(false);
   const [progress, setProgress] = useState(0);
   const [isLoadingRoute, setIsLoadingRoute] = useState(false);
-  const [routeError, setRouteError] = useState<string | null>(null);
   const [metrics, setMetrics] = useState({
     steps: 0,
     timeLeft: 0,
@@ -69,7 +58,18 @@ function useRouteLogic(speedKmh: number) {
   const progressRef = useRef(0);
   const speedMs = useMemo(() => (speedKmh * 1000) / 3600, [speedKmh]);
 
+  useEffect(() => {
+    if (route && !isActive) {
+      const duration = route.distance / speedMs;
+      setMetrics((prev) => ({
+        ...prev,
+        timeLeft: Math.ceil(duration * (1 - progressRef.current)),
+      }));
+    }
+  }, [speedKmh, route, isActive, speedMs]);
+
   const handleMapClick = async (e: L.LeafletMouseEvent) => {
+    if (isActive) return;
     if (!points.start) {
       setPoints({ ...points, start: e.latlng });
       setCurrentPos(e.latlng);
@@ -81,7 +81,6 @@ function useRouteLogic(speedKmh: number) {
 
   const fetchRoute = async (start: L.LatLng, end: L.LatLng) => {
     setIsLoadingRoute(true);
-    setRouteError(null);
     try {
       const res = await fetch(
         `https://router.project-osrm.org/route/v1/walking/${start.lng},${start.lat};${end.lng},${end.lat}?overview=full&geometries=geojson`
@@ -89,7 +88,8 @@ function useRouteLogic(speedKmh: number) {
       const data = await res.json();
       if (data.code !== "Ok") throw new Error("Route not found");
       const r = data.routes[0];
-      setRoute({
+
+      const newRoute = {
         path: r.geometry.coordinates.map((c: any) => ({
           lat: c[1],
           lng: c[0],
@@ -97,9 +97,16 @@ function useRouteLogic(speedKmh: number) {
         line: turf.lineString(r.geometry.coordinates),
         distance: r.distance,
         duration: r.distance / speedMs,
+      };
+
+      setRoute(newRoute);
+      setMetrics({
+        steps: Math.floor(r.distance / METERS_PER_STEP),
+        timeLeft: Math.ceil(r.distance / speedMs),
+        distDone: 0,
       });
-    } catch (err: any) {
-      setRouteError(err.message);
+    } catch (err) {
+      console.error(err);
     } finally {
       setIsLoadingRoute(false);
     }
@@ -116,10 +123,12 @@ function useRouteLogic(speedKmh: number) {
         progressRef.current + move / route.distance,
         1
       );
+
       const p = progressRef.current;
       const dDone = p * route.distance;
       const pt = turf.along(route.line, dDone / 1000, { units: "kilometers" });
       const [lng, lat] = pt.geometry.coordinates;
+
       setCurrentPos(new L.LatLng(lat, lng));
       setProgress(p);
       setMetrics({
@@ -127,10 +136,11 @@ function useRouteLogic(speedKmh: number) {
         timeLeft: Math.ceil(route.duration * (1 - p)),
         distDone: dDone,
       });
+
       if (p < 1) animRef.current = requestAnimationFrame(frame);
       else {
         setIsActive(false);
-        confetti({ particleCount: 100, colors: ["#fbbf24", "#ffffff"] });
+        confetti();
       }
     };
     animRef.current = requestAnimationFrame(frame);
@@ -159,169 +169,96 @@ function useRouteLogic(speedKmh: number) {
     handleMapClick,
     reset,
     isLoadingRoute,
-    routeError,
+    setPoints,
+    fetchRoute,
   };
 }
 
 // #####################################################
-// # 2. COMPONENT: MapController (Headless)
+// # 2. HELPER COMPONENTS
 // #####################################################
 
 function MapController({ pos, isActive, onMapClick, isLocked }: any) {
   const map = useMap();
   useEffect(() => {
+    const handleFlyTo = (e: any) =>
+      map.flyTo(e.detail, 14, { animate: true, duration: 1.5 });
+    window.addEventListener("map-fly-to", handleFlyTo);
+    return () => window.removeEventListener("map-fly-to", handleFlyTo);
+  }, [map]);
+
+  useEffect(() => {
     if (pos && isActive) map.panTo(pos, { animate: true, duration: 0.5 });
   }, [pos, isActive, map]);
+
   useMapEvents({ click: (e) => !isLocked && onMapClick(e) });
   return null;
 }
-
-// #####################################################
-// # 3. COMPONENT: StatsHUD
-// #####################################################
-
-function StatsHUD({ metrics, progress }: { metrics: any; progress: number }) {
-  const formatTime = (s: number) =>
-    `${Math.floor(s / 60)}:${(s % 60).toString().padStart(2, "0")}`;
+function SettingsDropdown({ isOpen, speed, setSpeed, route, metrics }: any) {
+  if (!isOpen) return null;
   return (
-    <Card className="p-6 bg-white/95 backdrop-blur-xl border-none shadow-2xl rounded-4xl">
-      <div className="flex justify-between items-end mb-4">
-        <div>
-          <p className="text-[10px] font-black uppercase tracking-[0.2em] text-orange-800/40 mb-1">
-            Remaining
-          </p>
-          <h2 className="text-4xl font-black tabular-nums text-orange-950 tracking-tighter">
-            {formatTime(metrics.timeLeft)}
-          </h2>
+    /* Key Changes: 
+       - Changed 'top-[calc(100%+12px)]' to 'bottom-[calc(100%+12px)]'
+       - Changed 'slide-in-from-top-4' to 'slide-in-from-bottom-4'
+       - Changed 'origin-top' to 'origin-bottom'
+    */
+    <div className="absolute bottom-[calc(100%+12px)] left-0 w-full bg-white/90 backdrop-blur-2xl rounded-4xl shadow-2xl border border-white/50 p-6 animate-in fade-in slide-in-from-bottom-4 duration-300 origin-bottom z-3000">
+      <div className="space-y-6">
+        <h3 className="text-[11px] font-black text-slate-400 uppercase tracking-widest">
+          Mission Parameters
+        </h3>
+
+        <div className="grid grid-cols-2 gap-3">
+          <div className="bg-slate-50/50 p-4 rounded-2xl border border-slate-100">
+            <p className="text-[10px] font-bold text-slate-400 uppercase mb-1">
+              Total Dist
+            </p>
+            <p className="text-lg font-bold text-slate-900 leading-none">
+              {route ? `${(route.distance / 1000).toFixed(2)} km` : "0.00 km"}
+            </p>
+          </div>
+          <div className="bg-slate-50/50 p-4 rounded-2xl border border-slate-100">
+            <p className="text-[10px] font-bold text-slate-400 uppercase mb-1">
+              Est. Steps
+            </p>
+            <p className="text-lg font-bold text-slate-900 leading-none">
+              {metrics.steps.toLocaleString()}
+            </p>
+          </div>
         </div>
-        <span className="px-3 py-1 bg-yellow-400/20 text-yellow-700 text-[10px] font-black rounded-full border border-yellow-200">
-          {(progress * 100).toFixed(0)}%
-        </span>
-      </div>
-      <div className="h-2.5 w-full bg-orange-100 rounded-full overflow-hidden p-0.5">
-        <div
-          className="h-full bg-yellow-400 rounded-full transition-all"
-          style={{ width: `${progress * 100}%` }}
-        />
-      </div>
-    </Card>
-  );
-}
 
-// #####################################################
-// # 4. COMPONENT: TimerControls
-// #####################################################
-
-function TimerControls({ isActive, onToggle, onReset, disabled }: any) {
-  return (
-    <div className="flex flex-1 gap-3">
-      <Button
-        className="flex-1 h-14 bg-yellow-400 hover:bg-yellow-500 text-orange-950 font-black rounded-2xl shadow-lg shadow-yellow-100"
-        onClick={onToggle}
-        disabled={disabled}
-      >
-        {isActive ? (
-          <Pause className="mr-2 fill-current" />
-        ) : (
-          <Play className="mr-2 fill-current" />
-        )}
-        {isActive ? "PAUSE" : "START"}
-      </Button>
-      <Button
-        variant="outline"
-        className="h-14 w-14 rounded-2xl border-orange-100 bg-white"
-        onClick={onReset}
-      >
-        <RotateCcw className="text-orange-800" />
-      </Button>
+        <div className="space-y-4">
+          <div className="flex justify-between items-center text-sm font-bold text-slate-700">
+            <label>Walking Speed</label>
+            <span className="px-2 py-1 bg-blue-50 text-blue-600 rounded-lg text-xs">
+              {speed} km/h
+            </span>
+          </div>
+          <input
+            type="range"
+            min={1}
+            max={20}
+            step={0.5}
+            value={speed}
+            onChange={(e) => setSpeed(parseFloat(e.target.value))}
+            className="w-full h-1.5 bg-slate-200 rounded-lg appearance-none cursor-pointer accent-blue-600"
+          />
+        </div>
+      </div>
     </div>
   );
 }
 
 // #####################################################
-// # 5. COMPONENT: SettingsPanel
+// # 3. MAIN COMPONENT
 // #####################################################
-
-function SettingsPanel({
-  startPos,
-  endPos,
-  distanceText,
-  totalDuration,
-  steps,
-  progress,
-  routeData,
-  WALKING_SPEED_KMH,
-}: any) {
-  return (
-    <DialogContent className="sm:max-w-[425px] bg-white border-none rounded-4xl shadow-2xl">
-      <DialogHeader>
-        <DialogTitle className="flex items-center gap-2 text-2xl font-black text-orange-950">
-          <Settings2 className="text-yellow-500" />
-          Mission Details
-        </DialogTitle>
-      </DialogHeader>
-      <div className="space-y-6 pt-4">
-        <div className="grid grid-cols-2 gap-3">
-          <div className="p-4 bg-orange-50 rounded-2xl">
-            <p className="text-[10px] font-bold text-orange-800/40 uppercase">
-              Steps
-            </p>
-            <p className="text-xl text-orange-950 bg-orange-50 font-black">
-              {steps.toLocaleString()}
-            </p>
-          </div>
-          <div className="p-4 bg-yellow-400 rounded-2xl">
-            <p className="text-[10px] font-bold text-yellow-950 uppercase">
-              Progress
-            </p>
-            <p className="text-xl  text-orange-950 font-black">
-              {(progress * 100).toFixed(1)}%
-            </p>
-          </div>
-        </div>
-        <Separator className="bg-orange-100" />
-        <div className="space-y-2">
-          <p className="text-[10px] font-black text-orange-800/40 uppercase tracking-widest">
-            Navigation
-          </p>
-          <div className="text-sm font-bold text-orange-950 bg-orange-50 p-3 rounded-xl flex justify-between">
-            <span>Distance</span>
-            <span>{distanceText}</span>
-          </div>
-          <div className="text-sm font-bold text-orange-950 bg-orange-50 p-3 rounded-xl flex justify-between">
-            <span>Pace</span>
-            <span>{WALKING_SPEED_KMH} km/h</span>
-          </div>
-        </div>
-      </div>
-
-      {/* set waking speed settings */}
-      <div className="p-4 border-t border-orange-100">
-        <label className="block text-[10px] font-black text-orange-800/40 uppercase tracking-widest mb-2">
-          Walking Speed (km/h)
-        </label>
-        <input
-          type="number"
-          min={1}
-          max={20}
-          step={0.1}
-          value={WALKING_SPEED_KMH}
-          readOnly
-          className="w-full p-3 rounded-xl border border-orange-100 bg-orange-50 text-orange-950 font-bold"
-        />
-      </div>
-    </DialogContent>
-  );
-}
-
-// #####################################################
-// # 6. MAIN APPLICATION: MapTimer
-// #####################################################
-
-const WALKING_SPEED_KMH = 5000.0;
 
 export default function MapTimer() {
   const [speedKmh, setSpeedKmh] = useState(WALKING_SPEED_KMH);
+  const [isSettingsOpen, setIsSettingsOpen] = useState(false);
+  const [searchQuery, setSearchQuery] = useState("");
+  const [isSearching, setIsSearching] = useState(false);
+
   const {
     points,
     route,
@@ -333,14 +270,89 @@ export default function MapTimer() {
     handleMapClick,
     reset,
     isLoadingRoute,
-    routeError,
+    fetchRoute,
+    setPoints,
   } = useRouteLogic(speedKmh);
 
+  const formatPreciseTime = (totalSeconds: number) => {
+    const d = Math.floor(totalSeconds / 86400);
+    const h = Math.floor((totalSeconds % 86400) / 3600);
+    const m = Math.floor((totalSeconds % 3600) / 60);
+    const s = totalSeconds % 60;
+    if (d > 0) return `${d}d ${h}h ${m}m`;
+    return `${h}h ${m}m ${s}s`;
+  };
+
+  const handleSearch = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!searchQuery.trim()) return;
+    setIsSearching(true);
+    try {
+      const res = await fetch(
+        `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(
+          searchQuery
+        )}`
+      );
+      const data = await res.json();
+      if (data && data.length > 0) {
+        const coords = new L.LatLng(
+          parseFloat(data[0].lat),
+          parseFloat(data[0].lon)
+        );
+        window.dispatchEvent(new CustomEvent("map-fly-to", { detail: coords }));
+        if (!points.start) setPoints({ ...points, start: coords });
+        else if (!points.end) {
+          setPoints({ ...points, end: coords });
+          fetchRoute(points.start, coords);
+        }
+        setSearchQuery("");
+      }
+    } catch (err) {
+      console.error(err);
+    } finally {
+      setIsSearching(false);
+    }
+  };
+
   return (
-    <div className="relative w-full h-screen bg-orange-50 overflow-hidden">
+    <div className="relative w-full h-screen bg-slate-100 overflow-hidden">
+      {/* Search Bar */}
+      <div className="absolute top-6 left-1/2 -translate-x-1/2 z-2000 w-[90%] max-w-sm">
+        <form onSubmit={handleSearch} className="relative">
+          <div className="absolute left-4 top-1/2 -translate-y-1/2">
+            {isSearching ? (
+              <div className="w-5 h-5 border-2 border-blue-500 border-t-transparent rounded-full animate-spin" />
+            ) : (
+              <Search className="w-5 h-5 text-slate-400" />
+            )}
+          </div>
+          <input
+            type="text"
+            placeholder={
+              !points.start
+                ? "Search Start Location..."
+                : "Search Destination..."
+            }
+            className="w-full h-14 pl-12 pr-12 bg-white/80 backdrop-blur-xl border border-white/40 shadow-2xl rounded-2xl focus:outline-none text-slate-800 font-medium"
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+          />
+          {searchQuery && (
+            <button
+              type="button"
+              onClick={() => setSearchQuery("")}
+              className="absolute right-4 top-1/2 -translate-y-1/2 text-slate-400"
+            >
+              <X className="w-4 h-4" />
+            </button>
+          )}
+        </form>
+      </div>
+
+      {/* Map Layer */}
       <MapContainer
         center={[20, 78]}
-        zoom={8}
+        zoom={5}
         className="w-full h-full z-0"
         zoomControl={false}
       >
@@ -349,25 +361,25 @@ export default function MapTimer() {
           onMapClick={handleMapClick}
           pos={currentPos}
           isActive={isActive}
-          isLocked={!!route || isLoadingRoute}
+          isLocked={isActive || isLoadingRoute}
         />
         {route && (
           <Polyline
             positions={route.path}
-            color="#f59e0b"
-            weight={5}
-            opacity={0.3}
+            color="#007AFF"
+            weight={6}
+            opacity={0.6}
           />
         )}
         {currentPos && (
           <CircleMarker
             center={currentPos}
-            radius={10}
+            radius={8}
             pathOptions={{
-              fillColor: "#fbbf24",
-              color: "#92400e",
+              fillColor: "#007AFF",
+              color: "#fff",
               fillOpacity: 1,
-              weight: 2,
+              weight: 3,
             }}
           />
         )}
@@ -375,46 +387,68 @@ export default function MapTimer() {
         {points.end && <Marker position={points.end} />}
       </MapContainer>
 
-      <div className="absolute top-6 left-1/2 -translate-x-1/2 z-5000 w-[92%] max-w-md pointer-events-auto flex flex-col gap-4">
-        <StatsHUD metrics={metrics} progress={progress} />
-        <div className="flex gap-3 bg-white/90 backdrop-blur-xl p-4 rounded-4xl shadow-xl border border-orange-100/50">
-          <TimerControls
-            isActive={isActive}
-            onToggle={() => setIsActive(!isActive)}
-            onReset={reset}
-            disabled={!route || isLoadingRoute}
-          />
-          <Dialog>
-            <DialogTrigger asChild>
-              <Button
-                variant="outline"
-                className="h-14 w-14 rounded-2xl bg-white border-orange-100"
-              >
-                <Settings className="text-orange-800" />
-              </Button>
-            </DialogTrigger>
-            <SettingsPanel
-              startPos={points.start}
-              endPos={points.end}
-              distanceText={
-                route ? `${(route.distance / 1000).toFixed(2)} km` : "0.00 km"
-              }
-              totalDuration={route?.duration || 0}
-              steps={metrics.steps}
-              progress={progress}
-              routeData={route}
-              METERS_PER_STEP={METERS_PER_STEP}
-              WALKING_SPEED_KMH={speedKmh}
+      {/* HUD UI */}
+      <div className="absolute bottom-10 left-1/2 -translate-x-1/2 z-1000 w-[90%] max-w-sm flex flex-col gap-3">
+        <Card className="p-6 bg-white/80 backdrop-blur-2xl border-none shadow-2xl rounded-4xl">
+          <div className="flex justify-between items-start mb-4">
+            <div>
+              <p className="text-[11px] font-black text-slate-400 uppercase tracking-widest mb-1">
+                Time Remaining
+              </p>
+              <h2 className="text-4xl font-bold text-slate-900 leading-none">
+                {formatPreciseTime(metrics.timeLeft)}
+              </h2>
+            </div>
+            <div className="h-10 w-10 rounded-full bg-blue-50 flex items-center justify-center">
+              <Navigation2 className="w-5 h-5 text-blue-600 fill-current" />
+            </div>
+          </div>
+          <div className="h-2 w-full bg-slate-100 rounded-full overflow-hidden mb-4 border border-slate-200/50 p-0.5">
+            <div
+              className="h-full bg-blue-600 rounded-full transition-all duration-700"
+              style={{ width: `${progress * 100}%` }}
             />
-          </Dialog>
+          </div>
+          <div className="flex justify-between text-sm font-bold text-slate-800">
+            <span>{metrics.steps.toLocaleString()} Steps</span>
+            <span>{(metrics.distDone / 1000).toFixed(2)} km</span>
+          </div>
+        </Card>
+
+        <div className="relative flex gap-2 bg-white/70 backdrop-blur-xl p-2 rounded-4xl shadow-xl border border-white/40">
+          <Button
+            className={`flex-1 h-14 rounded-24px font-bold ${
+              isActive ? "bg-red-50 text-red-600" : "bg-blue-600 text-white"
+            }`}
+            onClick={() => setIsActive(!isActive)}
+            disabled={!route || isLoadingRoute}
+          >
+            {isActive ? <Pause className="mr-2" /> : <Play className="mr-2" />}
+            {isActive ? "Pause" : "Start"}
+          </Button>
+          <Button
+            variant="outline"
+            className="h-14 w-14 rounded-24px"
+            onClick={() => setIsSettingsOpen(!isSettingsOpen)}
+          >
+            <Settings />
+          </Button>
+          <Button
+            variant="outline"
+            className="h-14 w-14 rounded-24px"
+            onClick={reset}
+          >
+            <RotateCcw />
+          </Button>
+          <SettingsDropdown
+            isOpen={isSettingsOpen}
+            speed={speedKmh}
+            setSpeed={setSpeedKmh}
+            route={route}
+            metrics={metrics}
+          />
         </div>
       </div>
-
-      {!points.start && !isLoadingRoute && (
-        <div className="absolute bottom-12 left-1/2 -translate-x-1/2 z-5000 bg-orange-950 text-white px-8 py-4 rounded-3xl font-black shadow-2xl animate-bounce flex items-center gap-2">
-          <MapPin className="w-5 h-5 text-yellow-400" /> TAP TO START
-        </div>
-      )}
     </div>
   );
 }
