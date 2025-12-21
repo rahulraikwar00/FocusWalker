@@ -3,6 +3,8 @@ import { useState, useEffect, useRef, useMemo } from "react";
 import "leaflet/dist/leaflet.css";
 import "leaflet-defaulticon-compatibility/dist/leaflet-defaulticon-compatibility.webpack.css"; // Re-uses
 import "leaflet-defaulticon-compatibility";
+import { motion, AnimatePresence } from "framer-motion";
+import { ChevronUp, ChevronDown } from "lucide-react";
 
 import {
   MapContainer,
@@ -12,6 +14,7 @@ import {
   CircleMarker,
   useMap,
   useMapEvents,
+  Popup,
 } from "react-leaflet";
 
 import L from "leaflet";
@@ -34,9 +37,22 @@ import * as turf from "@turf/turf";
 L.Icon.Default.mergeOptions({
   iconRetinaUrl:
     "https://unpkg.com/leaflet@1.9.4/dist/images/marker-icon-2x.png",
+
   iconUrl: "https://unpkg.com/leaflet@1.9.4/dist/images/marker-icon.png",
+
   shadowUrl: "https://unpkg.com/leaflet@1.9.4/dist/images/marker-shadow.png",
 });
+
+// 1. Create a list of quotes
+const MOTIVATION = [
+  "Keep going!",
+  "Almost there!",
+  "Looking strong!",
+  "Great pace!",
+  "You got this!",
+  "Level Up!",
+  "Don't stop!",
+];
 
 const METERS_PER_STEP = 0.75;
 const WALKING_SPEED_KMH = 5.0;
@@ -213,47 +229,62 @@ function SettingsDropdown({ isOpen, speed, setSpeed, route, metrics }: any) {
        - Changed 'slide-in-from-top-4' to 'slide-in-from-bottom-4'
        - Changed 'origin-top' to 'origin-bottom'
     */
-    <div className="absolute bottom-[calc(100%+12px)] left-0 w-full bg-white/90 backdrop-blur-2xl rounded-4xl shadow-2xl border border-white/50 p-6 animate-in fade-in slide-in-from-bottom-4 duration-300 origin-bottom z-3000">
-      <div className="space-y-6">
-        <h3 className="text-[11px] font-black text-slate-400 uppercase tracking-widest">
-          Mission Parameters
-        </h3>
-
-        <div className="grid grid-cols-2 gap-3">
-          <div className="bg-slate-50/50 p-4 rounded-2xl border border-slate-100">
-            <p className="text-[10px] font-bold text-slate-400 uppercase mb-1">
-              Total Dist
+    <div className="absolute bottom-[calc(100%+12px)] left-0 w-full bg-white/80 backdrop-blur-3xl rounded-[2rem] shadow-[0_20px_40px_rgba(0,0,0,0.1)] border border-white/40 p-4 animate-in fade-in zoom-in-95 slide-in-from-bottom-4 duration-500 origin-bottom z-3000 ring-1 ring-black/[0.05]">
+      <div className="space-y-4">
+        {/* Compact Horizontal Stats */}
+        <div className="flex gap-2">
+          <div className="flex-1 bg-black/[0.03] px-3 py-2.5 rounded-2xl border border-black/[0.01]">
+            <p className="text-[10px] font-semibold text-slate-400 uppercase tracking-tight mb-0.5">
+              Distance
             </p>
-            <p className="text-lg font-bold text-slate-900 leading-none">
-              {route ? `${(route.distance / 1000).toFixed(2)} km` : "0.00 km"}
+            <p className="text-sm font-bold text-slate-900">
+              {route ? (route.distance / 1000).toFixed(2) : "0.00"}
+              <span className="text-[10px] text-slate-400 ml-0.5">km</span>
             </p>
           </div>
-          <div className="bg-slate-50/50 p-4 rounded-2xl border border-slate-100">
-            <p className="text-[10px] font-bold text-slate-400 uppercase mb-1">
+
+          <div className="flex-1 bg-black/[0.03] px-3 py-2.5 rounded-2xl border border-black/[0.01]">
+            <p className="text-[10px] font-semibold text-slate-400 uppercase tracking-tight mb-0.5">
               Est. Steps
             </p>
-            <p className="text-lg font-bold text-slate-900 leading-none">
+            <p className="text-sm font-bold text-slate-900">
               {metrics.steps.toLocaleString()}
+              <span className="text-[10px] text-slate-400 ml-0.5">st</span>
             </p>
           </div>
         </div>
 
-        <div className="space-y-4">
-          <div className="flex justify-between items-center text-sm font-bold text-slate-700">
-            <label>Walking Speed</label>
-            <span className="px-2 py-1 bg-blue-50 text-blue-600 rounded-lg text-xs">
-              {speed} km/h
-            </span>
+        {/* Integrated Control Row */}
+        <div
+          className="bg-black/[0.03] p-3 rounded-2xl space-y-2"
+          onPointerDownCapture={(e) => e.stopPropagation()}
+        >
+          <div className="flex justify-between items-center px-1">
+            <label className="text-[11px] font-bold text-slate-700 uppercase tracking-wide">
+              Pace
+            </label>
+            <div className="flex items-center gap-1 bg-blue-600 px-2 py-0.5 rounded-lg">
+              <span className="text-xs font-black text-white">{speed}</span>
+              <span className="text-[8px] font-bold text-white/80 uppercase">
+                km/h
+              </span>
+            </div>
           </div>
+
           <input
             type="range"
-            min={1}
-            max={20}
-            step={0.5}
+            min="1"
+            max="20"
             value={speed}
-            onChange={(e) => setSpeed(parseFloat(e.target.value))}
-            className="w-full h-1.5 bg-slate-200 rounded-lg appearance-none cursor-pointer accent-blue-600"
+            onChange={(e) => setSpeed(Number(e.target.value))}
+            className="w-full h-1.5 bg-slate-200 rounded-full appearance-none cursor-pointer accent-blue-600"
           />
+
+          <div className="flex justify-between text-[9px] font-bold text-slate-400 px-1 uppercase tracking-tighter">
+            <span>Slow</span>
+            <span>Average</span>
+            <span>Fast</span>
+          </div>
         </div>
       </div>
     </div>
@@ -269,6 +300,8 @@ export default function MapTimer() {
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
   const [isSearching, setIsSearching] = useState(false);
+  const [isCollapsed, setIsCollapsed] = useState(false);
+  const [quote, setQuote] = useState(MOTIVATION[0]);
 
   const {
     points,
@@ -293,6 +326,24 @@ export default function MapTimer() {
     if (d > 0) return `${d}d ${h}h ${m}m`;
     return `${h}h ${m}m ${s}s`;
   };
+
+  useEffect(() => {
+    let interval: NodeJS.Timeout;
+
+    if (isActive) {
+      // Start the cycle
+      interval = setInterval(() => {
+        setQuote((prevQuote: string) => {
+          // Pick a new quote that isn't the same as the current one
+          const others = MOTIVATION.filter((q) => q !== prevQuote);
+          return others[Math.floor(Math.random() * others.length)];
+        });
+      }, 5000);
+    }
+    return () => {
+      if (interval) clearInterval(interval);
+    };
+  }, [isActive]); // Only restart when play/pause changes
 
   const handleSearch = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -329,42 +380,49 @@ export default function MapTimer() {
     <div className="relative h-[100dvh] w-full overflow-hidden bg-slate-100 flex flex-col">
       <div className="relative w-full h-screen bg-slate-100 overflow-hidden">
         {/* Search Bar */}
-        <div className="absolute top-6 left-1/2 -translate-x-1/2 z-2000 w-[90%] max-w-sm">
-          <form onSubmit={handleSearch} className="relative">
-            <div className="absolute left-4 top-1/2 -translate-y-1/2">
+        <div className="absolute top-6 left-1/2 -translate-x-1/2 z-[2000] w-[92%] max-w-sm">
+          <form onSubmit={handleSearch} className="relative group">
+            {/* Search/Loading Icon */}
+            <div className="absolute left-5 top-1/2 -translate-y-1/2 transition-transform duration-300 group-focus-within:scale-110">
               {isSearching ? (
-                <div className="w-5 h-5 border-2 border-blue-500 border-t-transparent rounded-full animate-spin" />
+                <div className="w-5 h-5 border-2 border-blue-600 border-t-transparent rounded-full animate-spin" />
               ) : (
-                <Search className="w-5 h-5 text-slate-400" />
+                <Search className="w-5 h-5 text-slate-400 group-focus-within:text-blue-600 transition-colors" />
               )}
             </div>
+
+            {/* Input Field */}
             <input
               type="text"
-              placeholder={
-                !points.start
-                  ? "Search Start Location..."
-                  : "Search Destination..."
-              }
-              className="w-full h-14 pl-12 pr-12 bg-white/80 backdrop-blur-xl border border-white/40 shadow-2xl rounded-2xl focus:outline-none text-slate-800 font-medium"
+              placeholder={!points.start ? "Where from?" : "Where to?"}
+              className="w-full h-14 pl-14 pr-12 bg-white/60 backdrop-blur-2xl 
+                 border border-white/60 shadow-[0_8px_32px_rgba(0,0,0,0.06)] 
+                 ring-1 ring-black/5 rounded-[1.5rem] 
+                 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:bg-white/80
+                 text-slate-800 font-semibold placeholder:text-slate-400 
+                 transition-all duration-300"
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
             />
+
+            {/* Clear Button */}
             {searchQuery && (
               <button
                 type="button"
                 onClick={() => setSearchQuery("")}
-                className="absolute right-4 top-1/2 -translate-y-1/2 text-slate-400"
+                className="absolute right-4 top-1/2 -translate-y-1/2 w-8 h-8 flex items-center justify-center 
+                   bg-slate-100/50 hover:bg-slate-200/50 text-slate-500 rounded-full 
+                   transition-all active:scale-90"
               >
                 <X className="w-4 h-4" />
               </button>
             )}
           </form>
         </div>
-
         {/* Map Layer */}
         <MapContainer
           center={[20, 78]}
-          zoom={5}
+          zoom={6}
           className="w-full h-full z-0"
           zoomControl={false}
         >
@@ -375,20 +433,52 @@ export default function MapTimer() {
             isActive={isActive}
             isLocked={isActive || isLoadingRoute}
           />
-          {route && (
+
+          {/* {route && (
             <Polyline
               positions={route.path}
-              color="#007AFF"
-              weight={6}
-              opacity={0.6}
+              color="#3B82F6" // Your blue color
+              weight={8} // Thick enough to see the "steps"
+              opacity={0.8}
+              lineCap="round" // Makes each dash look like a footprint
+              dashArray="1, 15" // The "Magic": 1px dash followed by 15px gap
+              dashOffset="0"
             />
+          )} */}
+          {route && (
+            <>
+              {/* The Outer Glow (Soft & Wide) */}
+              <Polyline
+                positions={route.path}
+                color="#3B82F6"
+                weight={12}
+                opacity={0.15}
+                lineCap="round"
+              />
+              {/* The Secondary Glow (Medium) */}
+              <Polyline
+                positions={route.path}
+                color="#3B82F6"
+                weight={8}
+                opacity={0.3}
+                lineCap="round"
+              />
+              {/* The Core Line (Sharp & Vibrant) */}
+              <Polyline
+                positions={route.path}
+                color="#2563EB" // A slightly deeper blue for the center
+                weight={3}
+                opacity={1}
+                lineCap="round"
+              />
+            </>
           )}
           {currentPos && (
             <CircleMarker
               center={currentPos}
-              radius={8}
+              radius={7}
               pathOptions={{
-                fillColor: "#007AFF",
+                fillColor: "#3B82F6",
                 color: "#fff",
                 fillOpacity: 1,
                 weight: 3,
@@ -398,82 +488,165 @@ export default function MapTimer() {
           {points.start && <Marker position={points.start} />}
           {points.end && <Marker position={points.end} />}
         </MapContainer>
-
         {/* HUD UI */}
-        <div className="absolute bottom-10 left-1/2 -translate-x-1/2 z-1000 w-[90%] max-w-sm flex flex-col gap-3">
-          <Card className="p-6 bg-white/80 backdrop-blur-2xl border-none shadow-2xl rounded-4xl">
-            <div className="flex justify-between items-start mb-4">
-              <div>
-                <p className="text-[11px] font-black text-slate-400 uppercase tracking-widest mb-1">
+        return (
+        <motion.div
+          drag
+          dragMomentum={false}
+          dragConstraints={{ left: -20, right: 20, top: -400, bottom: 20 }}
+          className="absolute bottom-6 left-1/2 -translate-x-1/2 z-[1000] w-[92%] max-w-[340px] flex flex-col gap-2 touch-none"
+        >
+          <Card
+            className={`bg-white/70 backdrop-blur-2xl border border-white/50 shadow-2xl transition-all duration-300 ease-in-out
+      ${isCollapsed ? "rounded-full p-2 pl-5" : "rounded-[2rem] p-4"}`}
+          >
+            {/* Header / Primary Info */}
+            <div
+              className="flex justify-between items-center cursor-pointer select-none"
+              onClick={() => setIsCollapsed(!isCollapsed)}
+            >
+              <div className="flex flex-col">
+                <p className="text-[9px] font-black text-slate-500 uppercase tracking-tighter leading-none mb-1">
                   Time Remaining
                 </p>
-                <h2 className="text-4xl font-bold text-slate-900 leading-none">
-                  {formatPreciseTime(metrics.timeLeft)}
-                </h2>
+                <div className="flex items-baseline gap-1">
+                  <h2 className="text-3xl font-bold text-slate-900 tracking-tight leading-none">
+                    {formatPreciseTime(metrics.timeLeft)}
+                  </h2>
+                  {isCollapsed && (
+                    <span className="text-[10px] font-bold text-blue-600 ml-2">
+                      • {(metrics.distDone / 1000).toFixed(1)}km
+                    </span>
+                  )}
+                </div>
               </div>
-              <div className="h-10 w-10 rounded-full bg-blue-50 flex items-center justify-center">
-                <Navigation2 className="w-5 h-5 text-blue-600 fill-current" />
-              </div>
-            </div>
-            <div className="h-2 w-full bg-slate-100 rounded-full overflow-hidden mb-4 border border-slate-200/50 p-0.5">
+
               <div
-                className="h-full bg-blue-600 rounded-full transition-all duration-700"
-                style={{ width: `${progress * 100}%` }}
-              />
+                className={`flex items-center gap-2 ${
+                  isCollapsed ? "ml-4" : ""
+                }`}
+              >
+                <div className="h-9 w-9 rounded-full bg-blue-600 shadow-lg shadow-blue-200 flex items-center justify-center">
+                  <Navigation2 className="w-4 h-4 text-white fill-current" />
+                </div>
+              </div>
             </div>
-            <div className="flex justify-between text-sm font-bold text-slate-800">
-              <span>{metrics.steps.toLocaleString()} Steps</span>
-              <span>{(metrics.distDone / 1000).toFixed(2)} km</span>
-            </div>
+
+            {/* Collapsible Section */}
+            <AnimatePresence>
+              {!isCollapsed && (
+                <motion.div
+                  initial={{ height: 0, opacity: 0 }}
+                  animate={{ height: "auto", opacity: 1 }}
+                  exit={{ height: 0, opacity: 0 }}
+                  className="overflow-hidden"
+                >
+                  {/* Progress Bar - Tighter p-0 */}
+                  <div className="h-1.5 w-full bg-slate-200/50 rounded-full overflow-hidden mt-4 mb-3">
+                    <div
+                      className="h-full bg-blue-600 rounded-full" // Removed transition-all duration-700
+                      style={{
+                        width: `${progress * 100}%`,
+                        transition: "none", // Explicitly disable CSS transitions for this element
+                      }}
+                    />
+                  </div>
+
+                  {/* Stats Grid - Optimized for space */}
+                  <div className="flex justify-between items-center px-1">
+                    <div className="flex flex-col">
+                      <span className="text-[10px] text-slate-400 font-bold uppercase">
+                        Distance
+                      </span>
+                      <span className="text-sm font-bold text-slate-800">
+                        {(metrics.distDone / 1000).toFixed(2)} km
+                      </span>
+                    </div>
+                    <div className="flex flex-col text-right">
+                      <span className="text-[10px] text-slate-400 font-bold uppercase">
+                        Activity
+                      </span>
+                      <span className="text-sm font-bold text-slate-800">
+                        {metrics.steps.toLocaleString()} Steps
+                      </span>
+                    </div>
+                  </div>
+                </motion.div>
+              )}
+            </AnimatePresence>
           </Card>
 
-          <div className="relative flex gap-2 bg-white/70 backdrop-blur-xl p-2 rounded-4xl shadow-xl border border-white/40">
-            <Button
-              className={`flex-1 h-14 mx-1 rounded-2xl font-bold ${
-                isActive ? "bg-red-50 text-red-600" : "bg-blue-600 text-white"
-              }`}
-              onClick={() => setIsActive(!isActive)}
-              disabled={!route || isLoadingRoute}
-            >
-              {isActive ? (
-                <Pause className="mr-2" />
-              ) : (
-                <Play className="mr-2" />
-              )}
-              {isActive ? "Pause" : "Start"}
-            </Button>
-            <Button
-              variant="outline"
-              className={`h-14 w-14 rounded-3xl transition-all duration-300 border-white/50 shadow-sm ${
-                isSettingsOpen
-                  ? "bg-blue-600 text-white border-blue-600 shadow-blue-200"
-                  : "bg-white/70 backdrop-blur-md text-slate-700 hover:bg-white hover:text-blue-600"
-              }`}
-              onClick={() => setIsSettingsOpen(!isSettingsOpen)}
-            >
-              <Settings
-                className={`w-6 h-6 transition-transform duration-500 ${
-                  isSettingsOpen ? "rotate-90" : "rotate-0"
-                }`}
-              />
-            </Button>
+          {/* Action Buttons - Scaled down slightly */}
+          <AnimatePresence>
+            {!isCollapsed && (
+              <motion.div
+                initial={{ y: 20, opacity: 0, scale: 0.95 }}
+                animate={{ y: 0, opacity: 1, scale: 1 }}
+                exit={{ y: 20, opacity: 0, scale: 0.95 }}
+                className="flex items-center gap-2 bg-white/40 backdrop-blur-2xl p-2 rounded-[2rem] shadow-[0_8px_32px_rgba(0,0,0,0.12)] border border-white/60"
+              >
+                {/* Primary Action Button - More Vibrant */}
+                <Button
+                  aria-label={isActive ? "Pause walk" : "Start walk"}
+                  className={`flex-1 h-12 rounded-2xl font-bold text-sm transition-all duration-300 active:scale-[0.97] shadow-sm ${
+                    isActive
+                      ? "bg-red-500 text-white hover:bg-red-600 shadow-red-200"
+                      : "bg-blue-600 text-white hover:bg-blue-700 shadow-blue-200"
+                  }`}
+                  onClick={() => setIsActive(!isActive)}
+                  disabled={!route || isLoadingRoute}
+                >
+                  <div className="flex items-center justify-center gap-2">
+                    {isActive ? (
+                      <Pause className="w-4 h-4 fill-current" />
+                    ) : (
+                      <Play className="w-4 h-4 fill-current" />
+                    )}
+                    <span className="uppercase tracking-wide">
+                      {isActive ? "Pause" : "Start"}
+                    </span>
+                  </div>
+                </Button>
 
-            <Button
-              variant="outline"
-              className="h-14 w-14 rounded-3xl bg-white/70 backdrop-blur-md border-white/50 text-slate-700 shadow-sm hover:bg-white hover:text-red-500 hover:border-red-100 transition-all active:scale-90"
-              onClick={reset}
-            >
-              <RotateCcw className="w-6 h-6" />
-            </Button>
-            <SettingsDropdown
-              isOpen={isSettingsOpen}
-              speed={speedKmh}
-              setSpeed={setSpeedKmh}
-              route={route}
-              metrics={metrics}
-            />
-          </div>
-        </div>
+                {/* Control Group - Subtle Glass Style */}
+                <div className="flex gap-1.5 px-1 border-l border-slate-200/30">
+                  <Button
+                    variant="ghost"
+                    className={`h-11 w-11 rounded-xl transition-all duration-500 ${
+                      isSettingsOpen
+                        ? "bg-slate-900 text-white"
+                        : "bg-white/40 text-slate-600 hover:bg-white/80"
+                    }`}
+                    onClick={() => setIsSettingsOpen(!isSettingsOpen)}
+                  >
+                    <Settings
+                      className={`w-5 h-5 transition-transform duration-500 ${
+                        isSettingsOpen ? "rotate-180" : "rotate-0"
+                      }`}
+                    />
+                  </Button>
+
+                  <Button
+                    variant="ghost"
+                    aria-label="Reset route and progress"
+                    className="h-11 w-11 rounded-xl bg-white/40 text-slate-600 hover:bg-red-50 hover:text-red-600 transition-colors active:rotate-[-45deg]"
+                    onClick={reset}
+                  >
+                    <RotateCcw className="w-5 h-5" />
+                  </Button>
+                </div>
+              </motion.div>
+            )}
+          </AnimatePresence>
+
+          <SettingsDropdown
+            isOpen={isSettingsOpen}
+            speed={speedKmh}
+            setSpeed={setSpeedKmh}
+            metrics={metrics}
+          />
+        </motion.div>
+        );
       </div>
     </div>
   );
