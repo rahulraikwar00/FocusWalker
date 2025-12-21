@@ -45,7 +45,7 @@ export default defineConfig({
 
   build: {
     // FIX: We removed "external: ['react']" so React is bundled into the PWA
-    outDir: path.resolve(import.meta.dirname, "dist/public"),
+    outDir: path.resolve(import.meta.dirname, "dist"),
     emptyOutDir: true,
     sourcemap: false, // Set to true if you need to debug production errors
     rollupOptions: {
