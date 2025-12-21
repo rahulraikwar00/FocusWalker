@@ -1,6 +1,15 @@
+# Existing
 node_modules
 dist
 .DS_Store
 server/public
 vite.config.ts.*
 *.tar.gz
+
+# PWA Specific
+dev-dist
+sitemap.xml
+# Ignore the generated service worker in development
+sw.js
+sw.js.map
+workbox-*.js
