@@ -60,7 +60,7 @@ if (process.env.NODE_ENV === "production") {
   app.use(
     express.static(publicPath, {
       maxAge: "1d", // Optional: adds caching for assets
-      index: false, // Prevents it from automatically serving index.html before we want it to
+      // index: false, // Prevents it from automatically serving index.html before we want it to
     })
   );
 

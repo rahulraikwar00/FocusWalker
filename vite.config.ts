@@ -37,7 +37,7 @@ export default defineConfig({
   build: {
     // Better organization for Express static serving
     outDir: path.resolve(import.meta.dirname, "dist/public"),
-    emptyOutDir: true,
+    emptyOutDir: false,
     reportCompressedSize: false, // Speeds up build slightly
     rollupOptions: {
       input: path.resolve(import.meta.dirname, "client", "index.html"),

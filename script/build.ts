@@ -6,10 +6,13 @@ import { fileURLToPath } from "url";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const root = path.resolve(__dirname, "..");
+console.log("Project root:", root);
 
 async function buildAll() {
   try {
     console.log("🚀 Starting Full-Stack Build...");
+    await rm("dist", { recursive: true, force: true });
+    await mkdir("dist/public", { recursive: true });
 
     // 1. Clean previous builds
     console.log("🧹 Cleaning dist folder...");
