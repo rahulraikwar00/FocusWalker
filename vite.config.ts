@@ -8,48 +8,38 @@ import { metaImagesPlugin } from "./vite-plugin-meta-images";
 // #####################################################
 // # FULL PRODUCTION VITE CONFIGURATION
 // #####################################################
+// ... existing imports
 
 export default defineConfig({
-  // Use "./" to ensure assets load correctly on any subpath or PWA environment
-  base: "./",
+  // CHANGE: Use "/" for SPAs and PWAs to ensure absolute paths for assets
+  base: "/",
 
   plugins: [
     react(),
     runtimeErrorOverlay(),
     tailwindcss(),
     metaImagesPlugin(),
-    // Conditional plugins for Replit environment
-    ...(process.env.NODE_ENV !== "production" &&
-    process.env.REPL_ID !== undefined
-      ? [
-          await import("@replit/vite-plugin-cartographer").then((m) =>
-            m.cartographer()
-          ),
-          await import("@replit/vite-plugin-dev-banner").then((m) =>
-            m.devBanner()
-          ),
-        ]
-      : []),
+    // ... conditional plugins
   ],
 
   resolve: {
     alias: {
-      // Directs "@" to your source folder
       "@": path.resolve(import.meta.dirname, "client", "src"),
       "@shared": path.resolve(import.meta.dirname, "shared"),
       "@assets": path.resolve(import.meta.dirname, "attached_assets"),
     },
   },
 
+  // This tells Vite to look for index.html inside the client folder
   root: path.resolve(import.meta.dirname, "client"),
 
   build: {
-    // FIX: We removed "external: ['react']" so React is bundled into the PWA
+    // This puts the frontend exactly where your Express server looks for it (dist/public)
     outDir: path.resolve(import.meta.dirname, "dist/public"),
     emptyOutDir: true,
-    sourcemap: false, // Set to true if you need to debug production errors
     rollupOptions: {
-      // Ensure all necessary assets are bundled
+      // Ensure index.html is the entry point
+      input: path.resolve(import.meta.dirname, "client", "index.html"),
       output: {
         manualChunks: {
           vendor: ["react", "react-dom", "react-leaflet", "leaflet"],
