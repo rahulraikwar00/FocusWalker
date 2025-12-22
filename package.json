@@ -4,14 +4,14 @@
   "type": "module",
   "license": "MIT",
   "scripts": {
-    "dev:client": "vite dev --port 5000",
-    "dev": "NODE_ENV=development tsx server/index.ts",
+    "dev": "tsx server/index.ts",
     "build": "tsx script/build.ts",
-    "start": "NODE_ENV=production node dist/index.cjs",
-    "check": "tsc",
+    "start": "node dist/index.cjs",
+    "check": "tsc --noEmit",
     "db:push": "drizzle-kit push",
-    "fix:ports": "kill $(lsof -t -i:5173,5000,5432) 2>/dev/null || true",
-    "ports:check": "echo 'Checking ports...' && lsof -i:5173,5000,5432 || echo 'Ports free'"
+    "clean": "rm -rf dist",
+    "fix:ports": "kill $(lsof -t -i:5000,5432) 2>/dev/null || true",
+    "type-check": "tsc --noEmit -p tsconfig.json"
   },
   "dependencies": {
     "@hookform/resolvers": "^3.10.0",
