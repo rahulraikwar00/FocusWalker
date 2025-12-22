@@ -6,10 +6,29 @@
       "use": "@vercel/node"
     }
   ],
-  "rewrites": [
+  "routes": [
     {
-      "source": "/(.*)",
-      "destination": "dist/index.cjs"
+      "src": "/assets/(.*)",
+      "dest": "dist/public/assets/$1",
+      "headers": {
+        "cache-control": "public, max-age=31536000, immutable"
+      }
+    },
+    {
+      "src": "/favicon.ico",
+      "dest": "dist/public/favicon.ico"
+    },
+    {
+      "src": "/manifest.json",
+      "dest": "dist/public/manifest.json"
+    },
+    {
+      "src": "/(icons/.*)",
+      "dest": "dist/public/$1"
+    },
+    {
+      "src": "/(.*)",
+      "dest": "dist/index.cjs"
     }
   ]
 }

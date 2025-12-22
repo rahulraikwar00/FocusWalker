@@ -2,76 +2,56 @@ import { build as esbuild } from "esbuild";
 import { build as viteBuild } from "vite";
 import { rm, readFile } from "fs/promises";
 import path from "path";
+import { fileURLToPath } from "url";
 
-// List of packages to keep external (not bundled into the .cjs file)
-// These should match your production dependencies in package.json
-const allowlist = [
-  "@google/generative-ai",
-  "axios",
-  "connect-pg-simple",
-  "cors",
-  "date-fns",
-  "drizzle-orm",
-  "drizzle-zod",
-  "express",
-  "express-rate-limit",
-  "express-session",
-  "jsonwebtoken",
-  "memorystore",
-  "multer",
-  "nanoid",
-  "nodemailer",
-  "openai",
-  "passport",
-  "passport-local",
-  "pg",
-  "stripe",
-  "uuid",
-  "ws",
-  "xlsx",
-  "zod",
-  "zod-validation-error",
+const __dirname = path.dirname(fileURLToPath(import.meta.url));
+
+// Packages that MUST NOT be bundled (Native modules, binary drivers, or huge libs)
+const externalNodeModules = [
+  "pg", // Native bindings
+  "sharp", // If you ever use it for images
+  "canvas", // Native bindings
+  "@resvg/resvg-js",
 ];
 
 async function buildAll() {
+  console.log("🚀 Starting production build...");
+
   // 1. Clean previous builds
-  console.log("Cleaning dist folder...");
   await rm("dist", { recursive: true, force: true });
 
-  // 2. Build Client (React/Vite)
-  // This uses your vite.config.ts settings (outDir: dist/public)
-  console.log("Building client (Vite)...");
+  // 2. Build Client (Vite)
+  // This will respect your vite.config.ts and output to dist/public
+  console.log("📦 Building frontend...");
   await viteBuild();
 
-  // 3. Build Server (Express/ESBuild)
-  console.log("Building server (ESBuild)...");
-  const pkg = JSON.parse(await readFile("package.json", "utf-8"));
-  const allDeps = [
-    ...Object.keys(pkg.dependencies || {}),
-    ...Object.keys(pkg.devDependencies || {}),
-  ];
+  // 3. Build Server (ESBuild)
+  console.log("backend Building server...");
 
-  // Exclude libraries that shouldn't be bundled (like binary drivers)
-  const externals = allDeps.filter((dep) => !allowlist.includes(dep));
+  const pkg = JSON.parse(await readFile("package.json", "utf-8"));
+
+  // Logic Fix: Usually, you want to bundle almost everything for a "Standalone" file,
+  // EXCEPT for native drivers or things that expect a specific node_modules structure.
 
   await esbuild({
     entryPoints: ["server/index.ts"],
     platform: "node",
+    target: "node20", // Target the version you are actually using
     bundle: true,
     format: "cjs",
     outfile: "dist/index.cjs",
+    sourcemap: true, // Highly recommended for debugging production logs
     define: {
       "process.env.NODE_ENV": '"production"',
     },
     minify: true,
-    external: externals,
+    // We only externalize things that physically cannot be bundled
+    external: externalNodeModules,
     logLevel: "info",
+    mainFields: ["module", "main"],
   });
 
-  console.log("\n✅ Build Successful!");
-  console.log("Structure Created:");
-  console.log("- dist/index.cjs (Server)");
-  console.log("- dist/public/   (Frontend Assets)");
+  console.log("\n✅ Build Completed successfully!");
 }
 
 buildAll().catch((err) => {

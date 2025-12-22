@@ -26,6 +26,7 @@ export default defineConfig({
     alias: {
       "@": path.resolve(import.meta.dirname, "client", "src"),
       "@shared": path.resolve(import.meta.dirname, "shared"),
+      // Ensure this matches your actual folder name on disk
       "@assets": path.resolve(import.meta.dirname, "attached_assets"),
     },
   },
@@ -34,20 +35,24 @@ export default defineConfig({
   root: path.resolve(import.meta.dirname, "client"),
 
   build: {
-    // This puts the frontend exactly where your Express server looks for it (dist/public)
+    // Better organization for Express static serving
     outDir: path.resolve(import.meta.dirname, "dist/public"),
     emptyOutDir: true,
+    reportCompressedSize: false, // Speeds up build slightly
     rollupOptions: {
-      // Ensure index.html is the entry point
       input: path.resolve(import.meta.dirname, "client", "index.html"),
       output: {
+        // Keeps the filenames clean
+        chunkFileNames: "assets/js/[name]-[hash].js",
+        entryFileNames: "assets/js/[name]-[hash].js",
+        assetFileNames: "assets/[ext]/[name]-[hash].[ext]",
         manualChunks: {
-          vendor: ["react", "react-dom", "react-leaflet", "leaflet"],
+          vendor: ["react", "react-dom"],
+          maps: ["react-leaflet", "leaflet"], // Separate map logic
         },
       },
     },
   },
-
   server: {
     host: "0.0.0.0",
     port: 3000,
