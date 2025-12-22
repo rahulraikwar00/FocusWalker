@@ -1,20 +1,13 @@
 {
   "version": 2,
-  "builds": [
+  "rewrites": [
     {
-      "src": "dist/index.cjs",
-      "use": "@vercel/node",
-      "config": { "includeFiles": ["dist/public/**"] }
-    }
-  ],
-  "routes": [
-    {
-      "src": "/assets/(.*)",
-      "dest": "dist/public/assets/$1"
+      "source": "/api/(.*)",
+      "destination": "index.cjs"
     },
     {
-      "src": "/(.*)",
-      "dest": "dist/index.cjs"
+      "source": "/((?!assets/|icons/|favicon.ico|sw.js|manifest.json).*)",
+      "destination": "index.cjs"
     }
   ]
 }
