@@ -35,20 +35,33 @@ export default defineConfig({
   root: path.resolve(import.meta.dirname, "client"),
 
   build: {
-    // Better organization for Express static serving
     outDir: path.resolve(import.meta.dirname, "dist/public"),
     emptyOutDir: false,
-    reportCompressedSize: false, // Speeds up build slightly
+    reportCompressedSize: false,
+    // Optimization: CSS code splitting ensures HUD styles load fast
+    cssCodeSplit: true,
     rollupOptions: {
       input: path.resolve(import.meta.dirname, "client", "index.html"),
       output: {
-        // Keeps the filenames clean
         chunkFileNames: "assets/js/[name]-[hash].js",
         entryFileNames: "assets/js/[name]-[hash].js",
         assetFileNames: "assets/[ext]/[name]-[hash].[ext]",
-        manualChunks: {
-          vendor: ["react", "react-dom"],
-          maps: ["react-leaflet", "leaflet"], // Separate map logic
+        manualChunks(id) {
+          // Put ALL react-related core libraries in vendor
+          if (
+            id.includes("node_modules/react/") ||
+            id.includes("node_modules/react-dom/") ||
+            id.includes("node_modules/react-leaflet/") ||
+            id.includes("node_modules/leaflet/") ||
+            id.includes("node_modules/@react-leaflet/")
+          ) {
+            return "core-engine";
+          }
+
+          // Keep turf separate as it is pure math and doesn't use React context
+          if (id.includes("@turf")) {
+            return "spatial-math";
+          }
         },
       },
     },

@@ -64,9 +64,7 @@ if (process.env.NODE_ENV === "production") {
     })
   );
 
-  // Handle SPA routing: serve index.html for any unknown non-API route
   app.get("*", (req, res) => {
-    // If the request is for an API that doesn't exist, don't serve index.html
     if (req.path.startsWith("/api")) {
       return res.status(404).json({ message: "API endpoint not found" });
     }
