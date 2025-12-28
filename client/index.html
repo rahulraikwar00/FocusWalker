@@ -6,18 +6,58 @@
       name="viewport"
       content="width=device-width, initial-scale=1.0, maximum-scale=1, user-scalable=no, viewport-fit=cover"
     />
-    <meta name="theme-color" content="#0A0A0A" />
     <title>focusWalker</title>
 
-    <link rel="preconnect" href="https://basemaps.cartocdn.com" />
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-    <link rel="preconnect" href="https://basemaps.cartocdn.com" />
+    <meta name="theme-color" content="#0A0A0A" />
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta
+      name="apple-mobile-web-app-status-bar-style"
+      content="black-translucent"
+    />
+    <meta name="apple-mobile-web-app-title" content="focusWalker" />
+
+    <link rel="manifest" href="/manifest.json" />
     <link
-      rel="preconnect"
-      href="https://{s}.basemaps.cartocdn.com"
-      crossorigin
+      rel="icon"
+      type="image/png"
+      sizes="196x196"
+      href="/icons/favicon-196.png"
+    />
+    <link rel="apple-touch-icon" href="/icons/apple-icon-180.png" />
+
+    <link
+      rel="apple-touch-startup-image"
+      href="/icons/apple-splash-2048-2732.jpg"
+      media="(device-width: 1024px) and (device-height: 1366px) and (-webkit-device-pixel-ratio: 2) and (orientation: portrait)"
+    />
+    <link
+      rel="apple-touch-startup-image"
+      href="/icons/apple-splash-1290-2796.jpg"
+      media="(device-width: 430px) and (device-height: 932px) and (-webkit-device-pixel-ratio: 3) and (orientation: portrait)"
+    />
+    <link
+      rel="apple-touch-startup-image"
+      href="/icons/apple-splash-1179-2556.jpg"
+      media="(device-width: 393px) and (device-height: 852px) and (-webkit-device-pixel-ratio: 3) and (orientation: portrait)"
+    />
+    <link
+      rel="apple-touch-startup-image"
+      href="/icons/apple-splash-1170-2532.jpg"
+      media="(device-width: 390px) and (device-height: 844px) and (-webkit-device-pixel-ratio: 3) and (orientation: portrait)"
     />
 
+    <link
+      rel="preload"
+      href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"
+      as="style"
+    />
+    <link
+      rel="stylesheet"
+      href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"
+    />
+    <link rel="preconnect" href="https://a.basemaps.cartocdn.com" />
+    <link rel="preconnect" href="https://b.basemaps.cartocdn.com" />
+    <link rel="preconnect" href="https://c.basemaps.cartocdn.com" />
     <link rel="modulepreload" href="/src/main.tsx" />
 
     <style>
@@ -35,12 +75,42 @@
         font-family: system-ui, -apple-system, sans-serif;
       }
 
-      /* Tactical Skeleton Overlay */
-      #shell {
+      #loading-overlay {
         position: fixed;
         inset: 0;
+        background: var(--bg);
+        z-index: 9999;
+        transition: opacity 0.5s ease-out;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+      }
+
+      .splash-logo {
+        text-align: center;
+        margin-bottom: 40px;
+      }
+      /* The logo image from the generator */
+      .splash-img {
+        width: 80px;
+        height: 80px;
+        margin-bottom: 15px;
+        filter: drop-shadow(0 0 10px rgba(191, 255, 4, 0.3));
+      }
+      .logo-text {
+        color: var(--neon);
+        font-size: 28px;
+        font-weight: 900;
+        letter-spacing: -1.5px;
+        text-transform: uppercase;
+        font-style: italic;
+      }
+
+      #shell {
+        position: absolute;
+        inset: 0;
         pointer-events: none;
-        z-index: 10;
         display: flex;
         flex-direction: column;
         justify-content: space-between;
@@ -69,14 +139,12 @@
       @keyframes pulse {
         0%,
         100% {
-          opacity: 0.5;
+          opacity: 0.3;
         }
         50% {
-          opacity: 0.8;
+          opacity: 0.6;
         }
       }
-
-      /* Scanning Loader */
       .scanner {
         position: absolute;
         top: 0;
@@ -100,42 +168,33 @@
         }
       }
     </style>
-
-    <link
-      rel="stylesheet"
-      href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"
-      media="print"
-      onload="this.media='all'"
-    />
-    <link
-      rel="stylesheet"
-      href="https://fonts.googleapis.com/css2?family=Inter:wght@800&display=swap"
-      media="print"
-      onload="this.media='all'"
-    />
   </head>
   <body>
     <div id="loading-overlay">
       <div class="scanner"></div>
+      <div class="splash-logo">
+        <img src="/icons/apple-icon-180.png" class="splash-img" alt="logo" />
+        <div class="logo-text">focusWalker</div>
+      </div>
       <div id="shell">
         <div class="top-hud"></div>
         <div class="bottom-card"></div>
       </div>
     </div>
-
     <div id="root"></div>
 
     <script type="module" src="/src/main.tsx"></script>
-
     <script>
-      // Smoothly hide the shell once the app is ready
       window.addEventListener("load", () => {
         const overlay = document.getElementById("loading-overlay");
         if (overlay) {
           overlay.style.opacity = "0";
-          setTimeout(() => overlay.remove(), 400);
+          setTimeout(() => overlay.remove(), 500);
         }
       });
+      if ("serviceWorker" in navigator) {
+        navigator.serviceWorker.register("/sw.js").catch(() => {});
+      }
     </script>
   </body>
 </html>
