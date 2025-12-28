@@ -6,28 +6,46 @@
       name="viewport"
       content="width=device-width, initial-scale=1.0, maximum-scale=1, user-scalable=no, viewport-fit=cover"
     />
+    <title>focusWalker</title>
+
     <meta name="theme-color" content="#0A0A0A" />
     <meta name="apple-mobile-web-app-capable" content="yes" />
     <meta
       name="apple-mobile-web-app-status-bar-style"
       content="black-translucent"
     />
-    <title>focusWalker</title>
+    <meta name="apple-mobile-web-app-title" content="focusWalker" />
 
     <link rel="manifest" href="/manifest.json" />
-    <link rel="apple-touch-icon" href="/icon-192.png" />
-    <link rel="icon" type="image/png" href="/favicon.ico" />
+    <link
+      rel="icon"
+      type="image/png"
+      sizes="196x196"
+      href="/icons/favicon-196.png"
+    />
+    <link rel="apple-touch-icon" href="/icons/apple-icon-180.png" />
 
     <link
       rel="apple-touch-startup-image"
-      href="/splash/apple-splash-2048-2732.png"
+      href="/icons/apple-splash-2048-2732.jpg"
       media="(device-width: 1024px) and (device-height: 1366px) and (-webkit-device-pixel-ratio: 2) and (orientation: portrait)"
     />
     <link
       rel="apple-touch-startup-image"
-      href="/splash/apple-splash-1170-2532.png"
+      href="/icons/apple-splash-1290-2796.jpg"
+      media="(device-width: 430px) and (device-height: 932px) and (-webkit-device-pixel-ratio: 3) and (orientation: portrait)"
+    />
+    <link
+      rel="apple-touch-startup-image"
+      href="/icons/apple-splash-1179-2556.jpg"
+      media="(device-width: 393px) and (device-height: 852px) and (-webkit-device-pixel-ratio: 3) and (orientation: portrait)"
+    />
+    <link
+      rel="apple-touch-startup-image"
+      href="/icons/apple-splash-1170-2532.jpg"
       media="(device-width: 390px) and (device-height: 844px) and (-webkit-device-pixel-ratio: 3) and (orientation: portrait)"
     />
+
     <link
       rel="preload"
       href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"
@@ -37,16 +55,10 @@
       rel="stylesheet"
       href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"
     />
-    <link
-      rel="apple-touch-startup-image"
-      href="/splash/apple-splash-1284-2778.png"
-      media="(device-width: 428px) and (device-height: 926px) and (-webkit-device-pixel-ratio: 3) and (orientation: portrait)"
-    />
-
-    <link rel="modulepreload" href="/src/main.tsx" />
     <link rel="preconnect" href="https://a.basemaps.cartocdn.com" />
     <link rel="preconnect" href="https://b.basemaps.cartocdn.com" />
     <link rel="preconnect" href="https://c.basemaps.cartocdn.com" />
+    <link rel="modulepreload" href="/src/main.tsx" />
 
     <style>
       :root {
@@ -63,7 +75,6 @@
         font-family: system-ui, -apple-system, sans-serif;
       }
 
-      /* Initial Loading Overlay */
       #loading-overlay {
         position: fixed;
         inset: 0;
@@ -76,10 +87,16 @@
         justify-content: center;
       }
 
-      /* Logo Branding */
       .splash-logo {
         text-align: center;
         margin-bottom: 40px;
+      }
+      /* The logo image from the generator */
+      .splash-img {
+        width: 80px;
+        height: 80px;
+        margin-bottom: 15px;
+        filter: drop-shadow(0 0 10px rgba(191, 255, 4, 0.3));
       }
       .logo-text {
         color: var(--neon);
@@ -90,7 +107,6 @@
         font-style: italic;
       }
 
-      /* Tactical Shell (Visible during JS load) */
       #shell {
         position: absolute;
         inset: 0;
@@ -129,8 +145,6 @@
           opacity: 0.6;
         }
       }
-
-      /* Scanning Line */
       .scanner {
         position: absolute;
         top: 0;
@@ -158,32 +172,18 @@
   <body>
     <div id="loading-overlay">
       <div class="scanner"></div>
-
       <div class="splash-logo">
+        <img src="/icons/apple-icon-180.png" class="splash-img" alt="logo" />
         <div class="logo-text">focusWalker</div>
-        <div
-          style="
-            width: 40px;
-            height: 2px;
-            background: var(--neon);
-            margin: 8px auto;
-            opacity: 0.5;
-          "
-        ></div>
       </div>
-
       <div id="shell">
         <div class="top-hud"></div>
         <div class="bottom-card"></div>
       </div>
     </div>
-
     <div id="root"></div>
-
     <script type="module" src="/src/main.tsx"></script>
-
     <script>
-      // 1. Hide overlay when React is ready
       window.addEventListener("load", () => {
         const overlay = document.getElementById("loading-overlay");
         if (overlay) {
@@ -191,8 +191,6 @@
           setTimeout(() => overlay.remove(), 500);
         }
       });
-
-      // 2. Register Service Worker for Offline/Splash support
       if ("serviceWorker" in navigator) {
         navigator.serviceWorker.register("/sw.js").catch(() => {});
       }

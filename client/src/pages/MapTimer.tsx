@@ -74,7 +74,7 @@ function StatItem({
 
 // --- Main Logic Hook (Anti-Crash Version) ---
 
-export function useRouteLogic(speedKmh: number) {
+export function useRouteLogic(speedKmh: number, isWakeLockEnabled: boolean) {
   const [points, setPoints] = useState<{
     start: L.LatLng | null;
     end: L.LatLng | null;
@@ -91,12 +91,56 @@ export function useRouteLogic(speedKmh: number) {
   });
   const [isLocked, setIsLocked] = useState(true); // Default to locked
 
+  const wakeLockResource = useRef<WakeLockSentinel | null>(null);
   const animRef = useRef<number>(0);
   const lastTimeRef = useRef<number>(0);
   const progressRef = useRef(0);
 
   // Speed converted to meters per second
   const speedMs = (speedKmh * 1000) / 3600;
+
+  useEffect(() => {
+    const requestLock = async () => {
+      // ADDED: Check if user actually wants it enabled in settings
+      if ("wakeLock" in navigator && isActive && isWakeLockEnabled) {
+        try {
+          wakeLockResource.current = await navigator.wakeLock.request("screen");
+          console.log("HUD: Wake Lock Active 🟢");
+        } catch (err) {
+          console.error(err);
+        }
+      }
+    };
+
+    const releaseLock = async () => {
+      if (wakeLockResource.current) {
+        await wakeLockResource.current.release();
+        wakeLockResource.current = null;
+      }
+    };
+
+    if (isActive && isWakeLockEnabled) {
+      requestLock();
+    } else {
+      releaseLock();
+    }
+
+    const handleVisibilityChange = () => {
+      if (
+        isActive &&
+        isWakeLockEnabled &&
+        document.visibilityState === "visible"
+      ) {
+        requestLock();
+      }
+    };
+
+    document.addEventListener("visibilitychange", handleVisibilityChange);
+    return () => {
+      releaseLock();
+      document.removeEventListener("visibilitychange", handleVisibilityChange);
+    };
+  }, [isActive, isWakeLockEnabled]);
 
   const fetchRoute = useCallback(
     async (start: L.LatLng, end: L.LatLng) => {
@@ -256,6 +300,8 @@ export default function FocusTacticalMap() {
   const [speedKmh, setSpeedKmh] = useState(WALKING_SPEED_KMH);
   const [searchQuery, setSearchQuery] = useState("");
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
+  const [isHapticsEnabled, setIsHapticsEnabled] = useState(true); // Default to on
+  const [isWakeLockEnabled, setIsWakeLockEnabled] = useState(true);
 
   const {
     points,
@@ -271,12 +317,39 @@ export default function FocusTacticalMap() {
     reset,
     setIsLocked,
     isLocked,
-  } = useRouteLogic(speedKmh);
+  } = useRouteLogic(speedKmh, isWakeLockEnabled);
+
+  const handleStartMission = async () => {
+    // 1. Trigger haptic feedback so the user FEELS the start
+    if (isHapticsEnabled) {
+      triggerTactilePulse("double");
+    }
+
+    // 2. Engaging Screen Lock
+    if (isWakeLockEnabled) {
+      await toggleStayAwake(true);
+    }
+
+    // 3. Update your app state
+    setIsActive(true);
+  };
+
+  const handleStopMission = async () => {
+    // 1. Release the screen lock to save battery
+    await toggleStayAwake(false);
+
+    // 2. Final pulse to signal mission end
+    if (isHapticsEnabled) {
+      triggerTactilePulse("short");
+    }
+
+    setIsActive(false);
+  };
 
   return (
     <div className="relative h-dvh w-full overflow-hidden bg-[#0A0A0A] font-sans text-white">
       {/* 1. TOP HUD */}
-      <div className="absolute top-[env(safe-area-inset-top,1.5rem)] left-0 w-full z-1000 px-6 flex justify-between pointer-events-none">
+      <div className="absolute mt-3 ml-3 top-[env(safe-area-inset-top,1.5rem)] left-0 w-full z-1000 px-6 flex justify-between pointer-events-none">
         <motion.div className="flex items-center gap-4 bg-[#141414]/90 backdrop-blur-md border border-white/10 p-2 pr-6 rounded-2xl pointer-events-auto">
           <div className="w-12 h-12 bg-[#BFFF04] rounded-xl flex items-center justify-center">
             <User className="text-black w-6 h-6" />
@@ -308,7 +381,7 @@ export default function FocusTacticalMap() {
         </div>
       </div>
       {/* RECENTER / LOCK TOGGLE */}
-      <div className="absolute right-6 top-1/2 -translate-y-1/2 z-[1000] flex flex-col gap-4">
+      <div className="absolute right-6 top-1/2 -translate-y-1/2 z-1000 flex flex-col gap-4">
         <Button
           onClick={() => setIsLocked(!isLocked)}
           className={`w-14 h-14 rounded-2xl border transition-all shadow-xl ${
@@ -438,7 +511,14 @@ export default function FocusTacticalMap() {
 
           <div className="p-4 flex gap-3">
             <Button
-              onClick={() => setIsActive(!isActive)}
+              onClick={() => {
+                setIsActive(!isActive);
+                if (isActive) {
+                  handleStopMission();
+                } else {
+                  handleStartMission();
+                }
+              }}
               disabled={!route}
               className={`flex-4 h-14 rounded-2xl font-black text-xs tracking-widest ${
                 isActive ? "bg-white text-black" : "bg-[#BFFF04] text-black"
@@ -461,45 +541,196 @@ export default function FocusTacticalMap() {
         onClose={() => setIsSettingsOpen(false)}
         speedKmh={speedKmh}
         setSpeedKmh={setSpeedKmh}
+        isWakeLockEnabled={isWakeLockEnabled}
+        setIsWakeLockEnabled={setIsWakeLockEnabled}
+        isHapticsEnabled={isHapticsEnabled}
+        setIsHapticsEnabled={setIsHapticsEnabled}
       />
     </div>
   );
 }
 
 // Settings Overlay (Simplified to prevent React tree errors)
-const SettingsOverlay = ({ isOpen, onClose, speedKmh, setSpeedKmh }: any) => {
+import { Monitor, Zap } from "lucide-react";
+
+const SettingsOverlay = ({
+  isOpen,
+  onClose,
+  speedKmh,
+  setSpeedKmh,
+  isWakeLockEnabled,
+  setIsWakeLockEnabled,
+  isHapticsEnabled,
+  setIsHapticsEnabled,
+}: any) => {
   if (!isOpen) return null;
+
   return (
-    <div className="fixed inset-0 z-5000 bg-black/80 backdrop-blur-sm flex items-end sm:items-center justify-center">
-      <div className="bg-[#141414] w-full max-w-lg rounded-t-4xl sm:rounded-4xl p-6 border-t border-white/10">
-        <div className="flex justify-between items-center mb-8">
-          <h2 className="text-xl font-black italic">SYSTEM CONFIG</h2>
-          <button onClick={onClose}>
-            <X />
+    <div className="fixed inset-0 z-5000 bg-black/90 backdrop-blur-md flex items-end sm:items-center justify-center p-4">
+      <div className="bg-[#141414] w-full max-w-lg rounded-3xl sm:rounded-4xl p-8 border border-white/5 shadow-2xl">
+        {/* Header */}
+        <div className="flex justify-between items-center mb-10">
+          <div className="flex flex-col">
+            <h2 className="text-2xl font-black italic tracking-tighter text-white">
+              SYSTEM CONFIG
+            </h2>
+            <div className="h-1 w-12 bg-[#BFFF04] mt-1"></div>
+          </div>
+          <button
+            onClick={onClose}
+            className="p-2 hover:bg-white/5 rounded-full transition-colors"
+          >
+            <X className="text-white/50" />
           </button>
         </div>
-        <div className="space-y-6">
-          <div className="flex justify-between font-bold text-sm">
-            <span>VELOCITY</span>
-            <span className="text-[#BFFF04]">{speedKmh} KM/H</span>
+
+        <div className="space-y-10">
+          {/* Velocity Control */}
+          <div className="space-y-4">
+            <div className="flex justify-between font-black text-xs tracking-widest text-white/40">
+              <span>WALKING VELOCITY</span>
+              <span className="text-[#BFFF04] text-sm">{speedKmh} KM/H</span>
+            </div>
+            <input
+              type="range"
+              min="2"
+              max="20"
+              step="1"
+              value={speedKmh}
+              onChange={(e) => setSpeedKmh(Number(e.target.value))}
+              className="w-full h-2 bg-white/10 rounded-lg appearance-none cursor-pointer accent-[#BFFF04]"
+            />
           </div>
-          <input
-            type="range"
-            min="2"
-            max="20"
-            step="1"
-            value={speedKmh}
-            onChange={(e) => setSpeedKmh(Number(e.target.value))}
-            className="w-full accent-[#BFFF04]"
-          />
-          <Button
+
+          {/* System Toggles */}
+          <div className="grid grid-cols-1 gap-4">
+            {/* Wake Lock Toggle */}
+            <button
+              onClick={() => setIsWakeLockEnabled(!isWakeLockEnabled)}
+              className={`flex items-center justify-between p-4 rounded-2xl border transition-all ${
+                isWakeLockEnabled
+                  ? "border-[#BFFF04]/50 bg-[#BFFF04]/5"
+                  : "border-white/5 bg-white/5"
+              }`}
+            >
+              <div className="flex items-center gap-4">
+                <Monitor
+                  size={20}
+                  className={
+                    isWakeLockEnabled ? "text-[#BFFF04]" : "text-white/40"
+                  }
+                />
+                <div className="text-left">
+                  <p className="text-sm font-bold text-white">STAY AWAKE</p>
+                  <p className="text-[10px] text-white/40 uppercase">
+                    Prevent screen timeout
+                  </p>
+                </div>
+              </div>
+              <div
+                className={`w-10 h-5 rounded-full relative transition-colors ${
+                  isWakeLockEnabled ? "bg-[#BFFF04]" : "bg-white/10"
+                }`}
+              >
+                <div
+                  className={`absolute top-1 w-3 h-3 rounded-full bg-black transition-all ${
+                    isWakeLockEnabled ? "left-6" : "left-1"
+                  }`}
+                />
+              </div>
+            </button>
+
+            {/* Haptics Toggle */}
+            <button
+              onClick={() => setIsHapticsEnabled(!isHapticsEnabled)}
+              className={`flex items-center justify-between p-4 rounded-2xl border transition-all ${
+                isHapticsEnabled
+                  ? "border-[#BFFF04]/50 bg-[#BFFF04]/5"
+                  : "border-white/5 bg-white/5"
+              }`}
+            >
+              <div className="flex items-center gap-4">
+                <Zap
+                  size={20}
+                  className={
+                    isHapticsEnabled ? "text-[#BFFF04]" : "text-white/40"
+                  }
+                />
+                <div className="text-left">
+                  <p className="text-sm font-bold text-white">
+                    TACTILE FEEDBACK
+                  </p>
+                  <p className="text-[10px] text-white/40 uppercase">
+                    Vibrate on milestones
+                  </p>
+                </div>
+              </div>
+              <div
+                className={`w-10 h-5 rounded-full relative transition-colors ${
+                  isHapticsEnabled ? "bg-[#BFFF04]" : "bg-white/10"
+                }`}
+              >
+                <div
+                  className={`absolute top-1 w-3 h-3 rounded-full bg-black transition-all ${
+                    isHapticsEnabled ? "left-6" : "left-1"
+                  }`}
+                />
+              </div>
+            </button>
+          </div>
+
+          <button
             onClick={onClose}
-            className="w-full h-14 bg-[#BFFF04] text-black font-black rounded-2xl"
+            className="w-full py-5 bg-[#BFFF04] text-black font-black rounded-2xl hover:scale-[1.02] active:scale-[0.98] transition-transform shadow-[0_10px_20px_rgba(191,255,4,0.2)]"
           >
-            SAVE
-          </Button>
+            APPLY CHANGES
+          </button>
         </div>
       </div>
     </div>
   );
+};
+
+// Define this outside your component or in a Ref to persist it
+let wakeLockSentinel: WakeLockSentinel | null = null;
+
+const toggleStayAwake = async (enable: boolean) => {
+  if (!("wakeLock" in navigator)) {
+    console.warn("System: Wake Lock not supported on this browser.");
+    return;
+  }
+
+  try {
+    if (enable) {
+      wakeLockSentinel = await navigator.wakeLock.request("screen");
+      console.log("System: Screen Lock Engaged 🟢");
+    } else {
+      if (wakeLockSentinel) {
+        await wakeLockSentinel.release();
+        wakeLockSentinel = null;
+        console.log("System: Screen Lock Released 🔴");
+      }
+    }
+  } catch (err) {
+    console.error(`System: Wake Lock Error - ${err}`);
+  }
+};
+
+const triggerTactilePulse = (type: "short" | "double" | "error" = "short") => {
+  if (!("vibrate" in navigator)) return;
+
+  switch (type) {
+    case "short":
+      // A single sharp tactical click
+      navigator.vibrate(40);
+      break;
+    case "double":
+      // Useful for "Mission Started" or "Step Reached"
+      navigator.vibrate([50, 30, 50]);
+      break;
+    case "error":
+      // A long pulse for warnings
+      navigator.vibrate(200);
+      break;
+  }
 };
