@@ -687,13 +687,6 @@ const SettingsOverlay = ({
           </button>
         </div>
       </div>
-
-      <SettingsOverlay
-        isOpen={isSettingsOpen}
-        onClose={() => setIsSettingsOpen(false)}
-        speedKmh={speedKmh}
-        setSpeedKmh={setSpeedKmh}
-      />
     </div>
   );
 };
