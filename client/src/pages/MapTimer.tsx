@@ -470,8 +470,7 @@ export default function FocusTacticalMap() {
                   {isActive ? "Live Mission" : "Standby"}
                 </p>
                 <h2 className="text-4xl font-black tracking-tighter tabular-nums">
-                  {Math.floor((metrics.timeLeft || 0) / 60)}:
-                  {(metrics.timeLeft % 60).toString().padStart(2, "0")}
+                  <TimeFormat seconds={metrics.timeLeft} />
                 </h2>
               </div>
               <div className="text-right">
@@ -549,6 +548,22 @@ export default function FocusTacticalMap() {
     </div>
   );
 }
+
+const TimeFormat = ({ seconds }: { seconds: number }) => {
+  const days = Math.floor(seconds / 86400);
+  const hrs = Math.floor((seconds % 86400) / 3600);
+  const mins = Math.floor((seconds % 3600) / 60);
+  const secs = Math.floor(seconds % 60);
+
+  return (
+    <span className="tabular-nums">
+      {days > 0 && `${days}d `}
+      {(days > 0 || hrs > 0) && `${hrs}h `}
+      {(hrs > 0 || mins > 0) && `${mins}m `}
+      {secs}s
+    </span>
+  );
+};
 
 // Settings Overlay (Simplified to prevent React tree errors)
 import { Monitor, Zap } from "lucide-react";
