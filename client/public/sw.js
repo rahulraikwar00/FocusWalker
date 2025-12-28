@@ -1,65 +1,57 @@
-const CACHE_NAME = "focus-walker-v2"; // Incremented version
+const CACHE_NAME = "focus-walker-v2";
+const TILE_CACHE = "map-tiles";
 const STATIC_ASSETS = [
   "/",
   "/index.html",
   "/manifest.json",
   "/icon.png",
-  "https://unpkg.com/leaflet@1.9.4/dist/leaflet.css", // Cache the Leaflet CSS!
+  "https://unpkg.com/leaflet@1.9.4/dist/leaflet.css",
 ];
 
-// 1. Install - Cache core UI
 self.addEventListener("install", (event) => {
   event.waitUntil(
-    caches.open(CACHE_NAME).then((cache) => {
-      return cache.addAll(STATIC_ASSETS);
-    })
+    caches.open(CACHE_NAME).then((cache) => cache.addAll(STATIC_ASSETS))
   );
   self.skipWaiting();
 });
 
-// 2. Activate - Cleanup old caches
 self.addEventListener("activate", (event) => {
   event.waitUntil(
-    caches.keys().then((keys) => {
-      return Promise.all(
-        keys
-          .filter((key) => key !== CACHE_NAME)
-          .map((key) => caches.delete(key))
-      );
-    })
+    caches
+      .keys()
+      .then((keys) =>
+        Promise.all(
+          keys
+            .filter((k) => k !== CACHE_NAME && k !== TILE_CACHE)
+            .map((k) => caches.delete(k))
+        )
+      )
   );
 });
 
-// 3. Fetch - Smart Caching
 self.addEventListener("fetch", (event) => {
   const { request } = event;
   const url = new URL(request.url);
 
-  // Special logic for Map Tiles (CartoDB or OpenStreetMap)
-  if (
-    url.hostname.includes("basemaps.cartocdn.com") ||
-    url.hostname.includes("tile.openstreetmap.org")
-  ) {
+  // 1. Map Tiles: Cache-First (Save data and work offline)
+  if (url.hostname.includes("basemaps.cartocdn.com")) {
     event.respondWith(
-      caches.open("map-tiles").then((cache) => {
-        return cache.match(request).then((response) => {
-          // Return from cache OR fetch and save to cache
-          return (
-            response ||
-            fetch(request).then((networkResponse) => {
-              cache.put(request, networkResponse.clone());
-              return networkResponse;
-            })
-          );
+      caches.match(request).then((cached) => {
+        // If tile is in cache, return it IMMEDIATELY
+        if (cached) return cached;
+
+        // If not, get it from network and save it
+        return fetch(request).then((response) => {
+          const copy = response.clone();
+          caches.open("map-tiles").then((cache) => cache.put(request, copy));
+          return response;
         });
       })
     );
-  } else {
-    // Default strategy for UI: Check cache first, then network
-    event.respondWith(
-      caches.match(request).then((response) => {
-        return response || fetch(request);
-      })
-    );
+    return;
   }
+
+  // 2. Vite Assets (JS/CSS with hashes): Network-First, then Cache
+  // This ensures that when you update your app, users get the NEW version
+  event.respondWith(fetch(request).catch(() => caches.match(request)));
 });

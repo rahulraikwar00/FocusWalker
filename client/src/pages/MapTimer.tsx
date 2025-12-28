@@ -298,9 +298,12 @@ export default function FocusTacticalMap() {
         <div className="flex flex-col gap-2 pointer-events-auto">
           <Button
             onClick={() => setIsSettingsOpen(true)}
-            className="w-12 h-12 rounded-xl bg-[#141414] border border-white/10 p-0"
+            className="group w-12 h-12 rounded-xl bg-[#141414] border border-white/10 p-0 transition-all duration-300 hover:border-[#BFFF04]/50 hover:bg-[#1a1a1a] hover:shadow-[0_0_15px_rgba(191,255,4,0.2)]"
           >
-            <Settings size={20} />
+            <Settings
+              size={20}
+              className="text-white/70 transition-colors duration-300 group-hover:text-[#BFFF04]"
+            />
           </Button>
         </div>
       </div>
