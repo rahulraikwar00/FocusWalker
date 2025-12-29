@@ -13,7 +13,8 @@
     --accent-primary: #658c00;
     --accent-glow: rgba(101, 140, 0, 0.15);
     --bg-page: #ffffff;
-    --map-tiles-filter: brightness(0.95) contrast(1.1) saturate(1.3);
+    /* --map-tiles-filter: brightness(0.95) contrast(1.1) saturate(1.3); */
+    --map-tiles-filter: saturate(1.2) contrast(1.05);
 
     /* New: Soft organic shadows for Light Mode */
     --shadow-tactical: 0 10px 30px -10px rgba(0, 0, 0, 0.1);
@@ -28,7 +29,9 @@
     --accent-primary: #bfff04;
     --accent-glow: rgba(191, 255, 4, 0.35);
     --bg-page: #020617;
-    --map-tiles-filter: brightness(1.1) contrast(0.8) saturate(1.2);
+    /* --map-tiles-filter: brightness(1.1) contrast(0.8) saturate(1.2); */
+    --map-tiles-filter: brightness(1.2) contrast(1.4) saturate(1.2)
+      hue-rotate(-5deg);
 
     /* New: Glowing neon shadows for Dark Mode */
     --shadow-tactical: 0 0 20px var(--accent-glow);

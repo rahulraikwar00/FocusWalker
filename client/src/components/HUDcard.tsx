@@ -166,13 +166,19 @@ export const HUDCard = ({
                     isActive ? handleStopMission() : handleStartMission()
                   }
                   disabled={!route}
-                  className={`flex-3 h-full rounded-3xl font-black text-xs tracking-[0.2em] transition-all border-2 ${
+                  className={`flex-3 h-full rounded-2xl font-black text-[10px] tracking-[0.3em] uppercase transition-all duration-300 border-2 ${
                     isActive
-                      ? "bg-transparent border-(--text-primary) text-(--text-primary)"
-                      : "bg-(--accent-primary) border-(--accent-primary) text-(--bg-page) shadow-[0_0_20px_var(--accent-glow)]"
+                      ? "bg-transparent border-white/10 text-white/20 hover:border-red-500/50 hover:text-red-500 shadow-none"
+                      : /* ↑ Feels "Weak": Dim, low contrast, turns red only on hover as a warning */
+                        "bg-(--accent-primary) border-(--accent-primary) text-(--bg-page) shadow-[0_0_25px_var(--accent-glow)] active:scale-95"
+                    /* ↑ Feels "Strong": Bright, solid, glowing, and has physical feedback (scale) */
                   }`}
                 >
-                  {isActive ? "ABORT MISSION" : "EXECUTE FOCUS"}
+                  {isActive ? (
+                    <span className="flex items-center gap-2">GIVE UP</span>
+                  ) : (
+                    <span className="flex items-center gap-2">START FOCUS</span>
+                  )}
                 </Button>
 
                 {/* RE-CENTER / LOCK - High Frequency (Safe) */}
@@ -216,7 +222,7 @@ export const HUDCard = ({
                         initial={{ y: 20 }}
                         animate={{ y: 0 }}
                         exit={{ y: -20 }}
-                        className="text-[8px] font-black leading-none"
+                        className="text-[10px] font-black leading-none"
                       >
                         SURE?
                       </motion.span>
