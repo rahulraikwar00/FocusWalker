@@ -63,7 +63,7 @@ export const HUDCard = ({
         {/* --- TACTICAL HANDLE --- */}
         <button
           onClick={() => setIsCollapsed(!isCollapsed)}
-          className="w-full flex justify-center pt-3 pb-1 group"
+          className="w-full flex justify-center p-3 group"
         >
           <div className="w-12 h-1 bg-(--text-secondary) opacity-20 rounded-full group-hover:bg-(--accent-primary) group-hover:opacity-40 transition-all" />
         </button>
@@ -76,30 +76,53 @@ export const HUDCard = ({
               {isActive ? "T-MINUS TO EXTRACTION" : "SYSTEM STANDBY"}
             </span>
 
-            {/* The Hero Element */}
-            <h2
-              className={`font-black tracking-tighter tabular-nums transition-all duration-500 text-(--text-primary) ${
-                isCollapsed ? "text-6xl" : "text-7xl"
+            <div
+              className={`relative z-10 font-black tracking-tighter tabular-nums transition-all duration-500 text-(--text-primary) flex items-center justify-center ${
+                isCollapsed ? "text-5xl" : "text-5xl"
               }`}
             >
+              {/* Subtle Glow Ring behind the text */}
+              <div className="absolute -inset-4 bg-(--accent-primary)/5 blur-3xl rounded-full opacity-50" />
+
               <TimeFormat seconds={metrics.timeLeft} />
-            </h2>
+            </div>
 
             {/* Dynamic Progress Indicator */}
-            <div className="w-full mt-4 relative">
-              <div className="flex justify-between text-[8px] font-bold text-(--text-secondary) uppercase tracking-widest mb-1.5">
-                <span>Alpha</span>
-                <span className="text-(--accent-primary)">
-                  {(progress * 100).toFixed(1)}%
+            {/* 3. TELEMETRY GAUGE */}
+            <div className="w-full mt-3 px-2">
+              <div className="flex justify-between items-end mb-1.5 opacity-60">
+                <span className="text-[8px] font-bold text-(--text-primary) uppercase tracking-widest">
+                  Progress
                 </span>
-                <span>Omega</span>
+                <span className="text-[10px] font-black text-(--accent-primary) tabular-nums">
+                  {(progress * 100).toFixed(0)}%
+                </span>
               </div>
-              <div className="h-1 bg-(--text-secondary) opacity-10 rounded-full overflow-hidden">
-                <motion.div
-                  className="h-full bg-(--accent-primary) shadow-[0_0_15px_var(--accent-glow)]"
-                  animate={{ width: `${progress * 100}%` }}
-                  transition={{ type: "spring", bounce: 0, duration: 1 }}
-                />
+              <div className="relative flex gap-0.5 h-1.5 w-full">
+                {[...Array(20)].map((_, i) => {
+                  const stepThreshold = i / 20;
+                  const isFilled = progress > stepThreshold;
+                  const isCurrent =
+                    progress >= stepThreshold && progress < (i + 1) / 20;
+                  return (
+                    <div
+                      key={i}
+                      className="relative flex-1 h-full bg-(--text-secondary)/10 rounded-[1px]"
+                    >
+                      {isFilled && (
+                        <motion.div
+                          layoutId={`seg-${i}`}
+                          className="absolute inset-0 bg-(--accent-primary) rounded-[1px]"
+                          style={{
+                            boxShadow: isCurrent
+                              ? "0 0 8px var(--accent-glow)"
+                              : "none",
+                          }}
+                        />
+                      )}
+                    </div>
+                  );
+                })}
               </div>
             </div>
           </div>
@@ -266,18 +289,30 @@ const StatItem = ({ label, value, unit, isPrimary = false }: StatItemProps) => {
 };
 
 const TimeFormat = ({ seconds }: { seconds: number }) => {
-  // 1. Logic for extracting time units
-  const hrs = Math.floor(seconds / 3600);
+  // 1. Logic for extracting time units including Days
+  const days = Math.floor(seconds / 86400);
+  const hrs = Math.floor((seconds % 86400) / 3600);
   const mins = Math.floor((seconds % 3600) / 60);
   const secs = Math.floor(seconds % 60);
 
-  // 2. Padding logic to ensure 00:00:00 format
+  // 2. Padding logic
   const pad = (n: number) => n.toString().padStart(2, "0");
 
   return (
     <span className="tabular-nums tracking-tighter font-black flex items-baseline">
-      {/* Hours - Only visible for long-range missions */}
-      {hrs > 0 && (
+      {/* Days Segment - Tactical Highlight */}
+      {days > 0 && (
+        <>
+          <span className="text-(--accent-primary) opacity-90">
+            {pad(days)}
+          </span>
+
+          <span className="text-(--text-secondary) opacity-30 mx-1">:</span>
+        </>
+      )}
+
+      {/* Hours */}
+      {(hrs > 0 || days > 0) && (
         <>
           <span className="text-(--text-primary)">{pad(hrs)}</span>
           <span className="text-(--text-secondary) opacity-30 mx-0.5">:</span>
@@ -290,8 +325,8 @@ const TimeFormat = ({ seconds }: { seconds: number }) => {
       {/* Tactical Separator */}
       <span className="text-(--text-secondary) opacity-30 mx-0.5">:</span>
 
-      {/* Seconds - The "Active" Element */}
-      <span className="text-(--accent-primary) drop-shadow-[0_0_10px_var(--accent-glow)]">
+      {/* Seconds - Active Glow */}
+      <span className="text-(--accent-primary) drop-shadow-[0_0_8px_var(--accent-glow)]">
         {pad(secs)}
       </span>
     </span>

@@ -38,7 +38,7 @@ export const MapView = ({
     <MapContainer
       center={DELHI_DEFAULT}
       zoom={13}
-      className="w-full h-full z-0 bg-(--bg-page)" // Uses theme background
+      className="w-full h-full z-0 " // Uses theme background
       zoomControl={false}
     >
       <TileLayer
@@ -78,8 +78,8 @@ export const MapView = ({
             className: "custom-marker",
             html: `
           <div class="relative flex items-center justify-center">
-            <div class="absolute w-8 h-8 bg-[var(--accent-glow)] rounded-full animate-ping opacity-20"></div>
-            <div class="w-4 h-4 bg-[var(--accent-primary)] rounded-full border-2 border-[var(--bg-page)] shadow-[0_0_15px_var(--accent-glow)]"></div>
+            <div class="absolute w-8 h-8 bg-(--accent-glow) rounded-full animate-ping opacity-20"></div>
+            <div class="w-4 h-4 bg-(--accent-primary) rounded-full border-2 border-(--bg-page) shadow-[0_0_15px_var(--accent-glow)]"></div>
           </div>
         `,
             iconSize: [32, 32],

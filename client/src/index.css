@@ -1,106 +1,74 @@
 @import "tailwindcss";
 @import "tw-animate-css";
 
+/* ... keep your @font-face as is ... */
+
 @layer base {
   :root {
-    /* --- DAY MISSION (High-Contrast Light) --- */
-    --hud-bg: rgba(255, 255, 255, 0.9);
-    --hud-border: rgba(15, 23, 42, 0.12); /* Sharper borders */
-    --text-primary: #0f172a; /* Deep slate */
-    --text-secondary: #475569; /* Darker gray for readability */
-
-    /* Volt green is now "Tactical Forest" in Light Mode for better contrast */
+    /* Day Mission */
+    --hud-bg: rgba(255, 255, 255, 0.85);
+    --hud-border: rgba(15, 23, 42, 0.08);
+    --text-primary: #0f172a;
+    --text-secondary: #475569;
     --accent-primary: #658c00;
-    --accent-glow: rgba(101, 140, 0, 0.1);
+    --accent-glow: rgba(101, 140, 0, 0.15);
+    --bg-page: #ffffff;
+    --map-tiles-filter: brightness(0.95) contrast(1.1) saturate(1.3);
 
-    --bg-page: #ffffff; /* Pure white for a clean look */
-
-    /* Map: Crisp, vivid, and high-detail */
-    --map-tiles-filter: saturate(1.2) contrast(1.05);
+    /* New: Soft organic shadows for Light Mode */
+    --shadow-tactical: 0 10px 30px -10px rgba(0, 0, 0, 0.1);
   }
 
   .dark {
-    /* --- NIGHT OPS (Deep Onyx & Neon) --- */
-    --hud-bg: rgba(10, 10, 12, 0.95); /* Deep slate-black */
-    --hud-border: rgba(191, 255, 4, 0.15); /* Tinted borders */
+    /* Night Ops */
+    --hud-bg: rgba(10, 10, 12, 0.9);
+    --hud-border: rgba(191, 255, 4, 0.12);
     --text-primary: #f8fafc;
     --text-secondary: #94a3b8;
-
-    /* Signature Volt Green (Maximum Vibrancy) */
     --accent-primary: #bfff04;
-    --accent-glow: rgba(191, 255, 4, 0.4);
+    --accent-glow: rgba(191, 255, 4, 0.35);
+    --bg-page: #020617;
+    --map-tiles-filter: brightness(1.1) contrast(0.8) saturate(1.2);
 
-    --bg-page: #020617; /* Very deep navy/black */
-
-    /* Map: High-Contrast Tactical Radar */
-    /* This makes the dark map lines bright and the background deep */
-    --map-tiles-filter: brightness(1.2) contrast(1.4) saturate(1.2)
-      hue-rotate(-5deg);
+    /* New: Glowing neon shadows for Dark Mode */
+    --shadow-tactical: 0 0 20px var(--accent-glow);
   }
 
   body {
     background-color: var(--bg-page);
     color: var(--text-primary);
-    transition: background-color 0.4s cubic-bezier(0.4, 0, 0.2, 1),
-      color 0.4s ease;
-    font-variant-numeric: tabular-nums;
+    font-family: var(--font-sans); /* Uses Playpen Sans Thai */
     -webkit-font-smoothing: antialiased;
-  }
-}
-
-/* --- TACTICAL MAP OPTIMIZATION --- */
-.leaflet-tile-pane {
-  /* This ensures the filter applies correctly to the map container */
-  filter: var(--map-tiles-filter);
-  transition: filter 0.5s ease-in-out;
-}
-.leaflet-container {
-  background-color: #050505 !important;
-}
-/* Map Grid Overlay - Only visible in Dark Mode */
-.dark .leaflet-container::after {
-  content: "";
-  position: absolute;
-  inset: 0;
-  /* More visible grid for that "Radar" feel */
-  background-image: linear-gradient(
-      rgba(191, 255, 4, 0.05) 1px,
-      transparent 1px
-    ),
-    linear-gradient(90deg, rgba(191, 255, 4, 0.05) 1px, transparent 1px);
-  background-size: 50px 50px;
-  pointer-events: none;
-  z-index: 400;
-}
-
-/* Fix for Marker Visibility */
-.leaflet-marker-icon {
-  filter: drop-shadow(0 0 5px rgba(0, 0, 0, 0.2));
-}
-
-.dark .leaflet-marker-icon {
-  filter: drop-shadow(0 0 8px var(--accent-glow));
-}
-
-/* --- THEME UTILITIES --- */
-@layer utilities {
-  .bg-hud {
-    background-color: var(--hud-bg);
-    backdrop-filter: blur(20px) saturate(180%);
-    border: 1px solid var(--hud-border);
-  }
-
-  .text-tactical {
-    color: var(--accent-primary);
-  }
-
-  .glow-tactical {
-    box-shadow: 0 0 25px var(--accent-glow);
+    transition: background 0.4s ease, color 0.4s ease;
   }
 }
 
 @theme {
-  --color-hud-border: var(--hud-border);
+  --font-sans: "Playpen Sans Thai", cursive, system-ui, sans-serif;
   --color-tactical: var(--accent-primary);
-  --color-page-bg: var(--bg-page);
+  --color-hud: var(--hud-bg);
+  --color-hud-border: var(--hud-border);
+}
+
+@layer utilities {
+  .glass-card {
+    background-color: var(--hud-bg);
+    backdrop-filter: blur(16px) saturate(180%);
+    border: 1px solid var(--hud-border);
+    box-shadow: var(--shadow-tactical);
+  }
+
+  .btn-primary {
+    background-color: var(--accent-primary);
+    color: var(--bg-page); /* Contrasts against the green */
+    font-weight: 700;
+    border-radius: 1.25rem;
+    padding: 0.75rem 1.5rem;
+    transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+  }
+
+  .btn-primary:active {
+    transform: scale(0.96);
+    filter: brightness(1.1);
+  }
 }

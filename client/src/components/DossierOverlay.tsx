@@ -1,6 +1,5 @@
 import React, { useState } from "react";
 import { User, Shield, Target, Save } from "lucide-react";
-import { motion } from "framer-motion";
 
 export const PersonnelDossier = ({ initialData, onSave }: any) => {
   const [profile, setProfile] = useState(
@@ -12,59 +11,69 @@ export const PersonnelDossier = ({ initialData, onSave }: any) => {
   );
 
   return (
-    <div className="space-y-6">
-      {/* --- PROFILE AVATAR SECTION --- */}
-      <div className="flex items-center gap-6 mb-8">
-        <div className="relative">
-          <div className="w-20 h-20 rounded-2xl bg-(--accent-primary)/10 border-2 border-(--accent-primary) flex items-center justify-center shadow-[0_0_20px_var(--accent-glow)]">
-            <User size={40} className="text-(--accent-primary)" />
+    <div className="max-w-md mx-auto space-y-5 p-1">
+      {/* --- COMPACT HEADER SECTION --- */}
+      <div className="flex items-center gap-5 pb-4 border-b border-(--hud-border)/30">
+        <div className="relative group">
+          {/* Hexagonal/Clipped shape for the avatar container */}
+          <div className="w-16 h-16 bg-(--accent-primary)/10 border border-(--accent-primary)/40 rounded-tr-2xl rounded-bl-2xl flex items-center justify-center shadow-[inset_0_0_12px_rgba(var(--accent-primary-rgb),0.2)]">
+            <User size={32} className="text-(--accent-primary) opacity-80" />
           </div>
-          <div className="absolute -bottom-2 -right-2 bg-(--bg-page) border border-(--hud-border) p-1.5 rounded-lg">
-            <Shield size={12} className="text-(--accent-primary)" />
+          <div className="absolute -top-1 -left-1">
+            <Shield
+              size={14}
+              className="text-(--accent-primary) fill-(--bg-page)"
+            />
           </div>
         </div>
-        <div>
-          <h3 className="text-xl font-black italic tracking-tighter text-(--text-primary) uppercase">
-            Operative Profile
+
+        <div className="flex flex-col">
+          <h3 className="text-lg font-black italic tracking-tight text-(--text-primary) leading-none uppercase">
+            Operative Dossier
           </h3>
-          <p className="text-[10px] text-(--text-secondary) font-bold tracking-widest uppercase opacity-60">
-            ID: FW-8829-ALPHA
-          </p>
+          <span className="mt-1 text-[9px] font-mono text-(--accent-primary) opacity-70 tracking-tighter">
+            REF: // ALPHA-8829-FW
+          </span>
         </div>
       </div>
 
-      {/* --- INPUT FIELDS --- */}
-      <div className="space-y-4">
-        {/* Callsign Input */}
-        <div className="group">
-          <label className="block text-[9px] font-black text-(--accent-primary) tracking-[0.2em] mb-2 ml-1">
-            CALLSIGN (NAME)
-          </label>
+      {/* --- FORM BODY --- */}
+      <div className="space-y-5">
+        {/* Callsign: Slimmer profile */}
+        <div className="space-y-1.5">
+          <div className="flex justify-between items-end px-1">
+            <label className="text-[10px] font-black text-(--text-secondary) tracking-widest uppercase">
+              Callsign
+            </label>
+            <span className="text-[8px] text-(--accent-primary) font-mono opacity-50">
+              REQUIRED
+            </span>
+          </div>
           <input
             type="text"
             value={profile.callsign}
             onChange={(e) =>
               setProfile({ ...profile, callsign: e.target.value })
             }
-            placeholder="ENTER IDENTITY..."
-            className="w-full bg-(--text-secondary)/5 border border-(--hud-border) rounded-xl px-4 py-3 text-sm font-bold text-(--text-primary) placeholder:text-(--text-secondary)/30 focus:outline-none focus:border-(--accent-primary) focus:ring-1 focus:ring-(--accent-primary) transition-all"
+            placeholder="DESIGNATION..."
+            className="w-full bg-(--text-secondary)/5 border border-(--hud-border) rounded-lg px-3 py-2.5 text-sm font-bold text-(--text-primary) focus:outline-none focus:ring-1 focus:ring-(--accent-primary)/50 transition-all"
           />
         </div>
 
-        {/* Rank/Role Display */}
-        <div className="group">
-          <label className="block text-[9px] font-black text-(--accent-primary) tracking-[0.2em] mb-2 ml-1">
-            ASSIGNED ROLE
+        {/* Roles: Segmented Pill Shape */}
+        <div className="space-y-1.5">
+          <label className="block text-[10px] font-black text-(--text-secondary) tracking-widest uppercase px-1">
+            Specialization
           </label>
-          <div className="flex gap-2">
+          <div className="grid grid-cols-3 gap-1.5 p-1 bg-(--text-secondary)/5 rounded-xl border border-(--hud-border)/50">
             {["Scout", "Hunter", "Ghost"].map((role) => (
               <button
                 key={role}
                 onClick={() => setProfile({ ...profile, rank: role })}
-                className={`flex-1 py-2 rounded-lg text-[10px] font-black tracking-widest uppercase border transition-all ${
+                className={`py-1.5 rounded-lg text-[9px] font-black tracking-widest uppercase transition-all ${
                   profile.rank === role
-                    ? "bg-(--accent-primary) border-(--accent-primary) text-(--bg-page)"
-                    : "bg-transparent border-(--hud-border) text-(--text-secondary)"
+                    ? "bg-(--accent-primary) text-(--bg-page) shadow-lg"
+                    : "text-(--text-secondary) hover:bg-(--text-secondary)/10"
                 }`}
               >
                 {role}
@@ -73,28 +82,30 @@ export const PersonnelDossier = ({ initialData, onSave }: any) => {
           </div>
         </div>
 
-        {/* Bio / Mission Objectives */}
-        <div className="group">
-          <label className="block text-[9px] font-black text-(--accent-primary) tracking-[0.2em] mb-2 ml-1">
-            MISSION DIRECTIVE (BIO)
+        {/* Bio: Optimized for shape */}
+        <div className="space-y-1.5">
+          <label className="block text-[10px] font-black text-(--text-secondary) tracking-widest uppercase px-1">
+            Directive
           </label>
           <textarea
-            rows={3}
+            rows={2}
             value={profile.bio}
             onChange={(e) => setProfile({ ...profile, bio: e.target.value })}
-            placeholder="DEFINE YOUR FOCUS OBJECTIVES..."
-            className="w-full bg-(--text-secondary)/5 border border-(--hud-border) rounded-xl px-4 py-3 text-sm font-bold text-(--text-primary) placeholder:text-(--text-secondary)/30 focus:outline-none focus:border-(--accent-primary) resize-none transition-all"
+            placeholder="OBJECTIVES..."
+            className="w-full bg-(--text-secondary)/5 border border-(--hud-border) rounded-lg px-3 py-2 text-xs font-medium text-(--text-primary) focus:outline-none focus:border-(--accent-primary)/50 resize-none transition-all leading-relaxed"
           />
         </div>
       </div>
 
-      {/* --- SAVE ACTION --- */}
+      {/* --- ACTION: Low Profile Button --- */}
       <button
         onClick={() => onSave(profile)}
-        className="w-full mt-4 flex items-center justify-center gap-3 py-4 bg-(--text-primary) text-(--bg-page) rounded-2xl font-black text-xs tracking-[0.3em] uppercase hover:brightness-110 active:scale-[0.98] transition-all shadow-xl"
+        className="w-full group relative flex items-center justify-center gap-2 py-3.5 bg-(--text-primary) text-(--bg-page) rounded-lg font-black text-[10px] tracking-[0.25em] uppercase overflow-hidden hover:brightness-90 transition-all"
       >
-        <Save size={16} />
-        Update Dossier
+        <Save size={14} />
+        <span>Update Registry</span>
+        {/* Subtle decorative edge */}
+        <div className="absolute right-0 top-0 h-full w-1 bg-(--accent-primary) opacity-0 group-hover:opacity-100 transition-opacity" />
       </button>
     </div>
   );

@@ -8,7 +8,6 @@ import { HUDCard } from "@/components/HUDcard";
 import { useRouteLogic } from "@/hooks/useRouteLogic";
 import { HUDtop } from "@/components/HUDtop";
 import { LocationSearch } from "@/components/LocationSearch";
-import { SettingsOverlay } from "@/components/SettingOverlay";
 import { toggleStayAwake, triggerTactilePulse } from "@/lib/utils";
 import { AnimatePresence, motion } from "framer-motion";
 import { WelcomeOverlay } from "@/components/WelcomeOverlay";
@@ -206,8 +205,6 @@ export default function FocusTacticalMap() {
               className="relative w-full max-w-md bg-hud/80 border border-hud rounded-[2.5rem] p-8 shadow-[0_30px_100px_rgba(0,0,0,0.5)] pointer-events-auto overflow-hidden"
             >
               {/* Decorative Corner Brackets for that HUD feel */}
-              <div className="absolute top-4 left-4 w-4 h-4 border-t-2 border-l-2 border-(--accent-primary) opacity-40" />
-              <div className="absolute top-4 right-4 w-4 h-4 border-t-2 border-r-2 border-(--accent-primary) opacity-40" />
 
               {isDossierOpen ? (
                 <PersonnelDossier
@@ -225,8 +222,16 @@ export default function FocusTacticalMap() {
                   isDark={isDark}
                   toggleTheme={toggleTheme}
                   onApply={(newSettings) => {
-                    // handle the update logic here
+                    // 1. Update the actual operational states
+                    setSpeedKmh(newSettings.speed);
+                    setIsWakeLockEnabled(newSettings.wakeLock);
+                    setIsHapticsEnabled(newSettings.haptics);
+
+                    // 2. Close the HUD
                     setIsSettingsOpen(false);
+
+                    // 3. Optional: Trigger a success haptic or toast
+                    console.log("SYSTEM CONFIG UPDATED");
                   }}
                 />
               )}
