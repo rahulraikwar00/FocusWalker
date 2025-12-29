@@ -3,9 +3,9 @@
   "short_name": "Walker",
   "start_url": "/",
   "display": "standalone",
-  "background_color": "#1a1a1e",
-  "theme_color": "#1a1a1e",
-  "orientation": "portrait",
+  "background_color": "#0a0a0a",
+  "theme_color": "#bfff04",
+  "orientation": "portrait-primary",
   "icons": [
     {
       "src": "client/public/icons/manifest-icon-192.maskable.png",

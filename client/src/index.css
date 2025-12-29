@@ -1,102 +1,106 @@
 @import "tailwindcss";
 @import "tw-animate-css";
 
-@theme inline {
-  --color-background: hsl(240 10% 10%); /* Deep Cave Dark */
-  --color-foreground: hsl(0 0% 90%);
-  --color-primary: hsl(45 90% 60%); /* Gold/Miner Helmet */
-  --color-primary-foreground: hsl(240 10% 10%);
-  --color-secondary: hsl(240 5% 25%); /* Rock Grey */
-  --color-secondary-foreground: hsl(0 0% 90%);
-  --color-accent: hsl(120 70% 40%); /* Gem Green */
-  --color-accent-foreground: hsl(0 0% 90%);
-  --color-muted: hsl(240 5% 15%);
-  --color-muted-foreground: hsl(240 5% 60%);
-  --color-card: hsl(240 8% 12%);
-  --color-card-foreground: hsl(0 0% 90%);
-  --color-border: hsl(240 5% 20%);
-  --color-input: hsl(240 5% 20%);
-  --color-ring: hsl(45 90% 60%);
-
-  --font-pixel: "Press Start 2P", monospace;
-  --font-mono: "VT323", monospace;
-}
-
 @layer base {
-  * {
-    @apply border-border;
+  :root {
+    /* --- DAY MISSION (High-Contrast Light) --- */
+    --hud-bg: rgba(255, 255, 255, 0.9);
+    --hud-border: rgba(15, 23, 42, 0.12); /* Sharper borders */
+    --text-primary: #0f172a; /* Deep slate */
+    --text-secondary: #475569; /* Darker gray for readability */
+
+    /* Volt green is now "Tactical Forest" in Light Mode for better contrast */
+    --accent-primary: #658c00;
+    --accent-glow: rgba(101, 140, 0, 0.1);
+
+    --bg-page: #ffffff; /* Pure white for a clean look */
+
+    /* Map: Crisp, vivid, and high-detail */
+    --map-tiles-filter: saturate(1.2) contrast(1.05);
   }
+
+  .dark {
+    /* --- NIGHT OPS (Deep Onyx & Neon) --- */
+    --hud-bg: rgba(10, 10, 12, 0.95); /* Deep slate-black */
+    --hud-border: rgba(191, 255, 4, 0.15); /* Tinted borders */
+    --text-primary: #f8fafc;
+    --text-secondary: #94a3b8;
+
+    /* Signature Volt Green (Maximum Vibrancy) */
+    --accent-primary: #bfff04;
+    --accent-glow: rgba(191, 255, 4, 0.4);
+
+    --bg-page: #020617; /* Very deep navy/black */
+
+    /* Map: High-Contrast Tactical Radar */
+    /* This makes the dark map lines bright and the background deep */
+    --map-tiles-filter: brightness(1.2) contrast(1.4) saturate(1.2)
+      hue-rotate(-5deg);
+  }
+
   body {
-    @apply bg-background text-foreground overflow-hidden;
-  }
-  @layer base {
-    :root {
-      --background: 240 10% 10%;
-      --foreground: 0 0% 90%;
-
-      --primary: 45 90% 60%; /* Gold Miner */
-      --primary-foreground: 240 10% 10%;
-
-      --secondary: 240 5% 25%; /* Rock Grey */
-      --secondary-foreground: 0 0% 98%;
-
-      --accent: 142 70% 45%; /* Sharper Gem Green */
-      --accent-foreground: 0 0% 98%;
-
-      --muted: 240 5% 15%;
-      --muted-foreground: 240 5% 60%;
-
-      --card: 240 8% 12%;
-      --card-foreground: 0 0% 90%;
-
-      --border: 240 5% 25%;
-      --input: 240 5% 20%;
-      --ring: 45 90% 60%;
-
-      --radius: 0.25rem; /* Sharper edges for the retro look */
-    }
+    background-color: var(--bg-page);
+    color: var(--text-primary);
+    transition: background-color 0.4s cubic-bezier(0.4, 0, 0.2, 1),
+      color 0.4s ease;
+    font-variant-numeric: tabular-nums;
+    -webkit-font-smoothing: antialiased;
   }
 }
 
-/* Pixel Art Utilities */
-.pixel-corners {
-  clip-path: polygon(
-    0px 4px,
-    4px 4px,
-    4px 0px,
-    calc(100% - 4px) 0px,
-    calc(100% - 4px) 4px,
-    100% 4px,
-    100% calc(100% - 4px),
-    calc(100% - 4px) calc(100% - 4px),
-    calc(100% - 4px) 100%,
-    4px 100%,
-    4px calc(100% - 4px),
-    0px calc(100% - 4px)
-  );
+/* --- TACTICAL MAP OPTIMIZATION --- */
+.leaflet-tile-pane {
+  /* This ensures the filter applies correctly to the map container */
+  filter: var(--map-tiles-filter);
+  transition: filter 0.5s ease-in-out;
+}
+.leaflet-container {
+  background-color: #050505 !important;
+}
+/* Map Grid Overlay - Only visible in Dark Mode */
+.dark .leaflet-container::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  /* More visible grid for that "Radar" feel */
+  background-image: linear-gradient(
+      rgba(191, 255, 4, 0.05) 1px,
+      transparent 1px
+    ),
+    linear-gradient(90deg, rgba(191, 255, 4, 0.05) 1px, transparent 1px);
+  background-size: 50px 50px;
+  pointer-events: none;
+  z-index: 400;
 }
 
-.pixel-text-shadow {
-  text-shadow: 2px 2px 0px rgba(0, 0, 0, 0.5);
+/* Fix for Marker Visibility */
+.leaflet-marker-icon {
+  filter: drop-shadow(0 0 5px rgba(0, 0, 0, 0.2));
 }
 
-.pixel-box-shadow {
-  box-shadow: -4px 0 0 0 rgba(0, 0, 0, 0.5), 4px 0 0 0 rgba(0, 0, 0, 0.5),
-    0 -4px 0 0 rgba(0, 0, 0, 0.5), 0 4px 0 0 rgba(0, 0, 0, 0.5);
+.dark .leaflet-marker-icon {
+  filter: drop-shadow(0 0 8px var(--accent-glow));
 }
 
-@keyframes mine-swing {
-  0% {
-    transform: rotate(0deg);
+/* --- THEME UTILITIES --- */
+@layer utilities {
+  .bg-hud {
+    background-color: var(--hud-bg);
+    backdrop-filter: blur(20px) saturate(180%);
+    border: 1px solid var(--hud-border);
   }
-  50% {
-    transform: rotate(-45deg);
+
+  .text-tactical {
+    color: var(--accent-primary);
   }
-  100% {
-    transform: rotate(0deg);
+
+  .glow-tactical {
+    box-shadow: 0 0 25px var(--accent-glow);
   }
 }
 
-.animate-mine {
-  animation: mine-swing 0.5s infinite;
+@theme {
+  --color-hud-border: var(--hud-border);
+  --color-tactical: var(--accent-primary);
+  --color-page-bg: var(--bg-page);
 }

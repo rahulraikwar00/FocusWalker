@@ -1,5 +1,6 @@
 import { useState, useEffect } from "react";
 import { Download } from "lucide-react"; // Import an icon
+import { AnimatePresence } from "framer-motion";
 
 export function usePWAInstall() {
   const [installPrompt, setInstallPrompt] = useState<any>(null);
@@ -42,12 +43,22 @@ export default function InstallButton() {
   if (!isVisible) return null;
 
   return (
-    <button
-      onClick={handleInstall}
-      className="fixed top-24 right-6 z-3000 flex items-center gap-2 bg-[#BFFF04] text-black px-4 py-2 rounded-xl font-black text-[10px] tracking-widest uppercase shadow-[0_0_20px_rgba(191,255,4,0.4)] animate-bounce"
-    >
-      <Download size={14} />
-      Install System
-    </button>
+    <AnimatePresence>
+      <button
+        onClick={handleInstall}
+        className="fixed top-48 right-0 z-3000 flex items-center gap-3 bg-(--accent-primary) text-(--bg-page) pl-4 pr-3 py-3 rounded-l-2xl font-black text-[10px] tracking-[0.2em] uppercase shadow-[0_0_20px_var(--accent-glow)] transition-all hover:pr-5 active:scale-95 group"
+      >
+        <div className="flex flex-col items-end mr-1">
+          <span className="leading-none">Install</span>
+          <span className="text-[7px] opacity-70">System</span>
+        </div>
+        <div className="bg-(--bg-page)/20 p-1.5 rounded-lg">
+          <Download
+            size={16}
+            className="group-hover:translate-y-0.5 transition-transform"
+          />
+        </div>
+      </button>
+    </AnimatePresence>
   );
 }
