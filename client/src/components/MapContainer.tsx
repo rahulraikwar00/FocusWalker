@@ -9,41 +9,51 @@ import {
   useMapEvents,
 } from "react-leaflet";
 import "leaflet/dist/leaflet.css";
+import { useEffect } from "react";
 
 interface MapProps {
-  DELHI_DEFAULT: L.LatLngExpression;
+  DEFAULT_LOCATION: L.LatLngExpression;
   handleMapClick: (e: L.LeafletMouseEvent) => void;
   currentPos: L.LatLng | null;
   isActive: boolean;
   points: { start: L.LatLng | null; end: L.LatLng | null };
   route: { path: L.LatLngExpression[] } | null;
   isLocked: boolean;
+  isDark: boolean;
 }
 
 // 1. Rename to avoid conflict with library MapContainer
 // 2. Add 'return' statement
 export const MapView = ({
-  DELHI_DEFAULT,
+  DEFAULT_LOCATION,
   handleMapClick,
   currentPos,
   isActive,
   points,
   route,
   isLocked,
+  isDark,
 }: MapProps) => {
   return (
     <MapContainer
-      center={DELHI_DEFAULT}
-      zoom={13}
-      className="w-full h-full z-0 bg-[#0A0A0A]"
+      center={DEFAULT_LOCATION}
+      zoom={5}
+      className="w-full h-full z-0 " // Uses theme background
       zoomControl={false}
+      minZoom={5}
     >
       <TileLayer
-        url="https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png"
-        attribution="&copy; <a href='https://carto.com/'>CARTO</a>"
+        key={isDark ? "stadia-dark" : "stadia-light"}
+        url={
+          isDark
+            ? "https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png"
+            : "https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png"
+        }
+        keepBuffer={12}
+        updateWhenIdle={false}
+        className="map-tiles"
       />
 
-      {/* Ensure MapController is imported or defined in your scope */}
       <MapController
         onMapClick={handleMapClick}
         isActive={isActive}
@@ -55,7 +65,12 @@ export const MapView = ({
       {route?.path && (
         <Polyline
           positions={route.path}
-          pathOptions={{ color: "#BFFF04", weight: 4 }}
+          // Uses standard CSS variable for the route line
+          pathOptions={{
+            color: isDark ? "#BFFF04" : "#86B300", // Fallback colors for JS-only components
+            weight: 4,
+            opacity: 0.8,
+          }}
         />
       )}
 
@@ -63,10 +78,15 @@ export const MapView = ({
         <Marker
           position={currentPos}
           icon={L.divIcon({
-            className: "m",
-            html: `<div class="w-4 h-4 bg-[#BFFF04] rounded-full border-2 border-black shadow-[0_0_10px_#BFFF04]"></div>`,
-            iconSize: [16, 16],
-            iconAnchor: [8, 8],
+            className: "custom-marker",
+            html: `
+          <div class="relative flex items-center justify-center">
+            <div class="absolute w-8 h-8 bg-(--accent-glow) rounded-full animate-ping opacity-20"></div>
+            <div class="w-4 h-4 bg-(--accent-primary) rounded-full border-2 border-(--bg-page) shadow-[0_0_15px_var(--accent-glow)]"></div>
+          </div>
+        `,
+            iconSize: [32, 32],
+            iconAnchor: [16, 16],
           })}
         />
       )}
@@ -84,7 +104,7 @@ function MapController({
 }: any) {
   const map = useMap();
 
-  React.useEffect(() => {
+  useEffect(() => {
     const timer = setTimeout(() => {
       if (map) map.invalidateSize();
     }, 200);
@@ -97,7 +117,7 @@ function MapController({
     },
   });
 
-  React.useEffect(() => {
+  useEffect(() => {
     if (!isActive && points?.start && map) {
       try {
         map.flyTo(points.start, 15, { animate: true, duration: 0.8 });
@@ -107,14 +127,14 @@ function MapController({
     }
   }, [isActive, points?.start, map]);
   // Handle Auto-Recenter (Tracking Mode)
-  React.useEffect(() => {
+  useEffect(() => {
     if (isLocked && currentPos && isActive) {
       map.setView(currentPos, 18, { animate: true, duration: 0.5 });
     }
   }, [currentPos, isLocked, isActive, map]);
 
   // Handle Fit-Bounds (Standby Mode: See both dots)
-  React.useEffect(() => {
+  useEffect(() => {
     if (!isActive && points.start && points.end) {
       const bounds = L.latLngBounds([points.start, points.end]);
       map.fitBounds(bounds, { padding: [70, 70], animate: true });
