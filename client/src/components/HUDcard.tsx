@@ -168,7 +168,7 @@ export const HUDCard = ({
                   disabled={!route}
                   className={`flex-3 h-full rounded-2xl font-black text-[10px] tracking-[0.3em] uppercase transition-all duration-300 border-2 ${
                     isActive
-                      ? "bg-transparent border-white/10 text-white/20 hover:border-red-500/50 hover:text-red-500 shadow-none"
+                      ? "bg-transparent border-red-500/50 text-red-500 shadow-none"
                       : /* ↑ Feels "Weak": Dim, low contrast, turns red only on hover as a warning */
                         "bg-(--accent-primary) border-(--accent-primary) text-(--bg-page) shadow-[0_0_25px_var(--accent-glow)] active:scale-95"
                     /* ↑ Feels "Strong": Bright, solid, glowing, and has physical feedback (scale) */

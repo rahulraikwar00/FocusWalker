@@ -3,16 +3,25 @@ import { useState, useEffect } from "react";
 export function usePWAInstall() {
   const [installPrompt, setInstallPrompt] = useState<any>(null);
   const [isVisible, setIsVisible] = useState(false);
+  const [isIOS, setIsIOS] = useState(false);
 
   useEffect(() => {
-    // 1. Listen for the install prompt
+    // 1. Detect iOS
+    const isIphone =
+      /iPad|iPhone|iPod/.test(navigator.userAgent) && !(window as any).MSStream;
+    const isStandalone = window.matchMedia(
+      "(display-mode: standalone)"
+    ).matches;
+
+    setIsIOS(isIphone && !isStandalone);
+
+    // 2. Standard PWA Prompt (Android/Chrome)
     const handler = (e: any) => {
       e.preventDefault();
       setInstallPrompt(e);
       setIsVisible(true);
     };
 
-    // 2. Hide button if the app is successfully installed
     const onInstall = () => {
       setIsVisible(false);
       setInstallPrompt(null);
@@ -21,6 +30,9 @@ export function usePWAInstall() {
     window.addEventListener("beforeinstallprompt", handler);
     window.addEventListener("appinstalled", onInstall);
 
+    // If already in PWA mode, never show the button
+    if (isStandalone) setIsVisible(false);
+
     return () => {
       window.removeEventListener("beforeinstallprompt", handler);
       window.removeEventListener("appinstalled", onInstall);
@@ -28,15 +40,19 @@ export function usePWAInstall() {
   }, []);
 
   const handleInstall = async () => {
+    if (isIOS) {
+      // For iOS, we can't trigger a prompt, so we trigger a "Help" UI
+      alert("Click the 'Share' icon and then 'Add to Home Screen' to install.");
+      return;
+    }
+
     if (!installPrompt) return;
+
     installPrompt.prompt();
     const { outcome } = await installPrompt.userChoice;
-
-    if (outcome === "accepted") {
-      setIsVisible(false);
-    }
+    if (outcome === "accepted") setIsVisible(false);
     setInstallPrompt(null);
   };
 
-  return { isVisible, handleInstall };
+  return { isVisible: isVisible || isIOS, handleInstall, isIOS };
 }
