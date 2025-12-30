@@ -8,60 +8,38 @@
     />
     <title>focusWalker</title>
 
-    <meta name="theme-color" content="#bfff04" />
-    <meta name="apple-mobile-web-app-capable" content="yes" />
-    <meta
-      name="apple-mobile-web-app-status-bar-style"
-      content="black-translucent"
-    />
+    <link rel="modulepreload" href="/src/main.tsx" />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
 
+    <link
+      href="https://fonts.googleapis.com/css2?family=Playpen+Sans+Thai:wght@800&display=swap"
+      rel="stylesheet"
+    />
     <link
       rel="stylesheet"
       href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"
     />
-    <link rel="preconnect" href="https://a.basemaps.cartocdn.com" />
-    <link rel="modulepreload" href="/src/main.tsx" />
-    <link rel="preconnect" href="https://fonts.googleapis.com" />
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-    <link
-      href="https://fonts.googleapis.com/css2?family=Playpen+Sans+Thai:wght@100..800&display=swap"
-      rel="stylesheet"
-    />
+    <link rel="manifest" href="/manifest.json" />
 
     <style>
       :root {
-        /* Default Light Mode Colors */
         --bg: #ffffff;
-        --ui-card: #f1f5f9;
         --text: #0f172a;
+        --neon: #bfff04;
+        --ui-card: rgba(15, 23, 42, 0.05);
         --hud-border: rgba(0, 0, 0, 0.05);
       }
 
-      /* 1. Handle System Dark Mode */
-      @media (prefers-color-scheme: dark) {
-        :root {
-          --bg: #050505;
-          --ui-card: #0d0d0d;
-          --text: #ffffff;
-          --hud-border: rgba(255, 255, 255, 0.05);
-        }
-      }
-
-      /* 2. Handle Manual "Light" Override (If system is dark but user chose light) */
-      :root.light {
-        --bg: #ffffff;
-        --ui-card: #f1f5f9;
-        --text: #0f172a;
-        --hud-border: rgba(0, 0, 0, 0.05);
-      }
-
-      /* 3. Handle Manual "Dark" Override (If system is light but user chose dark) */
       :root.dark {
         --bg: #050505;
-        --ui-card: #0d0d0d;
         --text: #ffffff;
+        --neon: #bfff04;
+        --ui-card: rgba(255, 255, 255, 0.03);
         --hud-border: rgba(255, 255, 255, 0.05);
       }
+
+      /* Base Styles */
       body,
       html {
         margin: 0;
@@ -70,33 +48,37 @@
         height: 100%;
         width: 100%;
         overflow: hidden;
-        font-family: "Playpen Sans Thai", cursive, system-ui, -apple-system,
-          sans-serif;
-        transition: background-color 0.3s ease;
+        font-family: "Playpen Sans Thai", system-ui, sans-serif;
       }
 
+      /* 2. THE TACTICAL GRID: Renders in ~10ms */
       #loading-overlay {
         position: fixed;
         inset: 0;
         background: var(--bg);
+        background-image: linear-gradient(
+            var(--hud-border) 1px,
+            transparent 1px
+          ),
+          linear-gradient(90deg, var(--hud-border) 1px, transparent 1px);
+        background-size: 40px 40px;
         z-index: 9999;
         display: flex;
         flex-direction: column;
         align-items: center;
         justify-content: center;
-        transition: opacity 0.5s ease-out;
+        transition: opacity 0.4s cubic-bezier(0.4, 0, 0.2, 1);
       }
 
       .splash-logo {
-        text-align: center;
-        z-index: 2;
+        position: relative;
+        z-index: 10;
       }
-
       .logo-text {
         color: var(--text);
-        font-size: 32px;
+        font-size: clamp(24px, 8vw, 36px);
         font-weight: 900;
-        letter-spacing: -1px;
+        letter-spacing: -0.05em;
         text-transform: uppercase;
         font-style: italic;
       }
@@ -104,131 +86,110 @@
       .logo-text::after {
         content: "";
         display: block;
-        width: 40px;
+        width: 60%;
         height: 4px;
         background: var(--neon);
-        margin: 8px auto 0;
-        box-shadow: 0 0 15px var(--neon);
+        margin: 4px auto 0;
+        box-shadow: 0 0 20px var(--neon);
       }
 
-      /* HUD SHELL SKELETON */
+      /* SKELETON SHELL */
       #shell {
         position: absolute;
         inset: 0;
-        pointer-events: none;
         display: flex;
         flex-direction: column;
         justify-content: space-between;
-        padding: calc(env(safe-area-inset-top) + 16px) 20px
-          calc(env(safe-area-inset-bottom) + 20px);
-        box-sizing: border-box;
+        padding: calc(env(safe-area-inset-top) + 20px) 20px
+          calc(env(safe-area-inset-bottom) + 30px);
+        pointer-events: none;
+      }
+
+      .skeleton {
+        background: var(--ui-card);
+        backdrop-filter: blur(10px);
+        border: 1px solid var(--hud-border);
+        animation: pulse 1.5s ease-in-out infinite;
       }
 
       .top-hud-skeleton {
-        width: 160px;
-        height: 54px;
-        background: var(--ui-card);
-        border: 1px solid var(--hud-border);
-        border-radius: 18px;
-        animation: pulse 2s infinite;
+        width: 140px;
+        height: 48px;
+        border-radius: 16px;
       }
-
       .bottom-card-skeleton {
         width: 100%;
-        max-width: 450px;
-        height: 180px;
-        background: var(--ui-card);
-        border: 1px solid var(--hud-border);
-        border-radius: 32px;
-        margin: 0 auto;
-        animation: pulse 2s infinite;
+        height: 160px;
+        border-radius: 24px;
       }
 
       @keyframes pulse {
         0%,
         100% {
-          opacity: 0.5;
-          transform: scale(0.99);
+          opacity: 0.4;
         }
         50% {
-          opacity: 1;
-          transform: scale(1);
+          opacity: 0.8;
         }
       }
 
       .scanner {
         position: absolute;
-        inset: 0;
-        background: linear-gradient(
-          to bottom,
-          transparent 0%,
-          rgba(191, 255, 4, 0.05) 50%,
-          transparent 100%
-        );
-        height: 20%;
+        top: 0;
+        left: 0;
         width: 100%;
-        animation: scan 3s linear infinite;
-        pointer-events: none;
+        height: 2px;
+        background: var(--neon);
+        box-shadow: 0 0 15px var(--neon);
+        opacity: 0.3;
+        animation: scan 4s linear infinite;
       }
 
       @keyframes scan {
         0% {
-          transform: translateY(-100%);
+          top: 0%;
         }
         100% {
-          transform: translateY(500%);
+          top: 100%;
         }
-      }
-
-      /* Fix Leaflet Tile Visibility */
-      .leaflet-container {
-        background: var(--bg) !important;
       }
     </style>
   </head>
   <body>
+    <script>
+      (function () {
+        const theme =
+          localStorage.getItem("theme") ||
+          (window.matchMedia("(prefers-color-scheme: dark)").matches
+            ? "dark"
+            : "light");
+        document.documentElement.classList.add(theme);
+      })();
+    </script>
+
     <div id="loading-overlay">
       <div class="scanner"></div>
-
       <div class="splash-logo">
         <div class="logo-text">focusWalker</div>
       </div>
-
       <div id="shell">
-        <div class="top-hud-skeleton"></div>
-        <div class="bottom-card-skeleton"></div>
+        <div class="top-hud-skeleton skeleton"></div>
+        <div class="bottom-card-skeleton skeleton"></div>
       </div>
     </div>
 
     <div id="root"></div>
-
     <script type="module" src="/src/main.tsx"></script>
-    <script>
-      // 1. Sync theme before overlay disappears
-      const savedTheme = localStorage.getItem("theme");
-      if (
-        savedTheme === "dark" ||
-        (!savedTheme &&
-          window.matchMedia("(prefers-color-scheme: dark)").matches)
-      ) {
-        document.documentElement.classList.add("dark");
-      }
 
-      // 2. Smoothly remove overlay
+    <script>
+      // Smooth dismissal after React Hydration
       window.addEventListener("load", () => {
         const overlay = document.getElementById("loading-overlay");
         if (overlay) {
           overlay.style.opacity = "0";
-          setTimeout(() => overlay.remove(), 600);
+          setTimeout(() => overlay.remove(), 500);
         }
       });
-
-      // 3. PWA Service Worker
-      if ("serviceWorker" in navigator) {
-        window.addEventListener("load", () => {
-          navigator.serviceWorker.register("/sw.js").catch(() => {});
-        });
-      }
     </script>
   </body>
 </html>

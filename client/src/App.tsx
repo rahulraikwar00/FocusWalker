@@ -5,7 +5,7 @@ import { QueryClientProvider } from "@tanstack/react-query";
 import { Toaster } from "@/components/ui/toaster";
 import NotFound from "@/pages/not-found";
 import FocusTacticalMap from "@/pages/FocusTacticalMap";
-import InstallButton from "./components/PWAInstall";
+import InstallButton from "./components/PWAInstallButton";
 
 function Router() {
   return (
@@ -43,18 +43,13 @@ function App() {
     });
   }, []);
 
-  const triggerInstall = async () => {
-    if (!installPrompt) return;
-    installPrompt.prompt();
-    const { outcome } = await installPrompt.userChoice;
-    if (outcome === "accepted") setInstallPrompt(null);
-  };
-
   return (
     <QueryClientProvider client={queryClient}>
       <Toaster />
       <Router />
-      {!isInstalled && <InstallButton />}
+
+      {/* Pass the state and the function as props */}
+      {!isInstalled && installPrompt && <InstallButton />}
     </QueryClientProvider>
   );
 }

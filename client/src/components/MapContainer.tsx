@@ -12,7 +12,7 @@ import "leaflet/dist/leaflet.css";
 import { useEffect } from "react";
 
 interface MapProps {
-  DELHI_DEFAULT: L.LatLngExpression;
+  DEFAULT_LOCATION: L.LatLngExpression;
   handleMapClick: (e: L.LeafletMouseEvent) => void;
   currentPos: L.LatLng | null;
   isActive: boolean;
@@ -25,7 +25,7 @@ interface MapProps {
 // 1. Rename to avoid conflict with library MapContainer
 // 2. Add 'return' statement
 export const MapView = ({
-  DELHI_DEFAULT,
+  DEFAULT_LOCATION,
   handleMapClick,
   currentPos,
   isActive,
@@ -36,10 +36,11 @@ export const MapView = ({
 }: MapProps) => {
   return (
     <MapContainer
-      center={DELHI_DEFAULT}
-      zoom={13}
+      center={DEFAULT_LOCATION}
+      zoom={5}
       className="w-full h-full z-0 " // Uses theme background
       zoomControl={false}
+      minZoom={5}
     >
       <TileLayer
         key={isDark ? "stadia-dark" : "stadia-light"}
@@ -48,6 +49,8 @@ export const MapView = ({
             ? "https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png"
             : "https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png"
         }
+        keepBuffer={12}
+        updateWhenIdle={false}
         className="map-tiles"
       />
 

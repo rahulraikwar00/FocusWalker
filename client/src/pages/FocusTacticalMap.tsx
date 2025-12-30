@@ -9,10 +9,13 @@ import { useRouteLogic } from "@/hooks/useRouteLogic";
 import { HUDtop } from "@/components/HUDtop";
 import { LocationSearch } from "@/components/LocationSearch";
 import { toggleStayAwake, triggerTactilePulse } from "@/lib/utils";
-import { AnimatePresence, motion } from "framer-motion";
+import { AnimatePresence } from "framer-motion";
 import { WelcomeOverlay } from "@/components/WelcomeOverlay";
 import { PersonnelDossier } from "@/components/DossierOverlay";
 import { SystemSettings } from "@/components/SystemSettings";
+import InstallButton from "@/components/PWAInstallButton";
+import ModalContainer from "@/components/ModalContainer";
+import { TacticalToast } from "@/components/ToastComponent";
 
 const MapView = React.lazy(() =>
   import("@/components/MapContainer").then((module) => ({
@@ -23,7 +26,7 @@ const MapView = React.lazy(() =>
 // --- Constants & Defaults ---
 
 const WALKING_SPEED_KMH = 5.0;
-const DELHI_DEFAULT = new L.LatLng(28.6139, 77.209);
+const DEFAULT_LOCATION = new L.LatLng(20.5937, 78.9629);
 
 export default function FocusTacticalMap() {
   const [speedKmh, setSpeedKmh] = useState(WALKING_SPEED_KMH);
@@ -33,6 +36,7 @@ export default function FocusTacticalMap() {
   const [isWakeLockEnabled, setIsWakeLockEnabled] = useState(true);
   const [showWelcome, setShowWelcome] = useState(false);
   const [isDossierOpen, setIsDossierOpen] = useState(false);
+  const [toast, setToast] = useState({ show: false, msg: "", type: "success" });
   // State for the Dossier Data
   const [userData, setUserData] = useState(() => {
     const saved = localStorage.getItem("user_dossier");
@@ -77,6 +81,10 @@ export default function FocusTacticalMap() {
     }
   }, []);
 
+  const triggerToast = (msg: string, type: "success" | "error" = "success") => {
+    setToast({ show: true, msg, type });
+    setTimeout(() => setToast((prev) => ({ ...prev, show: false })), 3000);
+  };
   const handleUpdateUser = (newData: any) => {
     setUserData(newData);
     localStorage.setItem("user_dossier", JSON.stringify(newData));
@@ -122,96 +130,91 @@ export default function FocusTacticalMap() {
 
   return (
     <div className="relative h-dvh w-full overflow-hidden bg-page-bg font-sans text-(--text-primary) transition-colors duration-500">
-      {/* LAYER 0: THE MAP (Base Layer) */}
-      <Suspense
-        fallback={
-          <div className="bg-(--bg-page) h-full w-full animate-pulse" />
-        }
-      >
-        <MapView
-          DELHI_DEFAULT={DELHI_DEFAULT}
-          handleMapClick={handleMapClick}
-          currentPos={currentPos}
-          isActive={isActive}
-          points={points}
-          route={route}
-          isLocked={isLocked}
-          /* FIX: Pass the actual state variable, not a hardcoded true */
-          isDark={isDark}
-        />
-      </Suspense>
+      <TacticalToast
+        message={toast.msg}
+        isVisible={toast.show}
+        type={toast.type as any}
+      />
+      {/* LAYER 0: MAP (Keep at z-0) */}
+      <div className="absolute inset-0 z-0">
+        <Suspense
+          fallback={
+            <div className="bg-(--bg-page) h-full w-full animate-pulse" />
+          }
+        >
+          <MapView
+            DEFAULT_LOCATION={DEFAULT_LOCATION}
+            currentPos={currentPos}
+            isActive={isActive}
+            points={points}
+            route={route}
+            isLocked={isLocked}
+            isDark={isDark}
+            handleMapClick={handleMapClick}
+          />
+        </Suspense>
+      </div>
 
-      {/* LAYER 1: VIGNETTE & SCANLINES */}
-      {/* Changed rgba(0,0,0,0.4) to a dynamic variable or lower opacity for dark mode */}
+      {/* LAYER 1: VIGNETTE (Keep at z-10, MUST be pointer-events-none) */}
       <div
-        className={`pointer-events-none absolute inset-0 z-10 transition-opacity duration-700 ${
-          isDark
-            ? "bg-[radial-gradient(circle_at_center,transparent_20%,rgba(0,0,0,0.6)_100%)] opacity-80"
-            : "bg-[radial-gradient(circle_at_center,transparent_20%,rgba(0,0,0,0.1)_100%)] opacity-30"
-        }`}
+        className="pointer-events-none absolute inset-0 z-10 transition-opacity duration-700 bg-[radial-gradient(circle_at_center,transparent_20%,black_100%)]"
+        style={{ opacity: isDark ? 0.6 : 0.1 }}
       />
 
-      {/* LAYER 2: HUD ELEMENTS */}
-      <HUDtop
-        userData={userData}
-        setIsSettingsOpen={setIsSettingsOpen}
-        setIsDossierOpen={setIsDossierOpen}
-      />
-
-      {!isActive && (
-        <LocationSearch
-          searchQuery={searchQuery}
-          setSearchQuery={setSearchQuery}
-          points={points}
-          searchLocation={searchLocation}
-          onLocationSelect={handleLocationSelect}
+      {/* LAYER 2: HUD ELEMENTS (z-20) */}
+      {/* We remove the 'h-full w-full' wrapper if possible, or ensure it's passthrough */}
+      <div className="absolute inset-0 z-20 pointer-events-none">
+        {/* Individual components MUST have pointer-events-auto inside them */}
+        <HUDtop
+          userData={userData}
+          setIsSettingsOpen={setIsSettingsOpen}
+          setIsDossierOpen={setIsDossierOpen}
         />
-      )}
 
-      <HUDCard
-        isActive={isActive}
-        progress={progress}
-        metrics={metrics}
-        handleStopMission={handleStopMission}
-        handleStartMission={handleStartMission}
-        reset={reset}
-        route={route}
-        setIsActive={setIsActive}
-        isLocked={isLocked}
-        setIsLocked={setIsLocked}
-      />
+        {!isActive && (
+          <LocationSearch
+            searchQuery={searchQuery}
+            setSearchQuery={setSearchQuery}
+            points={points}
+            searchLocation={searchLocation}
+            onLocationSelect={handleLocationSelect}
+          />
+        )}
 
-      <AnimatePresence>
+        {/* Give InstallButton a high internal Z-index if it's fixed */}
+        <InstallButton />
+
+        <HUDCard
+          isActive={isActive}
+          progress={progress}
+          metrics={metrics}
+          handleStopMission={handleStopMission}
+          handleStartMission={handleStartMission}
+          reset={reset}
+          route={route}
+          setIsActive={setIsActive}
+          isLocked={isLocked}
+          setIsLocked={setIsLocked}
+        />
+      </div>
+
+      {/* LAYER 3: MODALS (z-[100]) */}
+      <AnimatePresence mode="wait">
         {(isDossierOpen || isSettingsOpen) && (
-          <div className="fixed inset-0 z-9999 flex items-center justify-center p-4">
-            {/* 1. The Tactical Blur Backdrop */}
-            <motion.div
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              exit={{ opacity: 0 }}
-              onClick={() => {
+          <div className="fixed inset-0 z-100">
+            <ModalContainer
+              onClose={() => {
                 setIsDossierOpen(false);
                 setIsSettingsOpen(false);
               }}
-              className="absolute inset-0 bg-(--bg-page)/40 backdrop-blur-xl"
-            />
-
-            {/* 2. The Content Card */}
-            <motion.div
-              initial={{ y: 40, opacity: 0, scale: 0.95 }}
-              animate={{ y: 0, opacity: 1, scale: 1 }}
-              exit={{ y: 40, opacity: 0, scale: 0.95 }}
-              transition={{ type: "spring", damping: 25, stiffness: 300 }}
-              className="relative w-full max-w-md bg-hud/80 border border-hud rounded-[2.5rem] p-8 shadow-[0_30px_100px_rgba(0,0,0,0.5)] pointer-events-auto overflow-hidden"
             >
-              {/* Decorative Corner Brackets for that HUD feel */}
-
               {isDossierOpen ? (
                 <PersonnelDossier
                   userData={userData}
-                  onSave={(data: any) => {
-                    handleUpdateUser(data);
+                  onSave={() => {
+                    handleUpdateUser;
                     setIsDossierOpen(false);
+                    triggerToast("Dossier Updated");
                   }}
                 />
               ) : (
@@ -222,36 +225,27 @@ export default function FocusTacticalMap() {
                   isDark={isDark}
                   toggleTheme={toggleTheme}
                   onApply={(newSettings) => {
-                    // 1. Update the actual operational states
+                    triggerToast("Settings update");
                     setSpeedKmh(newSettings.speed);
                     setIsWakeLockEnabled(newSettings.wakeLock);
                     setIsHapticsEnabled(newSettings.haptics);
-
-                    // 2. Close the HUD
                     setIsSettingsOpen(false);
-
-                    // 3. Optional: Trigger a success haptic or toast
                     console.log("SYSTEM CONFIG UPDATED");
                   }}
                 />
               )}
-
-              <button
-                onClick={() => {
-                  setIsDossierOpen(false);
-                  setIsSettingsOpen(false);
-                }}
-                className="w-full mt-8 py-2 text-[9px] font-black text-(--text-secondary) uppercase tracking-[0.4em] hover:text-(--accent-primary) transition-colors"
-              >
-                [ Return to Mission ]
-              </button>
-            </motion.div>
+            </ModalContainer>
           </div>
         )}
-      </AnimatePresence>
-      <AnimatePresence>
+        {/* 2. Welcome Overlay (Priority Onboarding) */}
         {showWelcome && (
-          <WelcomeOverlay onComplete={() => setShowWelcome(false)} />
+          <WelcomeOverlay
+            key="welcome"
+            onComplete={() => {
+              setShowWelcome(false);
+              localStorage.setItem("has_onboarded", "true"); // Commit to storage here
+            }}
+          />
         )}
       </AnimatePresence>
     </div>
