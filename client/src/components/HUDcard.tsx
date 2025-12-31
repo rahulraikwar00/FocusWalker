@@ -1,11 +1,5 @@
 import { AnimatePresence, motion } from "framer-motion";
-import {
-  ChevronDown,
-  ChevronUp,
-  Navigation2,
-  RotateCcw,
-  Timer,
-} from "lucide-react";
+import { Navigation2, RotateCcw, Timer } from "lucide-react";
 import { Button } from "./ui/button";
 import { useEffect, useState } from "react";
 
@@ -241,14 +235,6 @@ export const HUDCard = ({
     </div>
   );
 };
-
-// 1. Individual Item Interface
-interface StatItemProps {
-  label: string;
-  value: string;
-  unit: string;
-  isPrimary?: boolean;
-}
 
 // 2. The StatItem Component
 const StatItem = ({ label, value, unit, isPrimary = false }: StatItemProps) => {

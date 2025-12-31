@@ -120,12 +120,13 @@ function MapController({
   currentPos,
 }: any) {
   const map = useMap();
+  const { position, error } = useUserLocation();
 
   useEffect(() => {
-    const timer = setTimeout(() => {
+    const handle = requestAnimationFrame(() => {
       if (map) map.invalidateSize();
-    }, 200);
-    return () => clearTimeout(timer);
+    });
+    return () => cancelAnimationFrame(handle);
   }, [map]);
 
   useMapEvents({
@@ -133,6 +134,17 @@ function MapController({
       if (!isActive && onMapClick) onMapClick(e);
     },
   });
+
+  useEffect(() => {
+    if (!map || !position) return;
+
+    console.log("user locaiton is get");
+    map.flyTo(position, 16, {
+      animate: true,
+      duration: 1.5, // Seconds
+      easeLinearity: 0.25,
+    });
+  }, [position, map]);
 
   useEffect(() => {
     if (!isActive && points?.start && map) {

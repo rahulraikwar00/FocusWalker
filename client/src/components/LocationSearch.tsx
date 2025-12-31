@@ -1,20 +1,7 @@
 import { Search, MapPin, Loader2 } from "lucide-react";
 import { useEffect, useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-
-interface SearchResult {
-  name: string;
-  latlng: L.LatLng;
-}
-
-interface LocationSearchProps {
-  searchQuery: string;
-  setSearchQuery: (query: string) => void;
-  points: { start: L.LatLng | null; end: L.LatLng | null };
-  // Modified to return a list of results
-  searchLocation: (query: string) => Promise<SearchResult[]>;
-  onLocationSelect: (location: SearchResult) => void;
-}
+import { LocationSearchProps, SearchResult } from "@/types";
 
 export const LocationSearch = ({
   searchQuery,

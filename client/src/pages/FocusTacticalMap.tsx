@@ -101,9 +101,8 @@ export default function FocusTacticalMap() {
       />
 
       {/* LAYER 2: HUD ELEMENTS (z-20) */}
-      {/* We remove the 'h-full w-full' wrapper if possible, or ensure it's passthrough */}
+
       <div className="absolute inset-0 z-20 pointer-events-none">
-        {/* Individual components MUST have pointer-events-auto inside them */}
         <HUDtop
           userData={userData}
           setIsSettingsOpen={setIsSettingsOpen}
