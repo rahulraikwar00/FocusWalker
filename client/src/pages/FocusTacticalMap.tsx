@@ -166,7 +166,11 @@ export default function FocusTacticalMap() {
                   isHapticsEnabled={settings.isHapticsEnabled}
                   isDark={settings.isDark}
                   toggleTheme={toggleTheme}
-                  onApply={(newSettings) => setSettings(newSettings)}
+                  onApply={(newSettings) => {
+                    setSettings(newSettings);
+                    setIsSettingsOpen(false);
+                    triggerToast("SyatemSettings Updated");
+                  }}
                 />
               )}
             </ModalContainer>

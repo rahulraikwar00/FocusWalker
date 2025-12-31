@@ -92,7 +92,7 @@ export const LocationSearch = ({
                 ? "Search start location..."
                 : "Search destination..."
             }
-            className="bg-transparent border-none outline-none text-sm w-full py-3 text-(--text-primary) placeholder:text-(--text-secondary)/80"
+            className="bg-transparent border-none outline-none text-sm w-full py-3 text-(--text-primary) placeholder:text-(--text-primary)"
           />
         </div>
 
