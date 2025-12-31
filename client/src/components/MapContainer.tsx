@@ -10,17 +10,8 @@ import {
 } from "react-leaflet";
 import "leaflet/dist/leaflet.css";
 import { useEffect } from "react";
-
-interface MapProps {
-  DEFAULT_LOCATION: L.LatLngExpression;
-  handleMapClick: (e: L.LeafletMouseEvent) => void;
-  currentPos: L.LatLng | null;
-  isActive: boolean;
-  points: { start: L.LatLng | null; end: L.LatLng | null };
-  route: { path: L.LatLngExpression[] } | null;
-  isLocked: boolean;
-  isDark: boolean;
-}
+import { MapProps } from "@/types";
+import { useUserLocation } from "@/hooks/useUserLocation";
 
 // 1. Rename to avoid conflict with library MapContainer
 // 2. Add 'return' statement
@@ -34,6 +25,10 @@ export const MapView = ({
   isLocked,
   isDark,
 }: MapProps) => {
+  const tileUrl = isDark
+    ? "https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png"
+    : "https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png";
+
   return (
     <MapContainer
       center={DEFAULT_LOCATION}
@@ -44,11 +39,7 @@ export const MapView = ({
     >
       <TileLayer
         key={isDark ? "stadia-dark" : "stadia-light"}
-        url={
-          isDark
-            ? "https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png"
-            : "https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png"
-        }
+        url={tileUrl}
         keepBuffer={12}
         updateWhenIdle={false}
         className="map-tiles"
@@ -68,7 +59,7 @@ export const MapView = ({
           // Uses standard CSS variable for the route line
           pathOptions={{
             color: isDark ? "#BFFF04" : "#86B300", // Fallback colors for JS-only components
-            weight: 4,
+            weight: 3,
             opacity: 0.8,
           }}
         />
@@ -103,12 +94,13 @@ function MapController({
   currentPos,
 }: any) {
   const map = useMap();
+  const { position, error } = useUserLocation();
 
   useEffect(() => {
-    const timer = setTimeout(() => {
+    const handle = requestAnimationFrame(() => {
       if (map) map.invalidateSize();
-    }, 200);
-    return () => clearTimeout(timer);
+    });
+    return () => cancelAnimationFrame(handle);
   }, [map]);
 
   useMapEvents({
@@ -116,6 +108,17 @@ function MapController({
       if (!isActive && onMapClick) onMapClick(e);
     },
   });
+
+  useEffect(() => {
+    if (!map || !position) return;
+
+    console.log("user locaiton is get");
+    map.flyTo(position, 16, {
+      animate: true,
+      duration: 1.5, // Seconds
+      easeLinearity: 0.25,
+    });
+  }, [position, map]);
 
   useEffect(() => {
     if (!isActive && points?.start && map) {

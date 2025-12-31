@@ -12,7 +12,6 @@ export const PersonnelDossier = ({ initialData, onSave }: any) => {
 
   const handleApply = () => {
     onSave(profile);
-    onclose;
   };
 
   return (

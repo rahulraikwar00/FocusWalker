@@ -2,19 +2,7 @@ import { motion } from "framer-motion";
 import { Monitor, Zap, Sun, Moon } from "lucide-react";
 import { useState } from "react";
 import { ThemeToggleButton } from "./ui/themeSwitchButton";
-
-interface SystemSettingsProps {
-  speedKmh: number;
-  isWakeLockEnabled: boolean;
-  isHapticsEnabled: boolean;
-  isDark: boolean;
-  toggleTheme: () => void;
-  onApply: (settings: {
-    speed: number;
-    wakeLock: boolean;
-    haptics: boolean;
-  }) => void;
-}
+import { SystemSettingsProps } from "@/types";
 
 export const SystemSettings = ({
   speedKmh,

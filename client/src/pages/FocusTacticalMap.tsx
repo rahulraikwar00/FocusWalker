@@ -85,6 +85,7 @@ export default function FocusTacticalMap() {
     setToast({ show: true, msg, type });
     setTimeout(() => setToast((prev) => ({ ...prev, show: false })), 3000);
   };
+
   const handleUpdateUser = (newData: any) => {
     setUserData(newData);
     localStorage.setItem("user_dossier", JSON.stringify(newData));
@@ -162,9 +163,8 @@ export default function FocusTacticalMap() {
       />
 
       {/* LAYER 2: HUD ELEMENTS (z-20) */}
-      {/* We remove the 'h-full w-full' wrapper if possible, or ensure it's passthrough */}
+
       <div className="absolute inset-0 z-20 pointer-events-none">
-        {/* Individual components MUST have pointer-events-auto inside them */}
         <HUDtop
           userData={userData}
           setIsSettingsOpen={setIsSettingsOpen}
@@ -183,7 +183,6 @@ export default function FocusTacticalMap() {
 
         {/* Give InstallButton a high internal Z-index if it's fixed */}
         <InstallButton />
-
         <HUDCard
           isActive={isActive}
           progress={progress}
@@ -211,8 +210,8 @@ export default function FocusTacticalMap() {
               {isDossierOpen ? (
                 <PersonnelDossier
                   userData={userData}
-                  onSave={() => {
-                    handleUpdateUser;
+                  onSave={(newData: any) => {
+                    handleUpdateUser(newData);
                     setIsDossierOpen(false);
                     triggerToast("Dossier Updated");
                   }}

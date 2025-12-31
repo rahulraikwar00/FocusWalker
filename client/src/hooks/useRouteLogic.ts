@@ -104,17 +104,24 @@ export function useRouteLogic(speedKmh: number, isWakeLockEnabled: boolean) {
     },
     [speedMs]
   );
-
-  const handleMapClick = async (e: L.LeafletMouseEvent) => {
+  const handleMapClick = (e: L.LeafletMouseEvent) => {
     if (isActive) return;
+
     if (!points.start) {
       setPoints((p) => ({ ...p, start: e.latlng }));
       setCurrentPos(e.latlng);
     } else if (!points.end) {
       setPoints((p) => ({ ...p, end: e.latlng }));
-      fetchRoute(points.start, e.latlng);
     }
   };
+
+  // 2. Use an Effect to handle the heavy fetching logic
+  useEffect(() => {
+    if (points.start && points.end && !route) {
+      // This runs AFTER the click has finished and the UI has updated
+      fetchRoute(points.start, points.end);
+    }
+  }, [points.end]);
 
   // 1. Just fetches the list for the UI dropdown
   const searchLocation = async (query: string): Promise<SearchResult[]> => {
