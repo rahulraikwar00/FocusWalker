@@ -1,11 +1,5 @@
+import { ModalProps } from "@/types";
 import { motion } from "framer-motion";
-import { ReactNode } from "react";
-
-interface ModalProps {
-  children: ReactNode;
-  onClose: () => void;
-  title?: string;
-}
 
 export default function ModalContainer({
   children,

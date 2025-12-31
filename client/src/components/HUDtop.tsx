@@ -1,15 +1,7 @@
 import { motion } from "framer-motion";
 import { User, Settings } from "lucide-react";
 import { Button } from "./ui/button";
-
-interface HUDtopProps {
-  userData: {
-    callsign: string;
-    rank: string;
-  };
-  setIsDossierOpen: (open: boolean) => void;
-  setIsSettingsOpen: (open: boolean) => void;
-}
+import { HUDtopProps } from "@/types";
 
 export const HUDtop = ({
   setIsSettingsOpen,

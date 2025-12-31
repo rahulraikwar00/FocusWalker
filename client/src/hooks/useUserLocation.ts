@@ -1,8 +1,9 @@
 import { useState, useCallback } from "react";
-import L from "leaflet";
 
 export const useUserLocation = () => {
-  const [position, setPosition] = useState<L.LatLng | null>(null);
+  const [position, setPosition] = useState<{ lat: number; lng: number } | null>(
+    null
+  );
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
 
@@ -17,17 +18,15 @@ export const useUserLocation = () => {
 
     navigator.geolocation.getCurrentPosition(
       (pos) => {
-        const { latitude, longitude } = pos.coords;
-        setPosition(new L.LatLng(latitude, longitude));
+        setPosition({
+          lat: pos.coords.latitude,
+          lng: pos.coords.longitude,
+        });
         setLoading(false);
-        console.log(position);
       },
       (err) => {
+        setError(err.message);
         setLoading(false);
-        // Human-friendly error messages
-        if (err.code === 1) setError("Please enable location access");
-        else if (err.code === 2) setError("Location signal lost");
-        else setError("Could not find your location");
       },
       {
         enableHighAccuracy: true,

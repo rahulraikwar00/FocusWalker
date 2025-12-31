@@ -1,36 +1,9 @@
 import { AnimatePresence, motion } from "framer-motion";
-import {
-  ChevronDown,
-  ChevronUp,
-  Navigation2,
-  RotateCcw,
-  Timer,
-} from "lucide-react";
+import { Navigation2, RotateCcw, Timer } from "lucide-react";
 import { Button } from "./ui/button";
 import { useEffect, useState } from "react";
 
-interface StatItemProps {
-  label: string;
-  value: string;
-  unit: string;
-}
-
-interface HudCardProps {
-  isActive: boolean;
-  progress: number;
-  metrics: {
-    timeLeft: number;
-    distDone: number;
-    steps: number;
-  };
-  handleStopMission: () => void;
-  handleStartMission: () => void;
-  reset: () => void;
-  setIsActive: (active: boolean) => void;
-  route: { path: L.LatLngExpression[] } | null;
-  isLocked: boolean;
-  setIsLocked: (active: boolean) => void;
-}
+import { HudCardProps, StatItemProps } from "@/types";
 
 export const HUDCard = ({
   isActive,
@@ -255,14 +228,6 @@ export const HUDCard = ({
     </div>
   );
 };
-
-// 1. Individual Item Interface
-interface StatItemProps {
-  label: string;
-  value: string;
-  unit: string;
-  isPrimary?: boolean;
-}
 
 // 2. The StatItem Component
 const StatItem = ({ label, value, unit, isPrimary = false }: StatItemProps) => {
