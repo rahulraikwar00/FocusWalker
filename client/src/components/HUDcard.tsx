@@ -3,20 +3,27 @@ import { Navigation2, RotateCcw, Timer } from "lucide-react";
 import { Button } from "./ui/button";
 import { useEffect, useState } from "react";
 
-import { HudCardProps, StatItemProps } from "@/types";
+interface StatItemProps {
+  label: string;
+  value: string;
+  unit: string;
+}
 
 export const HUDCard = ({
-  isActive,
-  progress,
-  metrics,
-  handleStopMission,
-  handleStartMission,
-  reset,
-  setIsActive,
-  route,
-  isLocked,
-  setIsLocked,
-}: HudCardProps) => {
+  mapState,
+  mapActions,
+}: {
+  mapState: any;
+  mapActions: any;
+}) => {
+  const { isActive, progress, metrics, route, isLocked } = mapState;
+  const {
+    handleStopMission,
+    handleStartMission,
+    reset,
+    setIsActive,
+    setIsLocked,
+  } = mapActions;
   const [isResetConfirming, setIsResetConfirming] = useState(false);
 
   // 2. Add an effect to auto-cancel the reset if they don't confirm

@@ -1,12 +1,15 @@
 import React, { useState } from "react";
-import { User } from "lucide-react";
+import { Avatar } from "./Avatar";
 
 export const PersonnelDossier = ({ initialData, onSave }: any) => {
+  const savedUserData = localStorage.getItem("user_dossier");
+  const parsedUserData = savedUserData ? JSON.parse(savedUserData) : null;
+
   const [profile, setProfile] = useState(
     initialData || {
-      callsign: "",
-      rank: "Scout",
-      bio: "",
+      callsign: parsedUserData?.callsign || "RECRUIT", // Fixed typo
+      rank: parsedUserData?.rank || "Scout",
+      bio: parsedUserData?.bio || "NEVER GIVE UP",
     }
   );
 
@@ -19,7 +22,7 @@ export const PersonnelDossier = ({ initialData, onSave }: any) => {
       {/* --- 1. USER IDENTITY --- */}
       <div className="flex items-center gap-4">
         <div className="w-16 h-16 bg-(--accent-primary)/10 rounded-2xl flex items-center justify-center border border-(--accent-primary)/20">
-          <User size={28} className="text-(--accent-primary)" />
+          <Avatar seed={profile.callsign || "Ghost"} size={64} />
         </div>
         <div>
           <h3 className="text-xl font-bold text-(--text-primary)">

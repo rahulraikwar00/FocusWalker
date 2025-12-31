@@ -7,19 +7,37 @@
       content="width=device-width, initial-scale=1.0, maximum-scale=1, user-scalable=no, viewport-fit=cover"
     />
     <title>focusWalker</title>
-
-    <link rel="modulepreload" href="/src/main.tsx" />
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link rel="preconnect" href="https://a.basemaps.cartocdn.com" crossorigin />
+    <link rel="preconnect" href="https://b.basemaps.cartocdn.com" crossorigin />
+    <link rel="preconnect" href="https://c.basemaps.cartocdn.com" crossorigin />
 
     <link
+      rel="preload"
+      as="style"
       href="https://fonts.googleapis.com/css2?family=Playpen+Sans+Thai:wght@800&display=swap"
-      rel="stylesheet"
     />
+    <link rel="modulepreload" href="/src/main.tsx" />
+    <link
+      rel="stylesheet"
+      href="leaflet.css"
+      media="print"
+      onload="this.media='all'"
+    />
+    <link
+      rel="stylesheet"
+      href="https://fonts.googleapis.com/css2?family=Playpen+Sans+Thai:wght@800&display=swap"
+    />
+
     <link
       rel="stylesheet"
       href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"
+      crossorigin
+      media="print"
+      onload="this.media='all'"
     />
+
     <link rel="manifest" href="/manifest.json" />
 
     <style>
@@ -143,14 +161,15 @@
         box-shadow: 0 0 15px var(--neon);
         opacity: 0.3;
         animation: scan 4s linear infinite;
+        will-change: transform; /* Important: Tells browser to use GPU */
       }
 
       @keyframes scan {
         0% {
-          top: 0%;
+          transform: translateY(0);
         }
         100% {
-          top: 100%;
+          transform: translateY(100vh);
         }
       }
     </style>
@@ -182,12 +201,11 @@
     <script type="module" src="/src/main.tsx"></script>
 
     <script>
-      // Smooth dismissal after React Hydration
       window.addEventListener("load", () => {
         const overlay = document.getElementById("loading-overlay");
         if (overlay) {
           overlay.style.opacity = "0";
-          setTimeout(() => overlay.remove(), 500);
+          setTimeout(() => overlay.remove(), 1500);
         }
       });
     </script>

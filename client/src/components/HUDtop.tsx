@@ -1,7 +1,16 @@
 import { motion } from "framer-motion";
-import { User, Settings } from "lucide-react";
+import { Settings } from "lucide-react";
 import { Button } from "./ui/button";
-import { HUDtopProps } from "@/types";
+import { Avatar } from "./Avatar";
+
+interface HUDtopProps {
+  userData: {
+    callsign: string;
+    rank: string;
+  };
+  setIsDossierOpen: (open: boolean) => void;
+  setIsSettingsOpen: (open: boolean) => void;
+}
 
 export const HUDtop = ({
   setIsSettingsOpen,
@@ -19,7 +28,7 @@ export const HUDtop = ({
       >
         <div className="relative">
           <div className="w-11 h-11 bg-(--accent-primary) rounded-lg flex items-center justify-center shadow-[0_0_15px_var(--accent-glow)] transition-all group-hover:brightness-110">
-            <User className="text-(--bg-page) w-5 h-5" />
+            <Avatar seed={userData.callsign} size={64} />
           </div>
           {/* Heartbeat / Online Status Dot */}
           <div className="absolute -bottom-1 -right-1 w-3 h-3 bg-(--accent-primary) border-2 border-(--bg-page) rounded-full animate-pulse" />

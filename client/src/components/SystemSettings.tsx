@@ -2,7 +2,20 @@ import { motion } from "framer-motion";
 import { Monitor, Zap, Sun, Moon } from "lucide-react";
 import { useState } from "react";
 import { ThemeToggleButton } from "./ui/themeSwitchButton";
-import { SystemSettingsProps } from "@/types";
+
+interface SystemSettingsProps {
+  speedKmh: number;
+  isWakeLockEnabled: boolean;
+  isHapticsEnabled: boolean;
+  isDark: boolean;
+  toggleTheme: () => void;
+  onApply: (settings: {
+    speedKmh: number;
+    isHapticsEnabled: boolean;
+    isWakeLockEnabled: boolean;
+    isDark: boolean;
+  }) => void;
+}
 
 export const SystemSettings = ({
   speedKmh,
@@ -16,12 +29,14 @@ export const SystemSettings = ({
   const [draftSpeed, setDraftSpeed] = useState(speedKmh);
   const [draftWake, setDraftWake] = useState(isWakeLockEnabled);
   const [draftHaptics, setDraftHaptics] = useState(isHapticsEnabled);
+  const [draftDark, setDraftDark] = useState(isDark);
 
   const handleApply = () => {
     onApply({
-      speed: draftSpeed,
-      wakeLock: draftWake,
-      haptics: draftHaptics,
+      speedKmh: draftSpeed,
+      isHapticsEnabled: draftHaptics,
+      isWakeLockEnabled: draftWake,
+      isDark: draftDark,
     });
   };
 

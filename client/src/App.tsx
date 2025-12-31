@@ -1,18 +1,29 @@
-import React, { useEffect, useState } from "react"; // ← This line is CRITICAL
+import React, { Suspense, useEffect, useState } from "react"; // ← This line is CRITICAL
 import { Switch, Route } from "wouter";
 import { queryClient } from "./lib/queryClient";
 import { QueryClientProvider } from "@tanstack/react-query";
 import { Toaster } from "@/components/ui/toaster";
 import NotFound from "@/pages/not-found";
-import FocusTacticalMap from "@/pages/FocusTacticalMap";
+
 import InstallButton from "./components/PWAInstallButton";
+
+const FocusTacticalMap = React.lazy(() => import("@/pages/FocusTacticalMap"));
+
+// 2. A simple fallback keeps the Main Thread free while the Map loads
+const MapLoading = () => (
+  <div className="flex h-screen w-screen items-center justify-center bg-background text-muted-foreground">
+    <p className="animate-pulse">Loading Tactical Interface...</p>
+  </div>
+);
 
 function Router() {
   return (
-    <Switch>
-      <Route path="/" component={FocusTacticalMap} />
-      <Route component={NotFound} />
-    </Switch>
+    <Suspense fallback={<MapLoading />}>
+      <Switch>
+        <Route path="/" component={FocusTacticalMap} />
+        <Route component={NotFound} />
+      </Switch>
+    </Suspense>
   );
 }
 
