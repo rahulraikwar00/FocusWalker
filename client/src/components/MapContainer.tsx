@@ -9,9 +9,9 @@ import {
   useMapEvents,
 } from "react-leaflet";
 import "leaflet/dist/leaflet.css";
-import { memo, useEffect } from "react";
-import { useUserLocation } from "@/hooks/useUserLocation";
+import { memo, useEffect, useState } from "react";
 
+import { TentLayer } from "./TentLayer";
 interface MapProps {
   DEFAULT_LOCATION: L.LatLngExpression;
   handleMapClick: (e: L.LeafletMouseEvent) => void;
@@ -21,6 +21,7 @@ interface MapProps {
   route: { path: L.LatLngExpression[] } | null;
   isLocked: boolean;
   isDark: boolean;
+  tentPositionArray: any;
 }
 
 const MARKER_HTML = `
@@ -50,6 +51,7 @@ export const MapView = memo(
     route,
     isLocked,
     isDark,
+    tentPositionArray,
   }: MapProps) => {
     return (
       <MapContainer
@@ -88,6 +90,13 @@ export const MapView = memo(
               weight: 4,
               opacity: 0.8,
             }}
+          />
+        )}
+        {/* --- RENDER TENTS --- */}
+        {tentPositionArray && (
+          <TentLayer
+            tentPositionArray={tentPositionArray}
+            currentPos={currentPos}
           />
         )}
 
@@ -135,17 +144,6 @@ function MapController({
       if (!isActive && onMapClick) onMapClick(e);
     },
   });
-
-  // useEffect(() => {
-  //   if (!map || !position) return;
-
-  //   console.log("user locaiton is get");
-  //   map.flyTo(position, 16, {
-  //     animate: true,
-  //     duration: 1.5, // Seconds
-  //     easeLinearity: 0.25,
-  //   });
-  // }, [position, map]);
 
   useEffect(() => {
     if (!isActive && points?.start && map) {

@@ -21,6 +21,7 @@ export function useRouteLogic(speedKmh: number, isWakeLockEnabled: boolean) {
     distDone: 0,
   });
   const [isLocked, setIsLocked] = useState(true); // Default to locked
+  const [tentPositionArray, setTentPositionArray] = useState<any>(null);
 
   const wakeLockResource = useRef<WakeLockSentinel | null>(null);
   const animRef = useRef<number>(0);
@@ -85,12 +86,16 @@ export function useRouteLogic(speedKmh: number, isWakeLockEnabled: boolean) {
 
         if (data.code === "Ok" && data.routes?.length > 0) {
           const r = data.routes[0];
+          const line = lineString(r.geometry.coordinates);
           setRoute({
             path: r.geometry.coordinates.map((c: any) => [c[1], c[0]]),
             line: lineString(r.geometry.coordinates),
             distance: r.distance,
             duration: r.distance / speedMs,
           });
+          const tents = calculateTents(line, r.distance);
+          setTentPositionArray(tents);
+
           setMetrics({
             steps: 0,
             timeLeft: Math.ceil(r.distance / speedMs),
@@ -102,6 +107,39 @@ export function useRouteLogic(speedKmh: number, isWakeLockEnabled: boolean) {
       } finally {
         setIsLoadingRoute(false);
       }
+    },
+    [speedMs]
+  );
+  useEffect(() => {
+    if (tentPositionArray) {
+      console.log("State updated! Current Tents:", tentPositionArray);
+    }
+  }, [tentPositionArray]);
+
+  const calculateTents = useCallback(
+    (line: any, totalDistance: number) => {
+      const segmentMinutes = 25;
+      const segmentDistanceMeters = speedMs * 60 * segmentMinutes;
+      const tents = [];
+
+      let accumulatedDistance = segmentDistanceMeters;
+
+      // While we haven't reached the end of the total distance
+      while (accumulatedDistance < totalDistance) {
+        const pt = along(line, accumulatedDistance / 1000, {
+          units: "kilometers",
+        });
+        const [lng, lat] = pt.geometry.coordinates;
+
+        tents.push({
+          id: `tent-${accumulatedDistance}`,
+          latlng: new L.LatLng(lat, lng),
+          distanceMark: accumulatedDistance,
+        });
+
+        accumulatedDistance += segmentDistanceMeters;
+      }
+      return tents;
     },
     [speedMs]
   );
@@ -224,6 +262,7 @@ export function useRouteLogic(speedKmh: number, isWakeLockEnabled: boolean) {
     setCurrentPos(null);
     setIsActive(false);
     setProgress(0);
+    setTentPositionArray(null);
     progressRef.current = 0;
     lastTimeRef.current = 0;
     setMetrics({ steps: 0, timeLeft: 0, distDone: 0 });
@@ -244,5 +283,6 @@ export function useRouteLogic(speedKmh: number, isWakeLockEnabled: boolean) {
     setIsLocked,
     isLocked,
     handleLocationSelect,
+    tentPositionArray,
   };
 }

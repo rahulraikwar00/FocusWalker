@@ -7,6 +7,7 @@ interface StatItemProps {
   label: string;
   value: string;
   unit: string;
+  isPrimary?: boolean;
 }
 
 export const HUDCard = ({
