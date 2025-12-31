@@ -1,17 +1,17 @@
 import React, { useState } from "react";
 import { Avatar } from "./Avatar";
 
+const DEMO_USER_DATA = {
+  callsign: "FOCUS WALKER",
+  rank: "Scout",
+  bio: "",
+};
+
 export const PersonnelDossier = ({ initialData, onSave }: any) => {
   const savedUserData = localStorage.getItem("user_dossier");
-  const parsedUserData = savedUserData ? JSON.parse(savedUserData) : null;
+  // const parsedUserData = savedUserData ? JSON.parse(savedUserData) : null;
 
-  const [profile, setProfile] = useState(
-    initialData || {
-      callsign: parsedUserData?.callsign || "RECRUIT", // Fixed typo
-      rank: parsedUserData?.rank || "Scout",
-      bio: parsedUserData?.bio || "NEVER GIVE UP",
-    }
-  );
+  const [profile, setProfile] = useState(initialData || { DEMO_USER_DATA });
 
   const handleApply = () => {
     onSave(profile);

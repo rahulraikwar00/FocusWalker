@@ -10,6 +10,7 @@ import {
 } from "react-leaflet";
 import "leaflet/dist/leaflet.css";
 import { memo, useEffect } from "react";
+import { useUserLocation } from "@/hooks/useUserLocation";
 
 interface MapProps {
   DEFAULT_LOCATION: L.LatLngExpression;
@@ -120,7 +121,7 @@ function MapController({
   currentPos,
 }: any) {
   const map = useMap();
-  const { position, error } = useUserLocation();
+  // const { position, error } = useUserLocation();
 
   useEffect(() => {
     const handle = requestAnimationFrame(() => {
@@ -135,16 +136,16 @@ function MapController({
     },
   });
 
-  useEffect(() => {
-    if (!map || !position) return;
+  // useEffect(() => {
+  //   if (!map || !position) return;
 
-    console.log("user locaiton is get");
-    map.flyTo(position, 16, {
-      animate: true,
-      duration: 1.5, // Seconds
-      easeLinearity: 0.25,
-    });
-  }, [position, map]);
+  //   console.log("user locaiton is get");
+  //   map.flyTo(position, 16, {
+  //     animate: true,
+  //     duration: 1.5, // Seconds
+  //     easeLinearity: 0.25,
+  //   });
+  // }, [position, map]);
 
   useEffect(() => {
     if (!isActive && points?.start && map) {
