@@ -9,9 +9,15 @@ const DEMO_USER_DATA = {
 
 export const PersonnelDossier = ({ initialData, onSave }: any) => {
   const savedUserData = localStorage.getItem("user_dossier");
-  // const parsedUserData = savedUserData ? JSON.parse(savedUserData) : null;
+  const parsedUserData = savedUserData ? JSON.parse(savedUserData) : null;
 
-  const [profile, setProfile] = useState(initialData || { DEMO_USER_DATA });
+  const [profile, setProfile] = useState(
+    initialData || {
+      callsign: parsedUserData?.callsign || DEMO_USER_DATA.callsign,
+      rank: parsedUserData?.rank || DEMO_USER_DATA.rank,
+      bio: parsedUserData?.bio || DEMO_USER_DATA.bio,
+    }
+  );
 
   const handleApply = () => {
     onSave(profile);
