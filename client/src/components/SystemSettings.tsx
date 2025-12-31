@@ -10,9 +10,10 @@ interface SystemSettingsProps {
   isDark: boolean;
   toggleTheme: () => void;
   onApply: (settings: {
-    speed: number;
-    wakeLock: boolean;
-    haptics: boolean;
+    speedKmh: number;
+    isHapticsEnabled: boolean;
+    isWakeLockEnabled: boolean;
+    isDark: boolean;
   }) => void;
 }
 
@@ -28,12 +29,14 @@ export const SystemSettings = ({
   const [draftSpeed, setDraftSpeed] = useState(speedKmh);
   const [draftWake, setDraftWake] = useState(isWakeLockEnabled);
   const [draftHaptics, setDraftHaptics] = useState(isHapticsEnabled);
+  const [draftDark, setDraftDark] = useState(isDark);
 
   const handleApply = () => {
     onApply({
-      speed: draftSpeed,
-      wakeLock: draftWake,
-      haptics: draftHaptics,
+      speedKmh: draftSpeed,
+      isHapticsEnabled: draftHaptics,
+      isWakeLockEnabled: draftWake,
+      isDark: draftDark,
     });
   };
 

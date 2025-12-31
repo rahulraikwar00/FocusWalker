@@ -9,7 +9,7 @@ import {
   useMapEvents,
 } from "react-leaflet";
 import "leaflet/dist/leaflet.css";
-import { useEffect } from "react";
+import { memo, useEffect } from "react";
 
 interface MapProps {
   DEFAULT_LOCATION: L.LatLngExpression;
@@ -22,77 +22,94 @@ interface MapProps {
   isDark: boolean;
 }
 
+const MARKER_HTML = `
+  <div class="relative flex items-center justify-center">
+    <div class="absolute w-8 h-8 bg-(--accent-glow) rounded-full animate-ping opacity-20"></div>
+    <div class="w-4 h-4 bg-(--accent-primary) rounded-full border-2 border-(--bg-page) shadow-[0_0_15px_var(--accent-glow)]"></div>
+  </div>
+`;
+
+// 2. Create a static icon instance (or useMemo inside)
+const tacticalIcon = L.divIcon({
+  className: "custom-marker",
+  html: MARKER_HTML,
+  iconSize: [32, 32],
+  iconAnchor: [16, 16],
+});
+
 // 1. Rename to avoid conflict with library MapContainer
 // 2. Add 'return' statement
-export const MapView = ({
-  DEFAULT_LOCATION,
-  handleMapClick,
-  currentPos,
-  isActive,
-  points,
-  route,
-  isLocked,
-  isDark,
-}: MapProps) => {
-  return (
-    <MapContainer
-      center={DEFAULT_LOCATION}
-      zoom={5}
-      className="w-full h-full z-0 " // Uses theme background
-      zoomControl={false}
-      minZoom={5}
-    >
-      <TileLayer
-        key={isDark ? "stadia-dark" : "stadia-light"}
-        url={
-          isDark
-            ? "https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png"
-            : "https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png"
-        }
-        keepBuffer={12}
-        updateWhenIdle={false}
-        className="map-tiles"
-      />
-
-      <MapController
-        onMapClick={handleMapClick}
-        isActive={isActive}
-        points={points}
-        isLocked={isLocked}
-        currentPos={currentPos}
-      />
-
-      {route?.path && (
-        <Polyline
-          positions={route.path}
-          // Uses standard CSS variable for the route line
-          pathOptions={{
-            color: isDark ? "#BFFF04" : "#86B300", // Fallback colors for JS-only components
-            weight: 4,
-            opacity: 0.8,
-          }}
+export const MapView = memo(
+  ({
+    DEFAULT_LOCATION,
+    handleMapClick,
+    currentPos,
+    isActive,
+    points,
+    route,
+    isLocked,
+    isDark,
+  }: MapProps) => {
+    return (
+      <MapContainer
+        center={DEFAULT_LOCATION}
+        zoom={5}
+        className="w-full h-full z-0 " // Uses theme background
+        zoomControl={false}
+        minZoom={5}
+      >
+        <TileLayer
+          key={isDark ? "stadia-dark" : "stadia-light"}
+          url={
+            isDark
+              ? "https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png"
+              : "https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png"
+          }
+          keepBuffer={12}
+          updateWhenIdle={false}
+          className="map-tiles"
         />
-      )}
 
-      {currentPos && (
-        <Marker
-          position={currentPos}
-          icon={L.divIcon({
-            className: "custom-marker",
-            html: `
-          <div class="relative flex items-center justify-center">
-            <div class="absolute w-8 h-8 bg-(--accent-glow) rounded-full animate-ping opacity-20"></div>
-            <div class="w-4 h-4 bg-(--accent-primary) rounded-full border-2 border-(--bg-page) shadow-[0_0_15px_var(--accent-glow)]"></div>
-          </div>
-        `,
-            iconSize: [32, 32],
-            iconAnchor: [16, 16],
-          })}
+        <MapController
+          onMapClick={handleMapClick}
+          isActive={isActive}
+          points={points}
+          isLocked={isLocked}
+          currentPos={currentPos}
         />
-      )}
-    </MapContainer>
-  );
-};
+
+        {route?.path && (
+          <Polyline
+            positions={route.path}
+            // Uses standard CSS variable for the route line
+            pathOptions={{
+              color: isDark ? "#BFFF04" : "#86B300", // Fallback colors for JS-only components
+              weight: 4,
+              opacity: 0.8,
+            }}
+          />
+        )}
+
+        {currentPos && <Marker position={currentPos} icon={tacticalIcon} />}
+      </MapContainer>
+    );
+  },
+
+  (prev, next) => {
+    // Return TRUE if they are equal (Don't re-render)
+    // Return FALSE if they are different (Do re-render)
+    return (
+      prev.isDark === next.isDark &&
+      prev.isActive === next.isActive &&
+      prev.isLocked === next.isLocked &&
+      prev.currentPos?.lat === next.currentPos?.lat &&
+      prev.currentPos?.lng === next.currentPos?.lng &&
+      prev.route?.path?.length === next.route?.path?.length &&
+      prev.points?.start?.lat === next.points?.start?.lat &&
+      prev.points?.end?.lat === next.points?.end?.lat
+    );
+  }
+);
 
 function MapController({
   pos,

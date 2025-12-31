@@ -1,7 +1,8 @@
 import confetti from "canvas-confetti";
 import L from "leaflet";
 import { useState, useRef, useEffect, useCallback } from "react";
-import * as turf from "@turf/turf";
+import { lineString } from "@turf/helpers";
+import along from "@turf/along";
 const METERS_PER_STEP = 0.72; // Average step length in meters
 
 export function useRouteLogic(speedKmh: number, isWakeLockEnabled: boolean) {
@@ -86,7 +87,7 @@ export function useRouteLogic(speedKmh: number, isWakeLockEnabled: boolean) {
           const r = data.routes[0];
           setRoute({
             path: r.geometry.coordinates.map((c: any) => [c[1], c[0]]),
-            line: turf.lineString(r.geometry.coordinates),
+            line: lineString(r.geometry.coordinates),
             distance: r.distance,
             duration: r.distance / speedMs,
           });
@@ -105,57 +106,64 @@ export function useRouteLogic(speedKmh: number, isWakeLockEnabled: boolean) {
     [speedMs]
   );
 
-  const handleMapClick = async (e: L.LeafletMouseEvent) => {
-    if (isActive) return;
-    if (!points.start) {
-      setPoints((p) => ({ ...p, start: e.latlng }));
-      setCurrentPos(e.latlng);
-    } else if (!points.end) {
-      setPoints((p) => ({ ...p, end: e.latlng }));
-      fetchRoute(points.start, e.latlng);
-    }
-  };
+  const handleMapClick = useCallback(
+    async (e: L.LeafletMouseEvent) => {
+      if (isActive) return;
+      setPoints((p) => {
+        if (!p.start) {
+          setCurrentPos(e.latlng);
+          return { ...p, start: e.latlng };
+        } else if (!p.end) {
+          fetchRoute(p.start, e.latlng);
+          return { ...p, end: e.latlng };
+        }
+        return p;
+      });
+    },
+    [isActive, fetchRoute]
+  );
 
-  // 1. Just fetches the list for the UI dropdown
-  const searchLocation = async (query: string): Promise<SearchResult[]> => {
-    if (!query || isActive) return [];
-    try {
-      const res = await fetch(
-        `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(
-          query
-        )}&limit=5`
-      );
-      const data = await res.json();
-
-      return data.map((item: any) => ({
-        name: item.display_name,
-        latlng: new L.LatLng(parseFloat(item.lat), parseFloat(item.lon)),
-      }));
-    } catch (e) {
-      console.error("Search Fetch Error:", e);
-      return [];
-    }
-  };
+  const searchLocation = useCallback(
+    async (query: string): Promise<SearchResult[]> => {
+      if (!query || isActive) return [];
+      try {
+        const res = await fetch(
+          `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(
+            query
+          )}&limit=5`
+        );
+        const data = await res.json();
+        return data.map((item: any) => ({
+          name: item.display_name,
+          latlng: new L.LatLng(parseFloat(item.lat), parseFloat(item.lon)),
+        }));
+      } catch (e) {
+        return [];
+      }
+    },
+    [isActive]
+  );
 
   interface SearchResult {
     name: string;
     latlng: L.LatLng;
   }
-  // 2. Handles what happens when a user clicks a result
-  const handleLocationSelect = (result: SearchResult) => {
-    const newLoc = result.latlng;
-
-    if (!points.start) {
-      // Setting the first point (Origin)
-      setPoints((p) => ({ ...p, start: newLoc }));
-      setCurrentPos(newLoc);
-    } else {
-      // Setting the second point (Destination)
-      setPoints((p) => ({ ...p, end: newLoc }));
-      // Trigger the routing engine
-      fetchRoute(points.start, newLoc);
-    }
-  };
+  // 3. Memoize handleLocationSelect
+  const handleLocationSelect = useCallback(
+    (result: SearchResult) => {
+      const newLoc = result.latlng;
+      setPoints((p) => {
+        if (!p.start) {
+          setCurrentPos(newLoc);
+          return { ...p, start: newLoc };
+        } else {
+          fetchRoute(p.start, newLoc);
+          return { ...p, end: newLoc };
+        }
+      });
+    },
+    [fetchRoute]
+  );
 
   // Safe Animation Loop
   useEffect(() => {
@@ -176,7 +184,7 @@ export function useRouteLogic(speedKmh: number, isWakeLockEnabled: boolean) {
       const dDone = progressRef.current * routeDist;
 
       try {
-        const pt = turf.along(route.line, dDone / 1000, {
+        const pt = along(route.line, dDone / 1000, {
           units: "kilometers",
         });
         const [lng, lat] = pt.geometry.coordinates;
@@ -209,7 +217,8 @@ export function useRouteLogic(speedKmh: number, isWakeLockEnabled: boolean) {
     };
   }, [isActive, route, speedMs]);
 
-  const reset = () => {
+  // 4. Memoize reset
+  const reset = useCallback(() => {
     setPoints({ start: null, end: null });
     setRoute(null);
     setCurrentPos(null);
@@ -218,7 +227,7 @@ export function useRouteLogic(speedKmh: number, isWakeLockEnabled: boolean) {
     progressRef.current = 0;
     lastTimeRef.current = 0;
     setMetrics({ steps: 0, timeLeft: 0, distDone: 0 });
-  };
+  }, []);
 
   return {
     points,

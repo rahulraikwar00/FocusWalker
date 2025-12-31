@@ -15,35 +15,21 @@ interface StatItemProps {
   unit: string;
 }
 
-interface HudCardProps {
-  isActive: boolean;
-  progress: number;
-  metrics: {
-    timeLeft: number;
-    distDone: number;
-    steps: number;
-  };
-  handleStopMission: () => void;
-  handleStartMission: () => void;
-  reset: () => void;
-  setIsActive: (active: boolean) => void;
-  route: { path: L.LatLngExpression[] } | null;
-  isLocked: boolean;
-  setIsLocked: (active: boolean) => void;
-}
-
 export const HUDCard = ({
-  isActive,
-  progress,
-  metrics,
-  handleStopMission,
-  handleStartMission,
-  reset,
-  setIsActive,
-  route,
-  isLocked,
-  setIsLocked,
-}: HudCardProps) => {
+  mapState,
+  mapActions,
+}: {
+  mapState: any;
+  mapActions: any;
+}) => {
+  const { isActive, progress, metrics, route, isLocked } = mapState;
+  const {
+    handleStopMission,
+    handleStartMission,
+    reset,
+    setIsActive,
+    setIsLocked,
+  } = mapActions;
   const [isResetConfirming, setIsResetConfirming] = useState(false);
 
   // 2. Add an effect to auto-cancel the reset if they don't confirm
