@@ -54,6 +54,30 @@
 }
 
 @layer utilities {
+  /* --- LEAFLET OVERRIDES --- */
+
+  /* --- RPG VERTICAL POPUP FIX --- */
+
+  .leaflet-popup-content-wrapper {
+    background: transparent !important;
+    box-shadow: none !important;
+    padding: 0 !important;
+  }
+
+  .leaflet-popup-content {
+    margin: 0 !important;
+    /* Force it to follow our card's width */
+    width: fit-content !important;
+  }
+
+  .leaflet-popup-tip-container {
+    /* Optional: Hide the triangle tip for a cleaner "floating HUD" look */
+    display: none;
+  }
+
+  .leaflet-popup-close-button {
+    display: none !important;
+  }
   .glass-card {
     background-color: var(--hud-bg);
     backdrop-filter: blur(16px) saturate(180%);

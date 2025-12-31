@@ -61,6 +61,7 @@ export default function FocusTacticalMap() {
     setIsLocked,
     isLocked,
     handleLocationSelect,
+    tentPositionArray,
   } = useRouteLogic(settings.speedKmh, settings.isWakeLockEnabled);
   const { handleStartMission, handleStopMission } = useMissionControl(
     settings,
@@ -90,6 +91,7 @@ export default function FocusTacticalMap() {
             isLocked={isLocked}
             isDark={settings.isDark}
             handleMapClick={handleMapClick}
+            tentPositionArray={tentPositionArray}
           />
         </Suspense>
       </div>
@@ -109,7 +111,7 @@ export default function FocusTacticalMap() {
           setIsDossierOpen={setIsDossierOpen}
         />
 
-        {!isActive && (
+        {!route && (
           <LocationSearch
             searchQuery={searchQuery}
             setSearchQuery={setSearchQuery}
