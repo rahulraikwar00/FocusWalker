@@ -2,6 +2,7 @@ import { motion } from "framer-motion";
 import { Monitor, Zap, Sun, Moon } from "lucide-react";
 import { useState } from "react";
 import { ThemeToggleButton } from "./ui/themeSwitchButton";
+import { toggleStayAwake, triggerTactilePulse } from "@/lib/utils";
 
 interface SystemSettingsProps {
   speedKmh: number;
@@ -32,6 +33,20 @@ export const SystemSettings = ({
   const [draftDark, setDraftDark] = useState(isDark);
 
   const handleApply = () => {
+    // 1. Theme Sync: Only trigger if the user actually changed it
+    if (draftDark !== isDark) {
+      toggleTheme();
+    }
+
+    // 2. Haptic Feedback: Use the draft value for immediate confirmation
+    if (draftHaptics) {
+      triggerTactilePulse("double"); // Tactical "Success" pulse
+    }
+
+    // 3. Wake Lock Sync: Ensure system stays awake if newly enabled
+    toggleStayAwake(draftWake);
+
+    // 4. Global State Update: Push all drafts to the main app state
     onApply({
       speedKmh: draftSpeed,
       isHapticsEnabled: draftHaptics,
@@ -54,7 +69,14 @@ export const SystemSettings = ({
         {/* 2. Theme Toggle: Large & Intuitive */}
         <div className="flex items-center justify-between px-2">
           <span className="text-sm font-medium">Appearance</span>
-          <ThemeToggleButton isDark={isDark} toggleTheme={toggleTheme} />
+          <ThemeToggleButton
+            isDark={draftDark}
+            toggleTheme={() => {
+              setDraftDark(!draftDark);
+              toggleTheme();
+              if (draftHaptics) triggerTactilePulse("short");
+            }}
+          />
         </div>
 
         {/* 3. Speed Slider: Clean & Direct */}
@@ -84,7 +106,10 @@ export const SystemSettings = ({
             active={draftWake}
             icon={<Monitor size={20} />}
             label="Keep Screen On"
-            onClick={() => setDraftWake(!draftWake)}
+            onClick={() => {
+              setDraftWake(!draftWake);
+              if (draftHaptics) triggerTactilePulse("short");
+            }}
           />
           <ToggleButton
             active={draftHaptics}

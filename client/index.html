@@ -13,15 +13,11 @@
     <link rel="preconnect" href="https://b.basemaps.cartocdn.com" crossorigin />
     <link rel="preconnect" href="https://c.basemaps.cartocdn.com" crossorigin />
 
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link
-      rel="preload"
-      as="style"
-      href="https://fonts.googleapis.com/css2?family=Playpen+Sans+Thai:wght@800&display=swap"
-    />
-
-    <link
+      href="https://fonts.googleapis.com/css2?family=Playpen+Sans+Thai:wght@100..800&display=swap"
       rel="stylesheet"
-      href="https://fonts.googleapis.com/css2?family=Playpen+Sans+Thai:wght@800&display=swap"
     />
 
     <link
@@ -36,135 +32,73 @@
 
     <style>
       :root {
-        --bg: #ffffff;
-        --text: #0f172a;
-        --neon: #bfff04;
-        --ui-card: rgba(15, 23, 42, 0.05);
-        --hud-border: rgba(0, 0, 0, 0.05);
+        /* Use the exact names from your index.css */
+        --bg-page: #ffffff;
+        --text-primary: #0f172a;
+        --accent-primary: #658c00; /* Day green */
+        --hud-bg: rgba(255, 255, 255, 0.85);
+        --hud-border: rgba(15, 23, 42, 0.08);
       }
 
       :root.dark {
-        --bg: #050505;
-        --text: #ffffff;
-        --neon: #bfff04;
-        --ui-card: rgba(255, 255, 255, 0.03);
-        --hud-border: rgba(255, 255, 255, 0.05);
+        --bg-page: #050505;
+        --text-primary: #ffffff;
+        --accent-primary: #bfff04; /* Tactical neon */
+        --hud-bg: rgba(10, 10, 12, 0.9);
+        --hud-border: rgba(191, 255, 4, 0.12);
       }
 
-      /* Base Styles */
+      /* Update your base styles to use these new names */
       body,
       html {
-        margin: 0;
-        padding: 0;
-        background: var(--bg);
-        height: 100%;
-        width: 100%;
-        overflow: hidden;
-        font-family: "Playpen Sans Thai", system-ui, sans-serif;
+        background: var(--bg-page);
+        color: var(--text-primary);
+        /* ... rest of your styles ... */
       }
 
-      /* 2. THE TACTICAL GRID: Renders in ~10ms */
       #loading-overlay {
         position: fixed;
         inset: 0;
-        background: var(--bg);
-        background-image: linear-gradient(
-            var(--hud-border) 1px,
-            transparent 1px
-          ),
-          linear-gradient(90deg, var(--hud-border) 1px, transparent 1px);
-        background-size: 40px 40px;
-        z-index: 9999;
+        background: var(--bg-page);
+        /* The "Magic Trio" for centering */
         display: flex;
         flex-direction: column;
         align-items: center;
         justify-content: center;
+
+        z-index: 9999;
         transition: opacity 0.4s cubic-bezier(0.4, 0, 0.2, 1);
       }
 
       .splash-logo {
-        position: relative;
-        z-index: 10;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        text-align: center;
       }
+
       .logo-text {
-        color: var(--text);
-        font-size: clamp(24px, 8vw, 36px);
+        color: var(--text-primary);
+        font-size: clamp(24px, 8vw, 42px); /* Slightly larger for impact */
         font-weight: 900;
+        font-family: var(--font-sans);
         letter-spacing: -0.05em;
         text-transform: uppercase;
-        font-style: italic;
+        margin: 0; /* Remove default margins that might push it off-center */
       }
 
       .logo-text::after {
         content: "";
         display: block;
-        width: 60%;
+        width: 100%; /* Make the neon bar match the text width */
         height: 4px;
-        background: var(--neon);
-        margin: 4px auto 0;
-        box-shadow: 0 0 20px var(--neon);
+        background: var(--accent-primary);
+        margin: 8px auto 0;
+        box-shadow: 0 0 20px var(--accent-primary);
       }
-
-      /* SKELETON SHELL */
-      #shell {
-        position: absolute;
-        inset: 0;
-        display: flex;
-        flex-direction: column;
-        justify-content: space-between;
-        padding: calc(env(safe-area-inset-top) + 20px) 20px
-          calc(env(safe-area-inset-bottom) + 30px);
-        pointer-events: none;
-      }
-
-      .skeleton {
-        background: var(--ui-card);
-        backdrop-filter: blur(10px);
-        border: 1px solid var(--hud-border);
-        animation: pulse 1.5s ease-in-out infinite;
-      }
-
-      .top-hud-skeleton {
-        width: 140px;
-        height: 48px;
-        border-radius: 16px;
-      }
-      .bottom-card-skeleton {
-        width: 100%;
-        height: 160px;
-        border-radius: 24px;
-      }
-
-      @keyframes pulse {
-        0%,
-        100% {
-          opacity: 0.4;
-        }
-        50% {
-          opacity: 0.8;
-        }
-      }
-
       .scanner {
-        position: absolute;
-        top: 0;
-        left: 0;
-        width: 100%;
-        height: 2px;
-        background: var(--neon);
-        box-shadow: 0 0 15px var(--neon);
-        opacity: 0.3;
-        animation: scan 4s linear infinite;
-        will-change: transform; /* Important: Tells browser to use GPU */
-      }
-
-      @keyframes scan {
-        0% {
-          transform: translateY(0);
-        }
-        100% {
-          transform: translateY(100vh);
-        }
+        background: var(--accent-primary);
       }
     </style>
   </head>
