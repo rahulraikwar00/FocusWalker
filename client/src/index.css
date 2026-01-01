@@ -5,47 +5,46 @@
 
 @layer base {
   :root {
-    /* Day Mission */
-    --hud-bg: rgba(255, 255, 255, 0.85);
-    --hud-border: rgba(15, 23, 42, 0.08);
-    --text-primary: #0f172a;
-    --text-secondary: #475569;
-    --accent-primary: #658c00;
+    /* --- The Explorer (Light Mode) --- */
+    /* Feels like a high-quality paper map in the sun */
+    --hud-bg: rgba(255, 255, 255, 0.8);
+    --hud-border: rgba(28, 30, 20, 0.08);
+    --text-primary: #1c1e14; /* Deep forest black */
+    --text-secondary: #5a6148; /* Mossy stone */
+    --accent-primary: #658c00; /* Sage expedition green */
     --accent-glow: rgba(101, 140, 0, 0.15);
-    --bg-page: #ffffff;
-    /* --map-tiles-filter: brightness(0.95) contrast(1.1) saturate(1.3); */
-    --map-tiles-filter: saturate(1.2) contrast(1.05);
-
-    /* New: Soft organic shadows for Light Mode */
-    --shadow-tactical: 0 10px 30px -10px rgba(0, 0, 0, 0.1);
+    --bg-page: #fdfdfb; /* Clean paper white */
   }
 
   .dark {
-    /* Night Ops */
-    --hud-bg: rgba(10, 10, 12, 0.9);
-    --hud-border: rgba(191, 255, 4, 0.12);
-    --text-primary: #f8fafc;
-    --text-secondary: #94a3b8;
-    --accent-primary: #bfff04;
-    --accent-glow: rgba(191, 255, 4, 0.35);
-    --bg-page: #020617;
-    /* --map-tiles-filter: brightness(1.1) contrast(0.8) saturate(1.2); */
-    --map-tiles-filter: brightness(1.2) contrast(1.1) saturate(0.8)
-      hue-rotate(-5deg);
+    /* --- Night Voyage (Dark Mode) --- */
+    /* Deep organic obsidian - feels premium and calm */
+    --hud-bg: rgba(10, 11, 7, 0.9);
+    --hud-border: rgba(191, 255, 4, 0.1);
+    --text-primary: #f1f5f9;
+    --text-secondary: #7e8a70; /* Muted olive grey */
+    --accent-primary: #bfff04; /* The 'Volt' Lime */
+    --accent-glow: rgba(191, 255, 4, 0.25);
+    --bg-page: #060704; /* Organic deep black */
 
-    /* New: Glowing neon shadows for Dark Mode */
-    --shadow-tactical: 0 0 20px var(--accent-glow);
+    /* Pro Dark Map: No green tint, just clean charcoal roads */
+    /* --map-tiles-filter: invert(100%) hue-rotate(180deg) brightness(0.6)
+      contrast(1.3) saturate(0.9); */
+
+    /* The "Ghost Glow" - looks like the HUD is floating */
+    /* --shadow-tactical: 0 0 40px rgba(191, 255, 4, 0.03),
+      0 0 80px rgba(191, 255, 4, 0.01); */
   }
 
   body {
     background-color: var(--bg-page);
     color: var(--text-primary);
-    font-family: var(--font-sans); /* Uses Playpen Sans Thai */
+    font-family: var(--font-sans);
     -webkit-font-smoothing: antialiased;
-    transition: background 0.4s ease, color 0.4s ease;
+    /* Smooth transition for the "Day/Night" cycle */
+    transition: background 0.8s cubic-bezier(0.4, 0, 0.2, 1), color 0.8s ease;
   }
 }
-
 @theme {
   --font-sans: "Playpen Sans Thai", cursive, system-ui, sans-serif;
   --color-tactical: var(--accent-primary);
@@ -80,22 +79,34 @@
   }
   .glass-card {
     background-color: var(--hud-bg);
-    backdrop-filter: blur(16px) saturate(180%);
+    backdrop-filter: blur(20px) saturate(160%); /* Increased blur for "Calm" vibe */
     border: 1px solid var(--hud-border);
     box-shadow: var(--shadow-tactical);
+    border-radius: 2rem; /* Rounder corners = more friendly/calm */
+    transition: all 0.4s cubic-bezier(0.22, 1, 0.36, 1);
   }
 
   .btn-primary {
     background-color: var(--accent-primary);
-    color: var(--bg-page); /* Contrasts against the green */
-    font-weight: 700;
-    border-radius: 1.25rem;
-    padding: 0.75rem 1.5rem;
-    transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+    color: #000000; /* Force black for maximum legibility on Lime */
+    font-weight: 800;
+    letter-spacing: -0.02em;
+    border-radius: 1.5rem;
+    padding: 1rem 2rem;
+    box-shadow: 0 4px 0px rgba(0, 0, 0, 0.1); /* Subtle "pushable" button feel */
   }
 
-  .btn-primary:active {
-    transform: scale(0.96);
-    filter: brightness(1.1);
+  .btn-primary:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 8px 20px var(--accent-glow);
+  }
+  .leaflet-container {
+    background: var(--bg-page) !important;
+    outline: 0;
+  }
+
+  /* Apply your custom map filter from index.css */
+  .leaflet-tile-pane {
+    filter: var(--map-tiles-filter);
   }
 }

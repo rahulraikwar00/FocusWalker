@@ -30,7 +30,8 @@ const MapView = React.lazy(() =>
 const DEFAULT_LOCATION = new L.LatLng(20.5937, 78.9629);
 
 export default function FocusTacticalMap() {
-  const { settings, setSettings, toggleTheme } = useAppSettings();
+  const { settings, setSettings, toggleTheme, toggleHaptics } =
+    useAppSettings();
 
   const {
     isDossierOpen,
@@ -169,8 +170,12 @@ export default function FocusTacticalMap() {
                   toggleTheme={toggleTheme}
                   onApply={(newSettings) => {
                     setSettings(newSettings);
+                    toggleStayAwake(newSettings.isWakeLockEnabled);
+                    if (newSettings.isHapticsEnabled) {
+                      triggerTactilePulse("double");
+                    }
                     setIsSettingsOpen(false);
-                    triggerToast("SyatemSettings Updated");
+                    triggerToast("System: Configuration Applied 🟢");
                   }}
                 />
               )}

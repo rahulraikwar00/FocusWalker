@@ -7,10 +7,10 @@ import NotFound from "@/pages/not-found";
 
 import InstallButton from "./components/PWAInstallButton";
 
-const FocusTacticalMap = React.lazy(() => import("@/pages/FocusTacticalMap"));
+import FocusTacticalMap from "@/pages/FocusTacticalMap";
 
 // 2. A simple fallback keeps the Main Thread free while the Map loads
-const MapLoading = () => (
+const AppLoading = () => (
   <div className="flex h-screen w-screen items-center justify-center bg-background text-muted-foreground">
     <p className="animate-pulse">Loading Tactical Interface...</p>
   </div>
@@ -18,12 +18,10 @@ const MapLoading = () => (
 
 function Router() {
   return (
-    <Suspense fallback={<MapLoading />}>
-      <Switch>
-        <Route path="/" component={FocusTacticalMap} />
-        <Route component={NotFound} />
-      </Switch>
-    </Suspense>
+    <Switch>
+      <Route path="/" component={FocusTacticalMap} />
+      <Route component={NotFound} />
+    </Switch>
   );
 }
 

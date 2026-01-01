@@ -1,31 +1,49 @@
-import { triggerTactilePulse } from "@/lib/utils";
-import { useState } from "react";
+import { useEffect, useState } from "react";
+import { triggerTactilePulse, toggleStayAwake } from "@/lib/utils";
 
-// Create this file: hooks/useAppSettings.js
 export const useAppSettings = () => {
-  const [settings, setSettings] = useState({
-    speedKmh: 5.0,
-    isHapticsEnabled: true,
-    isWakeLockEnabled: true,
-    isDark: true,
+  const [settings, setSettings] = useState(() => {
+    const savedTheme = localStorage.getItem("theme");
+    return {
+      speedKmh: 5.0,
+      isHapticsEnabled: true,
+      isWakeLockEnabled: true,
+      isDark: savedTheme ? savedTheme === "dark" : true,
+    };
   });
 
-  const toggleTheme = () => {
-    const newDark = !settings.isDark;
-    setSettings((prev) => ({ ...prev, isDark: newDark }));
-
-    // DOM manipulation stays here
-    if (newDark) {
-      document.documentElement.classList.add("dark");
+  // --- THEME SYNC ---
+  useEffect(() => {
+    const root = window.document.documentElement;
+    if (settings.isDark) {
+      root.classList.add("dark");
       localStorage.setItem("theme", "dark");
     } else {
-      document.documentElement.classList.remove("dark");
+      root.classList.remove("dark");
       localStorage.setItem("theme", "light");
     }
+  }, [settings.isDark]);
 
-    // Haptics here too
+  // --- WAKE LOCK SYNC ---
+  useEffect(() => {
+    toggleStayAwake(settings.isWakeLockEnabled);
+
+    // Cleanup: Release lock if component unmounts
+    return () => {
+      toggleStayAwake(false);
+    };
+  }, [settings.isWakeLockEnabled]);
+
+  const toggleTheme = () => {
+    setSettings((prev) => ({ ...prev, isDark: !prev.isDark }));
     if (settings.isHapticsEnabled) triggerTactilePulse("short");
   };
 
-  return { settings, setSettings, toggleTheme };
+  const toggleHaptics = () => {
+    const nextValue = !settings.isHapticsEnabled;
+    setSettings((prev) => ({ ...prev, isHapticsEnabled: nextValue }));
+    if (nextValue) triggerTactilePulse("double"); // Pulsing on enable
+  };
+
+  return { settings, setSettings, toggleTheme, toggleHaptics };
 };
