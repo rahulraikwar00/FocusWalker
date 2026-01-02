@@ -1,32 +1,47 @@
 import { Search, MapPin, Loader2 } from "lucide-react";
 import { useEffect, useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { LocationSearchProps, SearchResult } from "@/types";
+import { SearchResult } from "@/types/types";
+import { useGlobal } from "@/contexts/GlobalContext";
+
+interface LocationSearchProps {
+  points: { start: any; end: any };
+  searchLocation: (query: string) => Promise<SearchResult[]>;
+  onLocationSelect: (loc: SearchResult) => void;
+}
 
 export const LocationSearch = ({
-  searchQuery,
-  setSearchQuery,
   points,
   searchLocation,
   onLocationSelect,
 }: LocationSearchProps) => {
+  // 1. Pull search state directly from Global Context
+  const { searchQuery, setUI } = useGlobal();
+
   const [results, setResults] = useState<SearchResult[]>([]);
   const [isSearching, setIsSearching] = useState(false);
+
+  // Helper to update global search query
+  const updateQuery = (val: string) => setUI({ searchQuery: val });
 
   const handleSearch = async () => {
     if (!searchQuery.trim()) return;
     setIsSearching(true);
-    const locations = await searchLocation(searchQuery);
-    setResults(locations);
-    setIsSearching(false);
+    try {
+      const locations = await searchLocation(searchQuery);
+      setResults(locations);
+    } finally {
+      setIsSearching(false);
+    }
   };
 
   const selectLocation = (loc: SearchResult) => {
     onLocationSelect(loc);
-    setResults([]); // Clear list after selection
-    setSearchQuery(""); // Reset input
+    setResults([]);
+    updateQuery(""); // Clear global search state
   };
 
+  // Reset results if query is cleared
   useEffect(() => {
     if (searchQuery.trim() === "") {
       setResults([]);
@@ -34,7 +49,6 @@ export const LocationSearch = ({
   }, [searchQuery]);
 
   return (
-    // Change the root div to this:
     <div className="absolute top-28 left-1/2 -translate-x-1/2 z-50 w-[calc(100%-2.5rem)] max-w-md pointer-events-auto">
       <div className="relative group">
         {/* Input Field */}
@@ -59,27 +73,21 @@ export const LocationSearch = ({
 
           <input
             value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
+            onChange={(e) => updateQuery(e.target.value)}
             onBlur={() => {
-              const timer = setTimeout(() => {
-                setResults((prev) => (prev.length > 0 ? [] : prev));
-              }, 150);
-              return () => clearTimeout(timer);
+              // Delay clear so the click on a result actually registers
+              setTimeout(() => setResults([]), 200);
             }}
             onKeyDown={async (e) => {
               if (e.key === "Enter") {
                 e.preventDefault();
-                if (searchQuery.trim().length > 1) {
-                  await handleSearch();
-                }
+                await handleSearch();
               }
             }}
             placeholder={
-              !points.start
-                ? "Search start location..."
-                : "Search destination..."
+              !points.start ? "Target: Origin Location" : "Target: Destination"
             }
-            className="bg-transparent border-none outline-none text-sm w-full py-3 text-(--text-primary) placeholder:text-(--text-primary)"
+            className="bg-transparent border-none outline-none text-sm w-full py-3 text-(--text-primary) placeholder:text-(--text-primary)/40 italic font-medium"
           />
         </div>
 
@@ -90,34 +98,27 @@ export const LocationSearch = ({
               initial={{ opacity: 0, y: 4 }}
               animate={{ opacity: 1, y: 8 }}
               exit={{ opacity: 0, y: 4 }}
-              // FIX: Stop scroll events from reaching the map/body
               onWheel={(e) => e.stopPropagation()}
               onTouchStart={(e) => e.stopPropagation()}
-              className="absolute top-full left-0 w-full bg-hud/95 backdrop-blur-2xl border border-(--hud-border) rounded-2xl shadow-2xl overflow-hidden "
+              className="absolute top-full left-0 w-full bg-hud/95 backdrop-blur-2xl border border-(--hud-border) rounded-2xl shadow-2xl overflow-hidden"
             >
-              <div
-                className="max-h-60 overflow-y-auto overscroll-contain no-scrollbar"
-                // Extra safety for mobile touch
-                style={{ overscrollBehavior: "contain" }}
-              >
+              <div className="max-h-60 overflow-y-auto overscroll-contain no-scrollbar">
                 {results.map((loc, index) => (
                   <button
-                    key={index}
-                    onMouseDown={(e) => {
-                      e.preventDefault();
-                      onLocationSelect(loc);
-                      setResults([]);
-                      setSearchQuery("");
-                    }}
-                    className="w-full px-5 py-4 flex items-center gap-4 hover:bg-(--accent-primary)/10 border-b border-(--hud-border) last:border-none text-left"
+                    key={`${loc.name}-${index}`}
+                    onClick={() => selectLocation(loc)}
+                    className="w-full px-5 py-4 flex items-center gap-4 hover:bg-(--accent-primary)/10 border-b border-(--hud-border) last:border-none text-left transition-colors"
                   >
-                    <MapPin size={16} className="text-(--accent-primary)" />
+                    <div className="p-2 bg-(--accent-primary)/10 rounded-lg">
+                      <MapPin size={14} className="text-(--accent-primary)" />
+                    </div>
                     <div>
                       <p className="text-sm font-bold text-(--text-primary)">
                         {loc.name}
                       </p>
-                      <p className="text-[10px] text-(--text-secondary) opacity-50 mt-0.5">
-                        {loc.latlng.lat.toFixed(3)}, {loc.latlng.lng.toFixed(3)}
+                      <p className="text-[10px] text-(--text-secondary) opacity-50 mt-0.5 tracking-widest font-mono uppercase">
+                        LOC: {loc.latlng.lat.toFixed(4)} /{" "}
+                        {loc.latlng.lng.toFixed(4)}
                       </p>
                     </div>
                   </button>

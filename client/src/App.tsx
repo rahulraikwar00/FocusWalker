@@ -1,15 +1,17 @@
-import React, { Suspense, useEffect, useState } from "react"; // ← This line is CRITICAL
+import React, { Suspense, useEffect, useState } from "react";
 import { Switch, Route } from "wouter";
 import { queryClient } from "./lib/queryClient";
 import { QueryClientProvider } from "@tanstack/react-query";
 import { Toaster } from "@/components/ui/toaster";
 import NotFound from "@/pages/not-found";
+import InstallButton from "./components/shared/PWAInstallButton";
 
-import InstallButton from "./components/PWAInstallButton";
+// Import your new context providers
+import { GlobalProvider } from "./contexts/GlobalContext";
 
-import FocusTacticalMap from "@/pages/FocusTacticalMap";
+// Lazy load the heavy map component
+const FocusTacticalMap = React.lazy(() => import("@/pages/FocusTacticalMap"));
 
-// 2. A simple fallback keeps the Main Thread free while the Map loads
 const AppLoading = () => (
   <div className="flex h-screen w-screen items-center justify-center bg-background text-muted-foreground">
     <p className="animate-pulse">Loading Tactical Interface...</p>
@@ -19,7 +21,14 @@ const AppLoading = () => (
 function Router() {
   return (
     <Switch>
-      <Route path="/" component={FocusTacticalMap} />
+      <Route
+        path="/"
+        component={() => (
+          <Suspense fallback={<AppLoading />}>
+            <FocusTacticalMap />
+          </Suspense>
+        )}
+      />
       <Route component={NotFound} />
     </Switch>
   );
@@ -27,6 +36,7 @@ function Router() {
 
 function App() {
   const [isInstalled, setIsInstalled] = useState(false);
+  const [installPrompt, setInstallPrompt] = useState<any>(null);
 
   useEffect(() => {
     // 1. Initial Check: Is the app currently running in "Standalone" mode?
@@ -43,8 +53,6 @@ function App() {
     return () => mediaQuery.removeEventListener("change", handleChange);
   }, []);
 
-  const [installPrompt, setInstallPrompt] = useState<any>(null);
-
   useEffect(() => {
     window.addEventListener("beforeinstallprompt", (e) => {
       e.preventDefault();
@@ -54,11 +62,13 @@ function App() {
 
   return (
     <QueryClientProvider client={queryClient}>
-      <Toaster />
-      <Router />
-
-      {/* Pass the state and the function as props */}
-      {!isInstalled && installPrompt && <InstallButton />}
+      {/* Wrap everything with your new contexts */}
+      <GlobalProvider>
+        <Toaster />
+        <Router />
+        {/* Pass the state and the function as props */}
+        {!isInstalled && installPrompt && <InstallButton />}
+      </GlobalProvider>
     </QueryClientProvider>
   );
 }

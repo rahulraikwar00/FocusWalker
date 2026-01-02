@@ -1,5 +1,5 @@
 import { Download } from "lucide-react";
-import { usePWAInstall } from "@/hooks/usePWAInstall";
+import { usePWAInstall } from "@/components/shared/usePWAInstall";
 
 export default function InstallButton() {
   const { isVisible, handleInstall, isIOS } = usePWAInstall();

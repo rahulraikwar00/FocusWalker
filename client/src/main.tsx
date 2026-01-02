@@ -1,6 +1,6 @@
 import { createRoot } from "react-dom/client";
 import { Suspense, lazy } from "react";
-import "./index.css";
+import "./styles/index.css";
 
 // 1. Dynamic Import: This moves App (and its 500kb+ of Leaflet/Turf)
 // out of the initial 'main.js' bundle.
