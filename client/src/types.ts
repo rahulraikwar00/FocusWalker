@@ -83,3 +83,7 @@ export interface SystemSettingsProps {
     haptics: boolean;
   }) => void;
 }
+
+export interface PopUpcard {
+  distanceLeft: number;
+}
