@@ -1,27 +1,36 @@
 import React, { useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { Map, Zap, Play, Tent, Compass } from "lucide-react";
+import {
+  Map,
+  Zap,
+  Play,
+  Tent,
+  Compass,
+  Wind,
+  Flag,
+  Castle,
+} from "lucide-react";
 
 export const WelcomeOverlay = ({ onComplete }: { onComplete: () => void }) => {
   const [step, setStep] = useState(0);
 
   const steps = [
     {
-      title: "STOP STICKING TO CLOCKS",
-      desc: "Why count minutes when you can count miles? Every second of focus pulls you across a real-world map. You’re not just working; you’re finally moving.",
-      icon: <Map className="text-[#BFFF04]" size={40} />,
-      label: "THE VIBE",
+      title: "OUTWORK THE FOG",
+      desc: "Stop watching the clock and start clearing the map. Every minute of deep work reveals new terrain in a world only you can uncover. Your focus is the fuel.",
+      icon: <Wind className="text-[#BFFF04]" size={40} />, // 'Wind' icon to represent clearing fog
+      label: "THE MISSION",
     },
     {
-      title: "EARN YOUR REST",
-      desc: "Stay focused and you'll earn a 'Tent'—a peaceful resting spot on the map. It's your space to capture a photo or a thought before the next leg of your journey.",
-      icon: <Tent className="text-[#BFFF04]" size={40} />,
+      title: "CLAIM YOUR CHECKPOINTS",
+      desc: "Hit focus milestones to 'Secure Camp.' These aren't just breaks; they are vaults where you stash your best ideas and mental 'loot' before moving deeper into the wild.",
+      icon: <Flag className="text-[#BFFF04]" size={40} />, // 'Flag' or 'MapPin' for checkpoints
       label: "THE MOMENTUM",
     },
     {
-      title: "SEE THE DISTANCE",
-      desc: "By the end of the day, you'll have more than a to-do list. You'll have a map of a real adventure. It's time to see how far your mind can actually take you.",
-      icon: <Compass className="text-[#BFFF04]" size={40} />,
+      title: "BUILD YOUR LEGACY",
+      desc: "At the end of the trek, your productivity isn't a graph—it’s a territory. Look back at the miles covered and the world you've built through pure concentration.",
+      icon: <Castle className="text-[#BFFF04]" size={40} />, // 'Castle' or 'Mountain' for the built legacy
       label: "THE REWARD",
     },
   ];
