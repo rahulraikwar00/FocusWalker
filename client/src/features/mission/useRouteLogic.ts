@@ -5,7 +5,7 @@ import { lineString } from "@turf/helpers";
 import along from "@turf/along";
 import { toggleStayAwake, triggerTactilePulse } from "@/lib/utils";
 const METERS_PER_STEP = 0.72; // Average step length in meters
-
+const BREAK_DURATION = 25; //in min
 export function useRouteLogic(speedKmh: number, isWakeLockEnabled: boolean) {
   const [points, setPoints] = useState<{
     start: L.LatLng | null;
@@ -115,7 +115,7 @@ export function useRouteLogic(speedKmh: number, isWakeLockEnabled: boolean) {
 
   const calculateTents = useCallback(
     (line: any, totalDistance: number) => {
-      const segmentMinutes = 1;
+      const segmentMinutes = BREAK_DURATION;
       const segmentDistanceMeters = speedMs * 60 * segmentMinutes;
       const tents = [];
 

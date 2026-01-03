@@ -34,6 +34,7 @@ interface TentMarkerProps {
     id: string;
     latlng: L.LatLng;
     distanceMark: number;
+    originalIdx: number;
   };
   index: number;
   currentPos: L.LatLng | null;
@@ -42,6 +43,7 @@ interface TentMarkerProps {
   OpenPopup: (tentId: string, marker: L.Marker) => void;
   ClosePopup: () => void;
 }
+
 export const TentMarker = ({
   tent,
   index,
@@ -96,7 +98,7 @@ export const TentMarker = ({
         closeButton={false}
       >
         <PopUpcard
-          index={index}
+          index={tent.originalIdx}
           handleMarkerClick={ClosePopup}
           tent={tent}
           setIsActive={setIsActive} // Pass this so "Secure Camp" can restart the journey
