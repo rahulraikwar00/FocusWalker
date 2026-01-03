@@ -3,67 +3,100 @@ import L from "leaflet";
 import { useMapEvents } from "react-leaflet";
 import { TentMarker } from "./TentMarker";
 
+export interface TentlayerPorps {
+  tentPositionArray: {
+    id: string;
+    latlng: L.LatLng;
+    distanceMark: number;
+  }[];
+  currentPos: L.LatLng | null;
+  isActive: boolean;
+  setIsActive: (value: boolean) => void;
+}
+
 export const TentLayer = ({
   tentPositionArray,
   currentPos,
-}: {
-  tentPositionArray: any[];
-  currentPos: any;
-}) => {
-  const [zoom, setZoom] = useState(13);
+  isActive,
+  setIsActive,
+}: TentlayerPorps) => {
   const [bounds, setBounds] = useState<L.LatLngBounds | null>(null);
-  const markerRefs = useRef<{ [key: string]: L.Marker | null }>({});
+  const activeMarkerRef = useRef<L.Marker | null>(null);
 
-  // Logic: Map interaction handler
+  // 1. Initialize Map Events
   const map = useMapEvents({
-    moveend: () => {
-      setBounds(map.getBounds());
-      setZoom(map.getZoom());
-    },
-    zoomend: () => setZoom(map.getZoom()),
+    moveend: () => setBounds(map.getBounds()),
+    zoomend: () => setBounds(map.getBounds()),
   });
 
-  // Logic: Viewport & Zoom filtering
+  // 2. FIX: Capture initial bounds on mount
+  useEffect(() => {
+    if (map) setBounds(map.getBounds());
+  }, [map]);
+
+  // 3. Centralized Popup Logic
+  const openPopup = React.useCallback((tentId: string, marker: L.Marker) => {
+    if (activeMarkerRef.current && activeMarkerRef.current !== marker) {
+      activeMarkerRef.current.closePopup();
+    }
+    activeMarkerRef.current = marker;
+    marker.openPopup();
+  }, []);
+
+  const closePopup = React.useCallback(() => {
+    if (activeMarkerRef.current) {
+      activeMarkerRef.current.closePopup();
+      activeMarkerRef.current = null;
+    }
+  }, []);
+
+  // 4. Optimized Viewport Filtering
   const visibleTents = useMemo(() => {
-    if (!tentPositionArray || !bounds) return [];
+    if (!tentPositionArray?.length || !bounds) return [];
 
-    // 1. Get all tents currently in the viewport first
-    const inBounds = tentPositionArray
-      .map((tent, originalIdx) => ({ ...tent, originalIdx }))
-      .filter((tent) => {
-        if (!tent.latlng) return false;
-        try {
-          return bounds.contains(L.latLng(tent.latlng));
-        } catch (e) {
-          return false;
-        }
-      });
-
-    // 2. Logic: If we have more than 7, calculate a "Step" to pick them evenly
-    const totalInView = inBounds.length;
-    const maxVisible = 5;
-
-    if (totalInView <= maxVisible) {
-      return inBounds;
+    // Filter indices in bounds first (more memory efficient than mapping everything)
+    const inBoundsIndices: number[] = [];
+    for (let i = 0; i < tentPositionArray.length; i++) {
+      if (bounds.contains(tentPositionArray[i].latlng)) {
+        inBoundsIndices.push(i);
+      }
     }
 
-    // Calculate the step (e.g., if 70 tents are in view, pick every 10th one)
-    const step = Math.floor(totalInView / maxVisible);
+    const totalInView = inBoundsIndices.length;
+    const maxVisible = 5;
 
-    return inBounds.filter((_, i) => i % step === 0).slice(0, maxVisible); // Ensure hard cap of 7
-  }, [tentPositionArray, bounds]); // Zoom is no longer needed as the logic is purely density-based
+    if (totalInView === 0) return [];
 
-  const closePopup = (id: string) => markerRefs.current[id]?.closePopup();
+    // If few tents, show them all
+    if (totalInView <= maxVisible) {
+      return inBoundsIndices.map((idx) => ({
+        ...tentPositionArray[idx],
+        originalIdx: idx,
+      }));
+    }
+
+    // Interpolate to pick 5 spread-out tents across the visible segment
+    const result = [];
+    for (let i = 0; i < maxVisible; i++) {
+      const lookupIdx = Math.floor((i / (maxVisible - 1)) * (totalInView - 1));
+      const actualIdx = inBoundsIndices[lookupIdx];
+      result.push({ ...tentPositionArray[actualIdx], originalIdx: actualIdx });
+    }
+    return result;
+  }, [tentPositionArray, bounds]);
 
   return (
     <>
-      {visibleTents.map((tent, index) => (
+      {visibleTents.map((tent) => (
         <TentMarker
           key={tent.id}
           tent={tent}
           index={tent.originalIdx}
-          markerRef={(el: any) => (markerRefs.current[tent.id] = el)}
-          onSecure={closePopup}
+          currentPos={currentPos}
+          isActive={isActive}
+          setIsActive={setIsActive}
+          OpenPopup={openPopup}
+          ClosePopup={closePopup}
         />
       ))}
     </>

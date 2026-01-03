@@ -1,5 +1,5 @@
 import { Sun, Moon } from "lucide-react";
-import { useGlobal } from "@/contexts/GlobalContext";
+import { useGlobal } from "@/features/mission/contexts/GlobalContext";
 import { triggerTactilePulse } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 

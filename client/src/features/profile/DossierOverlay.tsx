@@ -1,6 +1,6 @@
 import React, { useState } from "react";
 import { Avatar } from "../../components/shared/Avatar";
-import { useGlobal, UserData } from "@/contexts/GlobalContext";
+import { useGlobal, UserData } from "@/features/mission/contexts/GlobalContext";
 
 export const PersonnelDossier = () => {
   // 1. Hook into Global Context

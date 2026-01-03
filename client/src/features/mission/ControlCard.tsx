@@ -1,8 +1,8 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { AnimatePresence, motion } from "framer-motion";
 import { Timer } from "lucide-react";
 import { Button } from "../../components/ui/button";
-import { useGlobal } from "../../contexts/GlobalContext";
+import { useGlobal } from "./contexts/GlobalContext";
 
 import { TacticalResetButton } from "./TacticalResetButton";
 
@@ -74,6 +74,10 @@ export const ControlCard = ({
 
   const { isActive, progress, metrics, route } = mapState;
   const { handleStopMission, handleStartMission, reset } = mapActions;
+
+  useEffect(() => {
+    setIsCollapsed(!isCollapsed);
+  }, [route]);
 
   return (
     <div className="absolute bottom-0 left-1/2 -translate-x-1/2 z-2000 pointer-events-none w-full max-w-md px-4 pb-[calc(env(safe-area-inset-bottom,0px)+1rem)]">

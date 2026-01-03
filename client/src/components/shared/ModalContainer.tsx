@@ -1,5 +1,5 @@
 import { motion } from "framer-motion";
-import { useGlobal } from "@/contexts/GlobalContext";
+import { useGlobal } from "@/features/mission/contexts/GlobalContext";
 
 interface ModalProps {
   children: React.ReactNode;

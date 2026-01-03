@@ -7,7 +7,7 @@ import NotFound from "@/pages/not-found";
 import InstallButton from "./components/shared/PWAInstallButton";
 
 // Import your new context providers
-import { GlobalProvider } from "./contexts/GlobalContext";
+import { GlobalProvider } from "./features/mission/contexts/GlobalContext";
 
 // Lazy load the heavy map component
 const FocusTacticalMap = React.lazy(() => import("@/pages/FocusTacticalMap"));

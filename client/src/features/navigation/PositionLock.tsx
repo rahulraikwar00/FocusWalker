@@ -1,7 +1,7 @@
 // src/features/map/PositionLock.tsx
 import { Lock, LockOpen } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { useGlobal } from "@/contexts/GlobalContext";
+import { useGlobal } from "@/features/mission/contexts/GlobalContext";
 
 export const PositionLock = () => {
   const { isLocked, setUI } = useGlobal();

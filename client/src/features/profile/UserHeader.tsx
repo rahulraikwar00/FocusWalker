@@ -1,7 +1,7 @@
 import { motion } from "framer-motion";
 
 import { Avatar } from "../../components/shared/Avatar";
-import { useGlobal } from "@/contexts/GlobalContext";
+import { useGlobal } from "@/features/mission/contexts/GlobalContext";
 
 export const UserHeader = () => {
   const { user, setUI } = useGlobal();

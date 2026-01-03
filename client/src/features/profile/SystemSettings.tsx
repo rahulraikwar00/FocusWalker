@@ -1,7 +1,7 @@
 import { Monitor, Zap, Map, Timer, Save } from "lucide-react";
 import { useState } from "react";
 import { toggleStayAwake, triggerTactilePulse } from "@/lib/utils";
-import { useGlobal } from "@/contexts/GlobalContext";
+import { useGlobal } from "@/features/mission/contexts/GlobalContext";
 
 export const SystemSettings = () => {
   const { settings, setUI, triggerToast } = useGlobal();

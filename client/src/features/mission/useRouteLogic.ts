@@ -112,15 +112,10 @@ export function useRouteLogic(speedKmh: number, isWakeLockEnabled: boolean) {
     },
     [speedMs]
   );
-  useEffect(() => {
-    if (tentPositionArray) {
-      console.log("State updated! Current Tents:", tentPositionArray);
-    }
-  }, [tentPositionArray]);
 
   const calculateTents = useCallback(
     (line: any, totalDistance: number) => {
-      const segmentMinutes = 25;
+      const segmentMinutes = 1;
       const segmentDistanceMeters = speedMs * 60 * segmentMinutes;
       const tents = [];
 
@@ -148,9 +143,9 @@ export function useRouteLogic(speedKmh: number, isWakeLockEnabled: boolean) {
 
   // Inside useRouteLogic.ts
 
-  const removePoint = (type: "start" | "end") => {
+  const removePoint = (type: "start" | "end", isActive: boolean) => {
+    if (isActive) return;
     setPoints((prev) => {
-      // Logic: If we remove ANY point, the route is invalid.
       setRoute(null);
       setTentPositionArray(null);
       setProgress(0);
@@ -218,7 +213,7 @@ export function useRouteLogic(speedKmh: number, isWakeLockEnabled: boolean) {
       const newLoc = result.latlng;
       setPoints((p) => {
         if (!p.start) {
-          setCurrentPos(newLoc);
+          // setCurrentPos(newLoc);
           return { ...p, start: newLoc };
         } else {
           fetchRoute(p.start, newLoc);

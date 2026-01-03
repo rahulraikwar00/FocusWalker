@@ -1,5 +1,5 @@
 import * as React from "react";
-import { Suspense } from "react";
+import { Suspense, useEffect } from "react";
 import "leaflet/dist/leaflet.css";
 import L from "leaflet";
 import { AnimatePresence } from "framer-motion";
@@ -15,7 +15,7 @@ import InstallButton from "@/components/shared/PWAInstallButton";
 import ModalContainer from "@/components/shared/ModalContainer";
 
 // Hooks
-import { useGlobal } from "@/contexts/GlobalContext";
+import { useGlobal } from "@/features/mission/contexts/GlobalContext";
 import { useRouteLogic } from "@/features/mission/useRouteLogic";
 import { SettingsSideBar } from "@/features/navigation/SettingsSideBar";
 
@@ -60,13 +60,12 @@ export default function FocusTacticalMap() {
     isLoadingRoute,
     removePoint,
   } = useRouteLogic(settings.speedKmh, settings.isWakeLockEnabled);
-
-  const onRemove = (type: "start" | "end") => {
-    setPoints((prev: any) => ({
-      ...prev,
-      [type]: null,
-    }));
-  };
+  useEffect(() => {
+    console.log("Current isLoadingRoute state:", isLoadingRoute);
+    if (!isLoadingRoute) {
+      console.log("Loader should be hidden now.");
+    }
+  }, [isLoadingRoute]);
 
   return (
     <div className="relative h-dvh w-full overflow-hidden bg-page-bg font-sans text-(--text-primary) transition-colors duration-500">
@@ -89,6 +88,7 @@ export default function FocusTacticalMap() {
             tentPositionArray={tentPositionArray}
             isLoadingRoute={isLoadingRoute}
             removePoint={removePoint}
+            setIsActive={setIsActive}
           />
         </Suspense>
       </div>

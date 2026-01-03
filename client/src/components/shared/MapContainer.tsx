@@ -22,8 +22,9 @@ interface MapProps {
   isLocked: boolean;
   isDark: boolean;
   tentPositionArray: any;
-  removePoint: (type: "start" | "end") => void;
+  removePoint: (type: "start" | "end", isActive: boolean) => void;
   isLoadingRoute: boolean;
+  setIsActive: any;
 }
 
 /**
@@ -36,10 +37,42 @@ const MARKER_HTML = `
     <div class="w-4 h-4 bg-(--accent-primary) rounded-full border-2 border-(--bg-page) shadow-[0_0_15px_var(--accent-glow)]"></div>
   </div>
 `;
+const START_MARKER_HTML = `
+  <div class="relative flex items-center justify-center">
+    <div class="absolute w-8 h-8 bg-(--accent-glow) rounded-full animate-pulse opacity-25"></div>
+    <div class="w-5 h-5 border-2 border-(--accent-primary) rounded-full bg-(--bg-page) flex items-center justify-center shadow-[0_0_15px_var(--accent-glow)]">
+      <div class="w-2 h-2 bg-(--accent-primary) rounded-full"></div>
+    </div>
+  </div>
+`;
+const END_MARKER_HTML = `
+  <div class="relative flex items-center justify-center">
+    <div class="absolute w-10 h-10 bg-(--accent-glow) rounded-full animate-pulse opacity-20"></div>
+    
+    <div class="relative flex flex-col items-center">
+      <div class="w-6 h-6 bg-(--accent-primary) rounded-full border-2 border-(--bg-page) flex items-center justify-center shadow-[0_0_20px_var(--accent-glow)]">
+        <div class="w-1.5 h-1.5 bg-(--bg-page) rounded-full"></div>
+      </div>
+      <div class="w-0 h-0 border-l-[6px] border-l-transparent border-r-[6px] border-r-transparent border-t-8 border-t-(--accent-primary) -mt-1"></div>
+    </div>
+  </div>
+`;
 
 const tacticalIcon = L.divIcon({
   className: "custom-marker",
   html: MARKER_HTML,
+  iconSize: [32, 32],
+  iconAnchor: [16, 16],
+});
+const starttacticalIcon = L.divIcon({
+  className: "custom-marker",
+  html: START_MARKER_HTML,
+  iconSize: [32, 32],
+  iconAnchor: [16, 16],
+});
+const endtacticalIcon = L.divIcon({
+  className: "custom-marker",
+  html: END_MARKER_HTML,
   iconSize: [32, 32],
   iconAnchor: [16, 16],
 });
@@ -57,6 +90,7 @@ export const MapView = memo(
     tentPositionArray,
     isLoadingRoute,
     removePoint,
+    setIsActive,
   }: MapProps) => {
     // Choose Tile Provider based on theme
     const tileUrl = useMemo(
@@ -69,6 +103,22 @@ export const MapView = memo(
 
     return (
       <div className="w-full h-full relative">
+        {isLoadingRoute && (
+          <div className="fixed inset-0 z-50 flex flex-col items-center justify-center bg-black/40 backdrop-blur-[2px] transition-opacity duration-500">
+            <div className="relative flex flex-col items-center">
+              <div className="relative w-24 h-1">
+                <div className="absolute inset-0 bg-white/20 rounded-full"></div>
+                <div className="absolute inset-0 bg-(--accent-primary) rounded-full animate-[loading-line_1.5s_ease-in-out_infinite] shadow-[0_0_8px_var(--accent-glow)]"></div>
+              </div>
+              <span className="mt-4 text-(--text-primary) text-xs font-bold tracking-[0.3em] uppercase animate-pulse">
+                Mapping your journey...
+              </span>
+              <span className="mt-1 text-(--text-primary)/70 text-xs italic">
+                Preparing the path ahead
+              </span>
+            </div>
+          </div>
+        )}
         <MapContainer
           center={DEFAULT_LOCATION}
           zoom={5}
@@ -90,18 +140,17 @@ export const MapView = memo(
             points={points}
             isLocked={isLocked}
             currentPos={currentPos}
-            isLoadingRoute={isLoadingRoute}
           />
 
           {/* Start Marker */}
           {points.start && (
             <Marker
               position={points.start}
-              icon={tacticalIcon}
+              icon={starttacticalIcon}
               eventHandlers={{
                 click: (e) => {
                   // L.DomEvent.stopPropagation(e); // STOP BUBBLING
-                  removePoint("start");
+                  removePoint("start", isActive);
                 },
               }}
             />
@@ -111,11 +160,11 @@ export const MapView = memo(
           {points.end && (
             <Marker
               position={points.end}
-              icon={tacticalIcon}
+              icon={endtacticalIcon}
               eventHandlers={{
                 click: (e) => {
-                  L.DomEvent.stopPropagation(e); // STOP BUBBLING
-                  removePoint("end");
+                  // L.DomEvent.stopPropagation(e); // STOP BUBBLING
+                  removePoint("end", isActive);
                 },
               }}
             />
@@ -139,6 +188,8 @@ export const MapView = memo(
             <TentLayer
               tentPositionArray={tentPositionArray}
               currentPos={currentPos}
+              setIsActive={setIsActive}
+              isActive={isActive}
             />
           )}
 
@@ -177,41 +228,58 @@ function MapController({
   points,
   isLocked,
   currentPos,
-  isLoadingRoute,
 }: any) {
   const map = useMap();
 
-  // Fix Leaflet resize issues on load
+  // Fix Leaflet resize issues
   useEffect(() => {
-    const timer = setTimeout(() => {
-      map.invalidateSize();
-    }, 100);
+    const timer = setTimeout(() => map.invalidateSize(), 100);
     return () => clearTimeout(timer);
   }, [map]);
 
-  // Click handler: Only allow adding points when NOT in mission
   useMapEvents({
     click: (e) => {
       if (!isActive && onMapClick) onMapClick(e);
     },
   });
 
-  // Camera Logic: Auto-Follow User (Locked Mode)
   useEffect(() => {
-    if (isLocked && currentPos && isActive) {
-      map.setView(currentPos, 17, { animate: true, duration: 1 });
+    // --- 1. TACTICAL FOLLOW (Movement Mode) ---
+    // Use setView for movement to avoid the "bounce" of flyTo during rapid updates
+    if (isActive && isLocked && currentPos) {
+      map.setView(currentPos, 18, {
+        animate: true,
+        duration: 0.5, // Fast enough to keep up with movement
+      });
+      return;
     }
-  }, [currentPos, isLocked, isActive, map]);
 
-  // Camera Logic: Fit View (Standby Mode)
-  useEffect(() => {
-    if (!isActive && points?.start && points?.end) {
-      const bounds = L.latLngBounds([points.start, points.end]);
-      map.fitBounds(bounds, { padding: [100, 100], animate: true });
-    } else if (!isActive && points?.start) {
-      map.flyTo(points.start, 15, { duration: 0.8 });
+    // --- 2. OBJECTIVE REACHED (Pause/Popup Mode) ---
+    // If we just stopped at a tent (not the start point)
+    if (
+      !isActive &&
+      currentPos &&
+      points.start &&
+      !currentPos.equals(points.start)
+    ) {
+      map.flyTo(currentPos, 17, {
+        duration: 0.8, // Smooth cinematic arrival
+        easeLinearity: 0.25,
+      });
+      return;
     }
-  }, [isActive, points, map]);
+
+    // --- 3. PLANNING MODE (Route Overview) ---
+    // Triggered when no mission is active and points are set
+    if (!isActive && points.start && points.end) {
+      const bounds = L.latLngBounds([points.start, points.end]);
+      map.flyToBounds(bounds, {
+        padding: [80, 80],
+        duration: 1.2, // Grand overview transition
+        easeLinearity: 0.25,
+      });
+    }
+  }, [isActive, isLocked, points, map, currentPos]);
 
   return null;
 }

@@ -2,7 +2,7 @@ import { Search, MapPin, Loader2 } from "lucide-react";
 import { useEffect, useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { SearchResult } from "@/types/types";
-import { useGlobal } from "@/contexts/GlobalContext";
+import { useGlobal } from "@/features/mission/contexts/GlobalContext";
 
 interface LocationSearchProps {
   points: { start: any; end: any };
