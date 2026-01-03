@@ -1,67 +1,140 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
+import { FiMessageSquare } from "react-icons/fi";
 import { GiCampingTent } from "react-icons/gi";
-
-interface PopUpcardProps {
-  index: number;
-  handleMarkerClick: () => void; // This is ClosePopup from the parent
-  tent: any;
-  setIsActive: (val: boolean) => void; // Added to resume movement
-}
 
 export const PopUpcard = ({
   index,
   handleMarkerClick,
   tent,
   setIsActive,
-}: PopUpcardProps) => {
+}: any) => {
   const [note, setNote] = useState("");
+  const [isSaving, setIsSaving] = useState(false);
+  const [visitCount, setVisitCount] = useState(0);
+
+  // Load history for this specific tent
+  useEffect(() => {
+    const stationKey = `trek_log_${tent.id}`;
+    const localData = localStorage.getItem(stationKey);
+
+    if (localData) {
+      const notes = JSON.parse(localData);
+      setVisitCount(notes.length);
+      // Optional: don't auto-fill 'note' if you want a fresh one every time
+      // setNote(notes[0].message);
+    }
+  }, [tent.id]);
 
   const handleSecure = () => {
-    // 1. Save data (Intel)
-    if (note.trim()) {
-      localStorage.setItem(`trek_log_${tent.id}`, note);
+    const trimmedNote = note.trim();
+    if (!trimmedNote) return;
+
+    if ("vibrate" in navigator) navigator.vibrate(20);
+    setIsSaving(true);
+
+    const timestamp = new Date().toLocaleString("en-GB", {
+      day: "2-digit",
+      month: "short",
+      hour: "2-digit",
+      minute: "2-digit",
+    });
+
+    const newRecord = {
+      tentId: tent.id,
+      message: trimmedNote,
+      emoji: "⛺",
+      timestamp: timestamp,
+    };
+
+    try {
+      // 1. Update Global Feed
+      const globalKey = "treklog";
+      const globalLogs = JSON.parse(localStorage.getItem(globalKey) || "[]");
+      localStorage.setItem(
+        globalKey,
+        JSON.stringify([newRecord, ...globalLogs])
+      );
+
+      // 2. Update Station-Specific Array
+      const stationKey = `trek_log_${tent.id}`;
+      const stationLogs = JSON.parse(localStorage.getItem(stationKey) || "[]");
+
+      // PREVENT DUPLICATES: Only save if the message is different from the last one
+      if (stationLogs.length === 0 || stationLogs[0].message !== trimmedNote) {
+        localStorage.setItem(
+          stationKey,
+          JSON.stringify([newRecord, ...stationLogs])
+        );
+      }
+    } catch (error) {
+      console.error("Local Storage is full or disabled:", error);
     }
+
     setIsActive(true);
-    handleMarkerClick();
-    console.log(`Station ${tent.id} Secured. Journey Resumed.`);
+
+    setTimeout(() => {
+      handleMarkerClick();
+      setNote("");
+      setIsSaving(false);
+    }, 400);
   };
 
   return (
-    <div className="glass-card flex flex-col rounded-3xl overflow-hidden w-44 border border-(--hud-border) shadow-2xl">
-      {/* Visual Header: Tactical Glow */}
-      <div className="flex flex-col items-center justify-center pt-5 pb-3 bg-(--accent-glow)/20">
-        <div className="relative">
+    <div className="glass-card flex flex-col w-60 overflow-hidden shadow-2xl transition-all duration-500 border border-[var(--hud-border)] bg-[var(--hud-bg)] backdrop-blur-xl">
+      {/* Header Area */}
+      <div className="relative h-24 flex items-center justify-center bg-[var(--accent-glow)]">
+        <div className="absolute top-3 left-3 w-2 h-2 border-t border-l border-tactical/40" />
+        <div className="absolute bottom-3 right-3 w-2 h-2 border-b border-r border-tactical/40" />
+
+        <div className="relative flex flex-col items-center">
           <GiCampingTent
             size={42}
-            className="text-(--accent-primary) drop-shadow-[0_0_10px_var(--accent-glow)]"
+            className="text-tactical filter drop-shadow-[0_0_10px_var(--accent-glow)] mb-1"
           />
-          <div className="absolute -bottom-1 left-1/2 -translate-x-1/2 w-8 h-1 bg-(--accent-primary) blur-md opacity-50" />
+          <span className="text-[7px] font-black tracking-[0.2em] text-tactical/60 uppercase">
+            {isSaving
+              ? "Syncing Data..."
+              : `Visit #${visitCount + 1} Authorized`}
+          </span>
         </div>
       </div>
 
       {/* Content Area */}
-      <div className="p-4 flex flex-col gap-1 text-center bg-(--hud-bg)">
-        <span className="text-[9px] font-bold tracking-[0.2em] text-(--text-secondary) uppercase opacity-60">
-          Sector {index + 1} Reached
-        </span>
+      <div className="p-5 flex flex-col gap-4">
+        <div className="space-y-1">
+          <span className="block text-[9px] font-black tracking-[0.2em] text-tactical uppercase">
+            Discovery Logged
+          </span>
+          <h3 className="text-[14px] font-black italic tracking-tight text-(--text-primary) uppercase">
+            Station {index}
+          </h3>
+        </div>
 
-        <h3 className="text-xs font-black italic tracking-tight text-(--text-primary) uppercase mb-1">
-          Field Station Alpha
-        </h3>
+        {/* Input Area */}
+        <div className="relative rounded-xl border border-(--hud-border) bg-(--text-primary)/5 focus-within:bg-(--text-primary)/10 transition-all">
+          <textarea
+            placeholder="What did you find here?"
+            value={note}
+            onChange={(e) => setNote(e.target.value)}
+            disabled={isSaving}
+            className="w-full bg-transparent text-[13px] p-3 text-(--text-primary) font-medium focus:outline-none placeholder:italic placeholder:opacity-30 resize-none h-24 font-sans"
+          />
+        </div>
 
-        {/* Tactical Log Input */}
-        <textarea
-          placeholder="Enter intel..."
-          value={note}
-          onChange={(e) => setNote(e.target.value)}
-          className="bg-black/40 border border-(--hud-border) text-[10px] p-2 mb-3 text-white rounded-lg focus:outline-none focus:border-(--accent-primary) placeholder:opacity-30 resize-none h-12"
-        />
-
+        {/* Action Button */}
         <button
-          className="btn-primary w-full text-[10px] py-2.5 px-0 uppercase tracking-[0.15em] font-bold cursor-pointer hover:scale-[1.02] active:scale-95 transition-all shadow-[0_0_15px_rgba(var(--accent-primary-rgb),0.2)]"
+          className={`btn-primary w-full text-[11px] uppercase tracking-widest transition-all py-3 flex flex-col items-center ${
+            isSaving ? "opacity-50 grayscale" : ""
+          }`}
           onClick={handleSecure}
+          disabled={isSaving}
         >
-          Secure & Resume
+          <span className="font-black">
+            {isSaving ? "Stored" : "Secure Log"}
+          </span>
+          <span className="text-[7px] opacity-70 font-medium normal-case">
+            Proceed with your journey
+          </span>
         </button>
       </div>
     </div>
