@@ -5,31 +5,25 @@ import { useGlobal, UserData } from "@/features/mission/contexts/GlobalContext";
 export const PersonnelDossier = () => {
   // 1. Hook into Global Context
   const { user, setUI, triggerToast } = useGlobal();
-
-  const [profile, setProfile] = useState<UserData>({
-    id: user?.id || `UX-${Math.floor(Math.random() * 9000) + 1000}`,
-    name: user?.name || "FOCUS WALKER",
-    rank: user?.rank || "Scout",
-    unit: user?.unit || "ALPHA-6",
-    clearance: user?.clearance || "LEVEL 1",
-    avatar: user?.avatar || "",
-    bio: user?.bio || "",
+  const randomId = user?.id || `${Math.floor(Math.random() * 9000) + 1000}`;
+  const [profile, setProfile] = useState<UserData>(() => {
+    return {
+      id: randomId, // Store just the number part
+      name: user?.name || "FOCUS WALKER",
+      rank: user?.rank || "Scout",
+      unit: user?.unit || "ALPHA-6",
+      clearance: user?.clearance || "LEVEL 1",
+      avatar: user?.avatar || "",
+      bio: user?.bio || "",
+    };
   });
   const handleApply = () => {
-    // 2. Prepare the payload (ensure all UserData fields are present)
     const updatedUser: UserData = {
       ...profile,
-      // We can auto-update clearance or unit based on rank if needed
       clearance: profile.rank === "Ghost" ? "LEVEL 4" : "LEVEL 1",
     };
-
-    // 3. Sync to Global Context
-    setUI({ user: updatedUser });
-
-    // 4. Persistence
+    setUI({ user: updatedUser, isDossierOpen: false });
     localStorage.setItem("user_dossier", JSON.stringify(updatedUser));
-
-    // 5. Tactical Feedback
     triggerToast("Personnel Record Synced", "success");
   };
 
@@ -45,7 +39,7 @@ export const PersonnelDossier = () => {
             Personnel Dossier
           </h3>
           <p className="text-xs text-(--text-secondary)">
-            ID: {profile.rank.toUpperCase()}-{Math.floor(Math.random() * 1000)}
+            ID: {profile.rank.toUpperCase()}-{randomId}
           </p>
         </div>
       </div>
