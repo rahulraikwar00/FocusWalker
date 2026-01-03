@@ -3,6 +3,7 @@ import L from "leaflet";
 import { useState, useRef, useEffect, useCallback } from "react";
 import { lineString } from "@turf/helpers";
 import along from "@turf/along";
+import { toggleStayAwake, triggerTactilePulse } from "@/lib/utils";
 const METERS_PER_STEP = 0.72; // Average step length in meters
 
 export function useRouteLogic(speedKmh: number, isWakeLockEnabled: boolean) {
@@ -24,6 +25,7 @@ export function useRouteLogic(speedKmh: number, isWakeLockEnabled: boolean) {
   const [tentPositionArray, setTentPositionArray] = useState<any>(null);
 
   const wakeLockResource = useRef<WakeLockSentinel | null>(null);
+
   const animRef = useRef<number>(0);
   const lastTimeRef = useRef<number>(0);
   const progressRef = useRef(0);
@@ -110,15 +112,10 @@ export function useRouteLogic(speedKmh: number, isWakeLockEnabled: boolean) {
     },
     [speedMs]
   );
-  useEffect(() => {
-    if (tentPositionArray) {
-      console.log("State updated! Current Tents:", tentPositionArray);
-    }
-  }, [tentPositionArray]);
 
   const calculateTents = useCallback(
     (line: any, totalDistance: number) => {
-      const segmentMinutes = 25;
+      const segmentMinutes = 1;
       const segmentDistanceMeters = speedMs * 60 * segmentMinutes;
       const tents = [];
 
@@ -144,17 +141,41 @@ export function useRouteLogic(speedKmh: number, isWakeLockEnabled: boolean) {
     [speedMs]
   );
 
+  // Inside useRouteLogic.ts
+
+  const removePoint = (type: "start" | "end", isActive: boolean) => {
+    if (isActive) return;
+    setPoints((prev) => {
+      setRoute(null);
+      setTentPositionArray(null);
+      setProgress(0);
+
+      if (type === "start") {
+        // If start is removed, we usually want to clear everything
+        // because the destination was relative to that start.
+        return { start: null, end: null };
+      } else {
+        return { ...prev, end: null };
+      }
+    });
+
+    triggerTactilePulse("short");
+  };
+
   const handleMapClick = useCallback(
-    async (e: L.LeafletMouseEvent) => {
+    (e: L.LeafletMouseEvent) => {
       if (isActive) return;
+
       setPoints((p) => {
         if (!p.start) {
-          setCurrentPos(e.latlng);
+          // SET START
           return { ...p, start: e.latlng };
         } else if (!p.end) {
+          // SET END & TRIGGER ROUTE
           fetchRoute(p.start, e.latlng);
           return { ...p, end: e.latlng };
         }
+        // If both exist, ignore map clicks (must remove a point first)
         return p;
       });
     },
@@ -192,7 +213,7 @@ export function useRouteLogic(speedKmh: number, isWakeLockEnabled: boolean) {
       const newLoc = result.latlng;
       setPoints((p) => {
         if (!p.start) {
-          setCurrentPos(newLoc);
+          // setCurrentPos(newLoc);
           return { ...p, start: newLoc };
         } else {
           fetchRoute(p.start, newLoc);
@@ -255,6 +276,28 @@ export function useRouteLogic(speedKmh: number, isWakeLockEnabled: boolean) {
     };
   }, [isActive, route, speedMs]);
 
+  const handleStartMission = async () => {
+    // 1. Hardware Feedback
+    triggerTactilePulse("double");
+
+    // 2. System Settings (WakeLock)
+    if (isWakeLockEnabled) {
+      await toggleStayAwake(true);
+    }
+
+    // 3. Local State Change
+    setIsActive(true);
+  };
+
+  const handleStopMission = async () => {
+    await toggleStayAwake(false);
+    triggerTactilePulse("short");
+    setIsActive(false);
+    // Important: Don't reset everything, just stop the movement
+    cancelAnimationFrame(animRef.current);
+    lastTimeRef.current = 0;
+  };
+
   // 4. Memoize reset
   const reset = useCallback(() => {
     setPoints({ start: null, end: null });
@@ -267,7 +310,6 @@ export function useRouteLogic(speedKmh: number, isWakeLockEnabled: boolean) {
     lastTimeRef.current = 0;
     setMetrics({ steps: 0, timeLeft: 0, distDone: 0 });
   }, []);
-
   return {
     points,
     route,
@@ -284,5 +326,9 @@ export function useRouteLogic(speedKmh: number, isWakeLockEnabled: boolean) {
     isLocked,
     handleLocationSelect,
     tentPositionArray,
+    handleStopMission,
+    handleStartMission,
+    removePoint,
+    setPoints,
   };
 }

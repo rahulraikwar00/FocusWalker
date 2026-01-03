@@ -1,28 +1,26 @@
 import * as React from "react";
-import { useState, Suspense, useEffect } from "react";
+import { Suspense, useEffect } from "react";
 import "leaflet/dist/leaflet.css";
-
 import L from "leaflet";
-
-import { HUDCard } from "@/components/HUDcard";
-import { useRouteLogic } from "@/hooks/useRouteLogic";
-import { HUDtop } from "@/components/HUDtop";
-import { LocationSearch } from "@/components/LocationSearch";
-import { toggleStayAwake, triggerTactilePulse } from "@/lib/utils";
 import { AnimatePresence } from "framer-motion";
-import { WelcomeOverlay } from "@/components/WelcomeOverlay";
-import { PersonnelDossier } from "@/components/DossierOverlay";
-import { SystemSettings } from "@/components/SystemSettings";
-import InstallButton from "@/components/PWAInstallButton";
-import ModalContainer from "@/components/ModalContainer";
-import { TacticalToast } from "@/components/ToastComponent";
-import { useAppSettings } from "@/hooks/useAppSettings";
-import { useUserDossier } from "@/hooks/useUserDossier";
-import { useUIState } from "@/hooks/useUIState";
-import { useMissionControl } from "@/hooks/useMissionControl";
+
+// Components
+import { ControlCard } from "@/features/mission/ControlCard";
+import { UserHeader } from "@/features/profile/UserHeader";
+import { LocationSearch } from "@/features/navigation/LocationSearch";
+import { WelcomeOverlay } from "@/features/profile/WelcomeOverlay";
+import { PersonnelDossier } from "@/features/profile/DossierOverlay";
+import { SystemSettings } from "@/features/profile/SystemSettings";
+import InstallButton from "@/components/shared/PWAInstallButton";
+import ModalContainer from "@/components/shared/ModalContainer";
+
+// Hooks
+import { useGlobal } from "@/features/mission/contexts/GlobalContext";
+import { useRouteLogic } from "@/features/mission/useRouteLogic";
+import { SettingsSideBar } from "@/features/navigation/SettingsSideBar";
 
 const MapView = React.lazy(() =>
-  import("@/components/MapContainer").then((module) => ({
+  import("@/components/shared/MapContainer").then((module) => ({
     default: module.MapView,
   }))
 );
@@ -30,23 +28,19 @@ const MapView = React.lazy(() =>
 const DEFAULT_LOCATION = new L.LatLng(20.5937, 78.9629);
 
 export default function FocusTacticalMap() {
-  const { settings, setSettings, toggleTheme, toggleHaptics } =
-    useAppSettings();
-
+  // 1. Single Source of Truth from Global Context
   const {
+    settings,
     isDossierOpen,
-    searchQuery,
     isSettingsOpen,
-    setIsDossierOpen,
-    setSearchQuery,
-    setIsSettingsOpen,
     showWelcome,
     completeOnboarding,
-    toast,
-    triggerToast,
-  } = useUIState();
-  const { userData, updateUser } = useUserDossier();
+    isLocked,
+    setUI,
+  } = useGlobal();
 
+  // 2. Specialized Logic Hooks
+  // We keep these because they handle complex math, GPS, and routing logic
   const {
     points,
     route,
@@ -57,26 +51,25 @@ export default function FocusTacticalMap() {
     metrics,
     handleMapClick,
     searchLocation,
-    isLoadingRoute,
     reset,
-    setIsLocked,
-    isLocked,
     handleLocationSelect,
     tentPositionArray,
+    handleStartMission,
+    handleStopMission,
+    setPoints,
+    isLoadingRoute,
+    removePoint,
   } = useRouteLogic(settings.speedKmh, settings.isWakeLockEnabled);
-  const { handleStartMission, handleStopMission } = useMissionControl(
-    settings,
-    setIsActive
-  );
+  useEffect(() => {
+    console.log("Current isLoadingRoute state:", isLoadingRoute);
+    if (!isLoadingRoute) {
+      console.log("Loader should be hidden now.");
+    }
+  }, [isLoadingRoute]);
 
   return (
     <div className="relative h-dvh w-full overflow-hidden bg-page-bg font-sans text-(--text-primary) transition-colors duration-500">
-      <TacticalToast
-        message={toast.msg}
-        isVisible={toast.show}
-        type={toast.type as any}
-      />
-      {/* LAYER 0: MAP (Keep at z-0) */}
+      {/* LAYER 0: MAP (Bottom) */}
       <div className="absolute inset-0 z-0">
         <Suspense
           fallback={
@@ -93,97 +86,44 @@ export default function FocusTacticalMap() {
             isDark={settings.isDark}
             handleMapClick={handleMapClick}
             tentPositionArray={tentPositionArray}
+            isLoadingRoute={isLoadingRoute}
+            removePoint={removePoint}
+            setIsActive={setIsActive}
           />
         </Suspense>
       </div>
 
-      {/* LAYER 1: VIGNETTE (Keep at z-10, MUST be pointer-events-none) */}
-      <div
-        className="pointer-events-none absolute inset-0 z-10 transition-opacity duration-700 bg-[radial-gradient(circle_at_center,transparent_20%,black_100%)]"
-        style={{ opacity: settings.isDark ? 0.6 : 0.1 }}
-      />
-
-      {/* LAYER 2: HUD ELEMENTS (z-20) */}
-
+      {/* LAYER 1: HUD ELEMENTS (Middle) */}
       <div className="absolute inset-0 z-20 pointer-events-none">
-        <HUDtop
-          userData={userData}
-          setIsSettingsOpen={setIsSettingsOpen}
-          setIsDossierOpen={setIsDossierOpen}
-        />
-
+        <UserHeader />
+        <SettingsSideBar /> {/* New Sidebar Component */}
         {!route && (
           <LocationSearch
-            searchQuery={searchQuery}
-            setSearchQuery={setSearchQuery}
             points={points}
             searchLocation={searchLocation}
             onLocationSelect={handleLocationSelect}
           />
         )}
-
-        {/* Give InstallButton a high internal Z-index if it's fixed */}
         <InstallButton />
-        <HUDCard
-          mapState={{
-            isActive,
-            progress,
-            metrics,
-            route,
-            isLocked,
-          }}
-          mapActions={{
-            handleStopMission,
-            handleStartMission,
-            reset,
-            setIsActive,
-            setIsLocked,
-          }}
+        <ControlCard
+          mapState={{ isActive, progress, metrics, route }}
+          mapActions={{ handleStopMission, handleStartMission, reset }}
         />
       </div>
 
-      {/* LAYER 3: MODALS (z-[100]) */}
+      {/* LAYER 2: OVERLAYS & MODALS (Top) */}
       <AnimatePresence mode="wait">
-        {(isDossierOpen || isSettingsOpen) && (
-          <div className="fixed inset-0 z-100">
-            <ModalContainer
-              onClose={() => {
-                setIsDossierOpen(false);
-                setIsSettingsOpen(false);
-              }}
-            >
-              {isDossierOpen ? (
-                <PersonnelDossier
-                  userData={userData}
-                  onSave={(newData: any) => {
-                    updateUser(newData);
-                    setIsDossierOpen(false);
-                    triggerToast("Dossier Updated");
-                  }}
-                />
-              ) : (
-                <SystemSettings
-                  speedKmh={settings.speedKmh}
-                  isWakeLockEnabled={settings.isWakeLockEnabled}
-                  isHapticsEnabled={settings.isHapticsEnabled}
-                  isDark={settings.isDark}
-                  toggleTheme={toggleTheme}
-                  onApply={(newSettings) => {
-                    setSettings(newSettings);
-                    toggleStayAwake(newSettings.isWakeLockEnabled);
-                    if (newSettings.isHapticsEnabled) {
-                      triggerTactilePulse("double");
-                    }
-                    setIsSettingsOpen(false);
-                    triggerToast("System: Configuration Applied 🟢");
-                  }}
-                />
-              )}
-            </ModalContainer>
-          </div>
-        )}
-        {/* 2. Welcome Overlay (Priority Onboarding) */}
+        {/* Onboarding Overlay */}
         {showWelcome && <WelcomeOverlay onComplete={completeOnboarding} />}
+
+        {/* Global Modals */}
+        {(isDossierOpen || isSettingsOpen) && (
+          <ModalContainer
+            title={isDossierOpen ? "Personnel Dossier" : "System Settings"}
+          >
+            {isDossierOpen ? <PersonnelDossier /> : <SystemSettings />}
+          </ModalContainer>
+        )}
       </AnimatePresence>
     </div>
   );

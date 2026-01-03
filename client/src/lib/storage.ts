@@ -9,8 +9,11 @@ const KEYS = {
 
 export const storage = {
   // --- USER DATA (XP, Level, Name) ---
-  saveUser: (data: any) =>
-    localStorage.setItem(KEYS.USER, JSON.stringify(data)),
+  saveUser: (data: any) => {
+    console.log("savign route");
+    localStorage.setItem(KEYS.USER, JSON.stringify(data));
+    console.log("done route");
+  },
   getUser: () =>
     JSON.parse(
       localStorage.getItem(KEYS.USER) ||

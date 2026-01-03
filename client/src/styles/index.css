@@ -53,6 +53,17 @@
 }
 
 @layer utilities {
+  /* src/index.css */
+  .custom-marker {
+    cursor: pointer;
+  }
+
+  .custom-marker:hover {
+    filter: brightness(1.2) saturate(1.5);
+    transform: scale(1.1);
+    transition: transform 0.2s ease;
+  }
+
   /* --- LEAFLET OVERRIDES --- */
 
   /* --- RPG VERTICAL POPUP FIX --- */
