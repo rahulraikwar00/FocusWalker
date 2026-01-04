@@ -1,4 +1,4 @@
-import { OpenSheetButton } from "@/components/shared/SideSheetDrawar";
+import { OpenSheetButton } from "@/components/shared/GlobalSideSheet";
 import { PositionLock } from "./PositionLock";
 import { SettingsButton } from "./SettingsButton";
 import { ThemeToggle } from "./ThemeToggleButton";

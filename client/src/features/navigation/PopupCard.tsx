@@ -77,6 +77,25 @@ export const PopUpcard = ({
       setNote("");
       setIsSaving(false);
     }, 400);
+    const handlePhotoCapture = (file: File) => {
+      const reader = new FileReader();
+
+      reader.onloadend = () => {
+        const base64String = reader.result as string;
+
+        // Now you can add this to your CheckPointData
+        const newCheckpoint: any = {
+          id: crypto.randomUUID(),
+          note: "Tactical photo captured",
+          timestamp: new Date().toLocaleTimeString(),
+          photo: base64String, // This is your string!
+        };
+
+        // Save to your route...
+      };
+
+      reader.readAsDataURL(file);
+    };
   };
 
   return (

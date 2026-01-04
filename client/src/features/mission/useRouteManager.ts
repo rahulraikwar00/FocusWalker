@@ -5,13 +5,17 @@ import { lineString } from "@turf/helpers";
 import along from "@turf/along";
 import { toggleStayAwake, triggerTactilePulse } from "@/lib/utils";
 import { useGlobal } from "./contexts/GlobalContext";
+
+const BREAK_DURATION = 25; //in mi
+
 const METERS_PER_STEP = 0.72; // Average step length in meters
-// const BREAK_DURATION = 25; //in min
+
 export function useRouteLogic(speedKmh: number, isWakeLockEnabled: boolean) {
   const [points, setPoints] = useState<{
     start: L.LatLng | null;
     end: L.LatLng | null;
   }>({ start: null, end: null });
+  const { settings } = useGlobal();
   const [route, setRoute] = useState<any>(null);
   const [currentPos, setCurrentPos] = useState<L.LatLng | null>(null);
   const [isActive, setIsActive] = useState(false);
@@ -22,12 +26,11 @@ export function useRouteLogic(speedKmh: number, isWakeLockEnabled: boolean) {
     timeLeft: 0,
     distDone: 0,
   });
+
   const [isLocked, setIsLocked] = useState(true); // Default to locked
   const [tentPositionArray, setTentPositionArray] = useState<any>(null);
 
   const wakeLockResource = useRef<WakeLockSentinel | null>(null);
-
-  const { breakDuration } = useGlobal().settings;
 
   const animRef = useRef<number>(0);
   const lastTimeRef = useRef<number>(0);
@@ -116,6 +119,8 @@ export function useRouteLogic(speedKmh: number, isWakeLockEnabled: boolean) {
     [speedMs]
   );
 
+  const breakDuration = settings?.breakDuration || BREAK_DURATION;
+
   const calculateTents = useCallback(
     (line: any, totalDistance: number) => {
       const segmentMinutes = breakDuration;
@@ -141,7 +146,7 @@ export function useRouteLogic(speedKmh: number, isWakeLockEnabled: boolean) {
       }
       return tents;
     },
-    [speedMs]
+    [speedMs, breakDuration]
   );
 
   // Inside useRouteLogic.ts

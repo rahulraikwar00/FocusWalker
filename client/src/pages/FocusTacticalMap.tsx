@@ -12,12 +12,12 @@ import { WelcomeOverlay } from "@/features/profile/WelcomeOverlay";
 import { PersonnelDossier } from "@/features/profile/DossierOverlay";
 import { SystemSettings } from "@/features/profile/SystemSettings";
 import InstallButton from "@/components/shared/PWAInstallButton";
-import ModalContainer from "@/components/shared/ModalContainer";
 
 // Hooks
 import { useGlobal } from "@/features/mission/contexts/GlobalContext";
 import { useRouteLogic } from "@/features/mission/useRouteLogic";
-import { SettingsSideBar } from "@/features/navigation/SettingsSideBar";
+import { SettingsSideBar } from "@/features/profile/SideBarSettings";
+import { ModalContainer } from "@/components/shared/ModalContainer";
 
 const MapView = React.lazy(() =>
   import("@/components/shared/MapContainer").then((module) => ({

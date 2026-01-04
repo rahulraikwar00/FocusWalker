@@ -6,6 +6,7 @@ import {
   useCallback,
   useMemo,
   useEffect,
+  useRef,
 } from "react";
 
 // ==================== TYPES ====================
@@ -25,6 +26,7 @@ export interface UserData {
 interface GlobalState {
   isDossierOpen: boolean;
   isSettingsOpen: boolean;
+  isSideSheetOpen: boolean;
   searchQuery: string;
   toast: { show: boolean; msg: string; type: ToastType };
   isLocked: boolean;
@@ -34,7 +36,9 @@ interface GlobalState {
     speedKmh: number;
     isWakeLockEnabled: boolean;
     isHapticsEnabled: boolean;
+    breakDuration: number;
   };
+  missionStatus: "idle" | "active" | "paused";
   user: UserData;
 }
 
@@ -45,6 +49,7 @@ interface GlobalContextValue extends GlobalState {
   triggerToast: (msg: string, type?: ToastType) => void;
   toggleTheme: () => void;
   completeOnboarding: () => void;
+  setMissionStatus: (status: GlobalState["missionStatus"]) => void;
 }
 
 const GlobalContext = createContext<GlobalContextValue | undefined>(undefined);
@@ -52,9 +57,10 @@ const GlobalContext = createContext<GlobalContextValue | undefined>(undefined);
 // ==================== PROVIDER ====================
 
 export function GlobalProvider({ children }: { children: ReactNode }) {
+  const toastTimerRef = useRef<NodeJS.Timeout | null>(null);
+
   // 1. Initialize State with LocalStorage fallbacks
   const [state, setState] = useState<GlobalState>(() => {
-    // Check if running in browser
     if (typeof window === "undefined") return initialDefaultState;
 
     const savedUser = localStorage.getItem("user_dossier");
@@ -71,6 +77,16 @@ export function GlobalProvider({ children }: { children: ReactNode }) {
     };
   });
 
+  // --- PERSISTENCE LAYER ---
+  // Background sync to LocalStorage whenever settings or user data change
+  useEffect(() => {
+    localStorage.setItem("app_settings", JSON.stringify(state.settings));
+  }, [state.settings]);
+
+  useEffect(() => {
+    localStorage.setItem("user_dossier", JSON.stringify(state.user));
+  }, [state.user]);
+
   // --- ACTIONS ---
 
   const setUI = useCallback((updates: Partial<GlobalState>) => {
@@ -79,31 +95,33 @@ export function GlobalProvider({ children }: { children: ReactNode }) {
 
   const updateSettings = useCallback(
     (updates: Partial<GlobalState["settings"]>) => {
-      setState((prev) => {
-        const newSettings = { ...prev.settings, ...updates };
-        localStorage.setItem("app_settings", JSON.stringify(newSettings));
-        return { ...prev, settings: newSettings };
-      });
+      setState((prev) => ({
+        ...prev,
+        settings: { ...prev.settings, ...updates },
+      }));
     },
     []
   );
 
   const updateUser = useCallback((updates: Partial<UserData>) => {
-    setState((prev) => {
-      const newUser = { ...prev.user, ...updates };
-      localStorage.setItem("user_dossier", JSON.stringify(newUser));
-      return { ...prev, user: newUser };
-    });
+    setState((prev) => ({
+      ...prev,
+      user: { ...prev.user, ...updates },
+    }));
   }, []);
 
   const completeOnboarding = useCallback(() => {
     localStorage.setItem("onboarding_complete", "true");
-    setUI({ showWelcome: false });
-  }, [setUI]);
+    setState((prev) => ({ ...prev, showWelcome: false }));
+  }, []);
 
   const triggerToast = useCallback((msg: string, type: ToastType = "info") => {
+    // Clear existing timer so toasts don't cut each other off
+    if (toastTimerRef.current) clearTimeout(toastTimerRef.current);
+
     setState((prev) => ({ ...prev, toast: { show: true, msg, type } }));
-    setTimeout(() => {
+
+    toastTimerRef.current = setTimeout(() => {
       setState((prev) => ({ ...prev, toast: { ...prev.toast, show: false } }));
     }, 3000);
   }, []);
@@ -112,8 +130,24 @@ export function GlobalProvider({ children }: { children: ReactNode }) {
     updateSettings({ isDark: !state.settings.isDark });
   }, [state.settings.isDark, updateSettings]);
 
-  // --- MEMOIZED VALUE ---
+  const setMissionStatus = useCallback(
+    (status: GlobalState["missionStatus"]) => {
+      setState((prev) => ({ ...prev, missionStatus: status }));
+    },
+    []
+  );
 
+  // --- THEME SYNC ---
+  useEffect(() => {
+    const root = window.document.documentElement;
+    if (state.settings.isDark) {
+      root.classList.add("dark");
+    } else {
+      root.classList.remove("dark");
+    }
+  }, [state.settings.isDark]);
+
+  // --- MEMOIZED VALUE ---
   const value = useMemo(
     () => ({
       ...state,
@@ -123,6 +157,7 @@ export function GlobalProvider({ children }: { children: ReactNode }) {
       triggerToast,
       toggleTheme,
       completeOnboarding,
+      setMissionStatus,
     }),
     [
       state,
@@ -132,16 +167,9 @@ export function GlobalProvider({ children }: { children: ReactNode }) {
       triggerToast,
       toggleTheme,
       completeOnboarding,
+      setMissionStatus,
     ]
   );
-  useEffect(() => {
-    const root = window.document.documentElement;
-    if (state.settings.isDark) {
-      root.classList.add("dark");
-    } else {
-      root.classList.remove("dark");
-    }
-  }, [state.settings.isDark]);
 
   return (
     <GlobalContext.Provider value={value}>{children}</GlobalContext.Provider>
@@ -153,6 +181,7 @@ export function GlobalProvider({ children }: { children: ReactNode }) {
 const initialDefaultState: GlobalState = {
   isDossierOpen: false,
   isSettingsOpen: false,
+  isSideSheetOpen: false,
   searchQuery: "",
   toast: { show: false, msg: "", type: "info" },
   isLocked: true,
@@ -162,7 +191,9 @@ const initialDefaultState: GlobalState = {
     speedKmh: 5,
     isWakeLockEnabled: false,
     isHapticsEnabled: true,
+    breakDuration: 25,
   },
+  missionStatus: "idle",
   user: {
     id: "UX-8829",
     name: "FOCUS WALKER",

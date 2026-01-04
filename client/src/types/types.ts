@@ -84,6 +84,29 @@ export interface SystemSettingsProps {
   }) => void;
 }
 
-export interface PopUpcard {
-  distanceLeft: number;
+export interface CheckPointData {
+  id: string;
+  label: string; // "Checkpoint Alpha", "Supply Drop", etc.
+  note: string;
+  timestamp: string; // ISO string is better for sorting: "2026-01-04T12:00:00Z"
+  distanceMark: number;
+  photo?: string; // Base64
+  // NEW: Precise location data
+  coords?: {
+    lat: number;
+    lng: number;
+  };
+}
+
+export interface RouteData {
+  id: string;
+  missionName: string; // User-defined or auto-generated: "Evening Patrol"
+  originName: string; // Renamed from startName
+  targetName: string; // Renamed from endName
+  totalDistance: number;
+  totalDuration: number;
+  timestamp: string; // Mission start date
+  logs: CheckPointData[]; // Renamed from tents to logs or waypoints
+  // NEW: Mission status
+  status: "completed" | "aborted" | "active";
 }

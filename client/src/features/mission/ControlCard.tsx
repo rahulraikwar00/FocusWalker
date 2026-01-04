@@ -76,7 +76,7 @@ export const ControlCard = ({
   const { handleStopMission, handleStartMission, reset } = mapActions;
 
   useEffect(() => {
-    setIsCollapsed(!isCollapsed);
+    setIsCollapsed(route ? false : true);
   }, [route]);
 
   return (
@@ -86,26 +86,28 @@ export const ControlCard = ({
         className="bg-hud backdrop-blur-2xl border border-hud rounded-[2.5rem] pointer-events-auto overflow-hidden shadow-[0_-20px_50px_-12px_rgba(0,0,0,0.5)]"
       >
         {/* HANDLE */}
-        <button
-          onClick={() => setIsCollapsed(!isCollapsed)}
-          className="w-full flex justify-center p-3 group"
-        >
+        {/* <div className="w-full h-5 flex items-center justify-center  group">
           <div className="w-12 h-1 bg-(--text-secondary) opacity-20 rounded-full group-hover:bg-(--accent-primary) transition-all" />
-        </button>
+        </div> */}
 
         {/* CLOCK SECTION */}
-        <div className="px-8 pb-6 text-center">
+        <div
+          className="px-8 pb-3 text-center mt-3"
+          onClick={() => setIsCollapsed(!isCollapsed)}
+        >
           <div className="flex flex-col items-center">
             <span className="text-[8px] font-black tracking-[0.3em] text-(--accent-primary) uppercase mb-1 flex items-center gap-2">
               <Timer size={10} className={isActive ? "animate-pulse" : ""} />
               {isActive ? "T-MINUS TO EXTRACTION" : "SYSTEM STANDBY"}
             </span>
 
-            <div className="relative z-10 text-5xl flex items-center justify-center">
-              <div className="absolute -inset-4 bg-(--accent-primary)/5 blur-3xl rounded-full opacity-50" />
+            <div
+              className={`relative z-10 ${getFontSize(
+                metrics.timeLeft
+              )} transition-all duration-300 flex items-center justify-center`}
+            >
               <TimeFormat seconds={metrics.timeLeft} />
             </div>
-
             {/* PROGRESS GAUGE */}
             <div className="w-full mt-3 px-2">
               <div className="flex justify-between items-end mb-1.5 opacity-60">
@@ -190,7 +192,7 @@ export const ControlCard = ({
                 </Button>
 
                 {/* RESET BUTTON (Smart Component) */}
-                <TacticalResetButton onReset={reset} />
+                <TacticalResetButton onReset={reset} isActive={isActive} />
               </div>
             </motion.div>
           )}
@@ -198,4 +200,10 @@ export const ControlCard = ({
       </motion.div>
     </div>
   );
+};
+
+const getFontSize = (seconds: number) => {
+  if (seconds >= 86400) return "text-6xl"; // Days + Hrs + Mins + Secs
+  if (seconds >= 3600) return "text-7xl"; // Hrs + Mins + Secs
+  return "text-8xl"; // Mins + Secs
 };
