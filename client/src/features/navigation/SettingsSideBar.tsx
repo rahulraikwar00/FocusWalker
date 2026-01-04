@@ -1,4 +1,4 @@
-import { OpenSheetButton } from "@/components/shared/GlobalSideSheet";
+import { ToggleButton } from "@/components/shared/GlobalSideSheet";
 import { PositionLock } from "./PositionLock";
 import { SettingsButton } from "./SettingsButton";
 import { ThemeToggle } from "./ThemeToggleButton";
@@ -15,7 +15,7 @@ export const SettingsSideBar = (drawerRef: any) => {
         <SettingsButton />
         <ThemeToggle />
         <PositionLock />
-        <OpenSheetButton />
+        <ToggleButton />
       </div>
 
       {/* 4. Vertical Label: Cleaned up spacing and added a subtle glow */}

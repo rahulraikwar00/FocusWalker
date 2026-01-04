@@ -2,39 +2,30 @@ import React, { useState, useMemo, useRef, useEffect } from "react";
 import L from "leaflet";
 import { useMapEvents } from "react-leaflet";
 import { TentMarker } from "./TentMarker";
-
-export interface TentlayerPorps {
-  tentPositionArray: {
-    id: string;
-    latlng: L.LatLng;
-    distanceMark: number;
-  }[];
-  currentPos: L.LatLng | null;
-  isActive: boolean;
-  setIsActive: (value: boolean) => void;
-}
+import { MissionTent } from "@/components/shared/MapContainer";
 
 export const TentLayer = ({
   tentPositionArray,
   currentPos,
   isActive,
   setIsActive,
-}: TentlayerPorps) => {
+}: any) => {
   const [bounds, setBounds] = useState<L.LatLngBounds | null>(null);
   const activeMarkerRef = useRef<L.Marker | null>(null);
 
-  // 1. Initialize Map Events
   const map = useMapEvents({
     moveend: () => setBounds(map.getBounds()),
     zoomend: () => setBounds(map.getBounds()),
   });
 
-  // 2. FIX: Capture initial bounds on mount
+  // Ensure bounds are captured as soon as the map or route loads
   useEffect(() => {
-    if (map) setBounds(map.getBounds());
-  }, [map]);
+    if (map) {
+      const b = map.getBounds();
+      if (b.isValid()) setBounds(b);
+    }
+  }, [map, tentPositionArray]);
 
-  // 3. Centralized Popup Logic
   const openPopup = React.useCallback((tentId: string, marker: L.Marker) => {
     if (activeMarkerRef.current && activeMarkerRef.current !== marker) {
       activeMarkerRef.current.closePopup();
@@ -50,46 +41,75 @@ export const TentLayer = ({
     }
   }, []);
 
-  // 4. Optimized Viewport Filtering
   const visibleTents = useMemo(() => {
-    if (!tentPositionArray?.length || !bounds) return [];
+    // 1. Safety Guard: Check if array exists
+    if (
+      !tentPositionArray ||
+      !Array.isArray(tentPositionArray) ||
+      tentPositionArray.length === 0
+    ) {
+      return [];
+    }
 
-    // Filter indices in bounds first (more memory efficient than mapping everything)
+    // 2. Safety Guard: If map isn't ready, show a small preview slice (prevents blank map)
+    if (!bounds || !bounds.isValid()) {
+      return tentPositionArray
+        .slice(0, 5)
+        .map((t, i) => ({ ...t, originalIdx: i }));
+    }
+
     const inBoundsIndices: number[] = [];
+
     for (let i = 0; i < tentPositionArray.length; i++) {
-      if (bounds.contains(tentPositionArray[i].latlng)) {
-        inBoundsIndices.push(i);
+      const tent = tentPositionArray[i];
+
+      // 3. THE "LAT" ERROR FIX:
+      // Ensure the point is valid before calling Leaflet methods
+      if (tent && tent.latlng) {
+        try {
+          const point = tent.latlng;
+          if (bounds.contains(point)) {
+            inBoundsIndices.push(i);
+          }
+        } catch (e) {
+          continue; // Skip malformed points instead of crashing
+        }
       }
     }
 
     const totalInView = inBoundsIndices.length;
-    const maxVisible = 5;
-
     if (totalInView === 0) return [];
 
-    // If few tents, show them all
-    if (totalInView <= maxVisible) {
-      return inBoundsIndices.map((idx) => ({
-        ...tentPositionArray[idx],
-        originalIdx: idx,
-      }));
-    }
+    const maxVisible = 5;
+    const selectedTents = [];
 
-    // Interpolate to pick 5 spread-out tents across the visible segment
-    const result = [];
-    for (let i = 0; i < maxVisible; i++) {
-      const lookupIdx = Math.floor((i / (maxVisible - 1)) * (totalInView - 1));
-      const actualIdx = inBoundsIndices[lookupIdx];
-      result.push({ ...tentPositionArray[actualIdx], originalIdx: actualIdx });
+    if (totalInView <= maxVisible) {
+      for (const idx of inBoundsIndices) {
+        selectedTents.push({ ...tentPositionArray[idx], originalIdx: idx });
+      }
+    } else {
+      // 4. Strategic Sampling: Prevents UI lag with thousands of points
+      for (let i = 0; i < maxVisible; i++) {
+        const divisor = maxVisible > 1 ? maxVisible - 1 : 1;
+        const lookupIdx = Math.floor((i / divisor) * (totalInView - 1));
+        const actualIdx = inBoundsIndices[lookupIdx];
+
+        if (tentPositionArray[actualIdx]) {
+          selectedTents.push({
+            ...tentPositionArray[actualIdx],
+            originalIdx: actualIdx,
+          });
+        }
+      }
     }
-    return result;
+    return selectedTents;
   }, [tentPositionArray, bounds]);
 
   return (
     <>
       {visibleTents.map((tent) => (
         <TentMarker
-          key={tent.id}
+          key={`tent-${tent.id}-${tent.originalIdx}`}
           tent={tent}
           index={tent.originalIdx}
           currentPos={currentPos}

@@ -30,12 +30,7 @@ const TENT_LEFT = createIcon("left");
 const TENT_RIGHT = createIcon("right");
 
 interface TentMarkerProps {
-  tent: {
-    id: string;
-    latlng: L.LatLng;
-    distanceMark: number;
-    originalIdx: number;
-  };
+  tent: any;
   index: number;
   currentPos: L.LatLng | null;
   isActive: boolean;
@@ -53,32 +48,32 @@ export const TentMarker = ({
   OpenPopup,
   ClosePopup,
 }: TentMarkerProps) => {
+  console.log("Rendering TentMarker:", tent);
   const markerRef = useRef<L.Marker>(null);
   // Inside your TentMarker component
   const hasTriggered = useRef(false);
 
   useEffect(() => {
-    if (!currentPos || !tent.latlng || !isActive) {
-      return;
+    if (!currentPos || !tent.latlng || !isActive) return;
+
+    try {
+      // Standardize both points to Leaflet LatLng objects
+      const p1 = L.latLng(currentPos);
+      const p2 = L.latLng(tent.latlng);
+
+      // Safety check for valid coordinates
+      if (!p1 || !p2) return;
+
+      const distance = p1.distanceTo(p2);
+
+      if (distance < 8 && !hasTriggered.current && markerRef.current) {
+        hasTriggered.current = true;
+        setIsActive(false);
+        OpenPopup(tent.id, markerRef.current);
+      }
+    } catch (err) {
+      console.error("Coordinate calculation failed", err);
     }
-    const p1 = L.latLng(currentPos);
-    const p2 = L.latLng(tent.latlng);
-    const distance = p1.distanceTo(p2);
-
-    // Added check: !hasTriggered.current
-    if (distance < 1.5 && !hasTriggered.current && markerRef.current) {
-      console.log("Mission Objective Reached");
-
-      hasTriggered.current = true; // Lock the trigger
-      setIsActive(false);
-      OpenPopup(tent.id, markerRef.current);
-    }
-
-    // // Optional: Reset the lock if the user moves far away (e.g., > 10m)
-    // // This allows them to trigger it again if they leave and come back
-    // if (distance > 10 && hasTriggered.current) {
-    //   hasTriggered.current = false;
-    // }
   }, [currentPos, isActive, tent.latlng, setIsActive, OpenPopup, tent.id]);
 
   return (

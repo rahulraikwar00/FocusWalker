@@ -28,7 +28,8 @@ export const PersonnelDossier = () => {
   };
 
   return (
-    <div className="w-full max-w-md mx-auto min-h-sm bg-(--bg-page) text-(--text-primary) font-sans pb-10">
+    <div className="w-full max-w-md mx-auto min-h-sm bg-(--bg-page) text-(--text-primary) font-sans pb-10 
+    overflow-y-auto no-scrollbar">
       {/* 1. HEADER */}
       <div className="flex justify-between items-center px-6 pt-6 mb-8">
         <h1 className="text-3xl font-bold tracking-tight">Personnel</h1>

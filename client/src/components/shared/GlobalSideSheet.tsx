@@ -1,52 +1,70 @@
 import { useDrawer } from "@/features/mission/contexts/DrawerContext";
-import { MapPin, X, History, ChevronLeft } from "lucide-react";
+import { MapPin, X, History, ChevronLeft, Loader2 } from "lucide-react";
 import { HistoryCard } from "@/features/navigation/HistoryCard";
-
 import { useState, useEffect } from "react";
 import { MissionDetailView } from "@/features/mission/MissionDetailView";
-import { Button } from "../ui/button";
+import { StorageService } from "@/lib/utils";
+import { Button } from "@/components/ui/button";
 
 export const GlobalSideSheet = () => {
   const { isOpen, toggle } = useDrawer();
-  const [history, setHistory] = useState([]);
+  const [history, setHistory] = useState<any[]>([]);
   const [selectedMission, setSelectedMission] = useState<any | null>(null);
+  const [isFetchingDetail, setIsFetchingDetail] = useState(false);
 
+  // 1. Fetch lightweight summaries when drawer opens
   useEffect(() => {
     if (isOpen) {
-      const globalKey = "treklog";
-      const saved = JSON.parse(localStorage.getItem(globalKey) || "[]");
-      setHistory(saved);
+      const loadHistory = async () => {
+        const summaries = await StorageService.getAllSummaries();
+        setHistory(summaries);
+      };
+      loadHistory();
     } else {
-      // Reset view when closing
       setTimeout(() => setSelectedMission(null), 300);
     }
   }, [isOpen]);
 
+  // 2. Fetch HEAVY data (photos/logs) only on click
+  const handleSelectMission = async (summary: any) => {
+    setIsFetchingDetail(true);
+    try {
+      const fullIntel = await StorageService.getFullRoute(summary.id);
+      setSelectedMission(fullIntel);
+    } catch (err) {
+      console.error("Failed to retrieve mission archives", err);
+    } finally {
+      setIsFetchingDetail(false);
+    }
+  };
+
   return (
     <>
+      {/* Overlay */}
       <div
         onClick={toggle}
-        className={`fixed inset-0 bg-black/60 backdrop-blur-md z-9998 transition-opacity duration-500 ${
+        className={`fixed inset-0 bg-black/60 backdrop-blur-md z-[9998] transition-opacity duration-500 ${
           isOpen ? "opacity-100" : "opacity-0 pointer-events-none"
         }`}
       />
 
+      {/* Side Sheet */}
       <div
-        className={`fixed top-0 left-0 h-full w-full sm:w-80 md:w-96 bg-(--bg-page) border-r border-(--hud-border) shadow-2xl z-9999 transition-transform duration-500 cubic-bezier(0.4, 0, 0.2, 1) ${
+        className={`fixed top-0 left-0 h-full w-full sm:w-80 md:w-96 bg-(--bg-page) border-r border-(--hud-border) shadow-2xl z-[9999] transition-transform duration-500 cubic-bezier(0.4, 0, 0.2, 1) ${
           isOpen ? "translate-x-0" : "-translate-x-full"
         }`}
       >
         <div className="flex flex-col h-full">
-          {/* HEADER: Dynamic based on view */}
+          {/* HEADER */}
           <div className="p-6 border-b border-(--hud-border) flex items-center justify-between">
             <div className="flex items-center gap-3">
               {selectedMission ? (
-                <button
+                <Button
                   onClick={() => setSelectedMission(null)}
                   className="p-1 -ml-1 hover:bg-(--text-secondary)/10 rounded-full transition-colors"
                 >
                   <ChevronLeft className="text-(--accent-primary)" size={24} />
-                </button>
+                </Button>
               ) : (
                 <History className="text-(--accent-primary)" size={20} />
               )}
@@ -54,26 +72,35 @@ export const GlobalSideSheet = () => {
                 {selectedMission ? "Mission Intel" : "Mission Logs"}
               </h2>
             </div>
-            <button onClick={toggle} className="p-2 text-(--text-secondary)">
+            <Button onClick={toggle} className="p-2 text-(--text-secondary)">
               <X size={20} />
-            </button>
+            </Button>
           </div>
 
-          {/* CONTENT: List or Detail */}
+          {/* CONTENT */}
           <div className="flex-1 overflow-y-auto custom-scrollbar">
-            {selectedMission ? (
+            {isFetchingDetail ? (
+              <div className="h-full flex flex-col items-center justify-center gap-2">
+                <Loader2 className="animate-spin text-tactical" size={24} />
+                <span className="text-[10px] font-black uppercase tracking-tighter opacity-40">
+                  Decrypting...
+                </span>
+              </div>
+            ) : selectedMission ? (
               <MissionDetailView mission={selectedMission} />
             ) : (
               <div className="p-4 space-y-4">
                 {history.length > 0 ? (
-                  history.map((log: any, index: number) => (
-                    <div
-                      key={index}
-                      onClick={() => setSelectedMission(log)}
-                      className="cursor-pointer active:scale-95 transition-transform"
-                    >
-                      <HistoryCard data={log} />
-                    </div>
+                  history.map((log) => (
+                    <HistoryCard
+                      key={log.id}
+                      data={log}
+                      onSelect={() => handleSelectMission(log)} // The async trigger
+                      onDelete={async (id) => {
+                        // await StorageService.deleteMission(id);
+                        setHistory((prev) => prev.filter((m) => m.id !== id));
+                      }}
+                    />
                   ))
                 ) : (
                   <EmptyState />
@@ -86,7 +113,6 @@ export const GlobalSideSheet = () => {
     </>
   );
 };
-
 const EmptyState = () => (
   <div className="h-40 flex flex-col items-center justify-center text-(--text-secondary) opacity-40">
     <MapPin size={32} className="mb-2" />

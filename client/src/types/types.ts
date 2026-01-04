@@ -83,30 +83,25 @@ export interface SystemSettingsProps {
     haptics: boolean;
   }) => void;
 }
-
 export interface CheckPointData {
   id: string;
-  label: string; // "Checkpoint Alpha", "Supply Drop", etc.
+  label: string;
   note: string;
-  timestamp: string; // ISO string is better for sorting: "2026-01-04T12:00:00Z"
+  timestamp: string;
   distanceMark: number;
-  photo?: string; // Base64
-  // NEW: Precise location data
-  coords?: {
-    lat: number;
-    lng: number;
-  };
+  photo?: string | null; // Add | null here
+  coords?: { lat: number; lng: number };
 }
 
 export interface RouteData {
   id: string;
-  missionName: string; // User-defined or auto-generated: "Evening Patrol"
-  originName: string; // Renamed from startName
-  targetName: string; // Renamed from endName
+  missionName: string;
+  originName: string;
+  destinationName: string;
   totalDistance: number;
   totalDuration: number;
-  timestamp: string; // Mission start date
-  logs: CheckPointData[]; // Renamed from tents to logs or waypoints
-  // NEW: Mission status
+  timestamp: string;
+  logs: CheckPointData[];
   status: "completed" | "aborted" | "active";
+  logCount?: number;
 }

@@ -5,6 +5,11 @@ import { Button } from "../../components/ui/button";
 import { useGlobal } from "./contexts/GlobalContext";
 
 import { TacticalResetButton } from "./TacticalResetButton";
+import { CheckPointData, RouteData } from "@/types/types";
+
+import { StorageService } from "@/lib/utils";
+import { useMission } from "@/components/shared/useMissionStore";
+import { ActiveRoute } from "./useRouteLogic";
 
 // --- SUB-COMPONENTS ---
 
@@ -70,14 +75,80 @@ export const ControlCard = ({
   mapActions: any;
 }) => {
   const { triggerToast } = useGlobal();
+  const { activeRoute } = useMission();
   const [isCollapsed, setIsCollapsed] = useState(false);
-
-  const { isActive, progress, metrics, route } = mapState;
-  const { handleStopMission, handleStartMission, reset } = mapActions;
+  const { isActive, progress, metrics, route, checkpoints } = mapState;
+  const { handleStopMission, handleStartMission, reset, getLocalityName } =
+    mapActions;
+  const [currentMissionId, setCurrentMissionId] = useState<string | null>(null);
 
   useEffect(() => {
     setIsCollapsed(route ? false : true);
   }, [route]);
+
+  const generateMissionId = (currentRoute: ActiveRoute) => {
+    const start = currentRoute.path[0];
+    const end = currentRoute.path[currentRoute.path.length - 1];
+
+    // Format: LAT_LNG_LAT_LNG_TIMESTAMP
+    const geoFingerprint = `${start[0].toFixed(4)}${start[1].toFixed(
+      4
+    )}_${end[0].toFixed(4)}${end[1].toFixed(4)}`;
+    const timeHash = Date.now().toString(36).toUpperCase();
+
+    return `OP_${geoFingerprint}_${timeHash}`;
+  };
+
+  const initiateMission = async () => {
+    if (currentMissionId) {
+      handleStartMission();
+      return;
+    }
+
+    const missionId = generateMissionId(route);
+    setCurrentMissionId(missionId); // Store the ID for this session
+    const draftMission: RouteData = {
+      id: missionId,
+      missionName: route?.name || "Field Operation",
+      timestamp: new Date().toISOString(),
+      totalDistance: 0,
+      totalDuration: 0,
+      logCount: 0,
+      status: "active",
+      logs: [],
+      originName: "origin TBD",
+      destinationName: "destination TBD",
+    };
+
+    // Save initial draft to IndexedDB
+    await StorageService.saveRouteSummary(draftMission);
+    handleStartMission();
+  };
+
+  const saveMission = async () => {
+    if (!currentMissionId) return; // Guard clause
+    const finalMissionData: RouteData = {
+      id: currentMissionId, // Use the string directly
+      missionName: route?.name || "Field Operation",
+      timestamp: new Date().toISOString(),
+      totalDistance: metrics.distDone,
+      totalDuration: metrics.timeElapsed,
+      logCount: activeRoute ? activeRoute.logs.length : 0,
+      status: "completed",
+      logs: activeRoute ? activeRoute.logs : [],
+      originName: "origin TBD",
+      destinationName: "destination TBD",
+    };
+
+    try {
+      await StorageService.saveRouteSummary(finalMissionData);
+      triggerToast("Intel Secured: Archive Updated", "success");
+      setCurrentMissionId(null); // Clear for next mission
+      handleStopMission();
+    } catch (error) {
+      triggerToast("System Error: Intel Lost", "error");
+    }
+  };
 
   return (
     <div className="absolute bottom-0 left-1/2 -translate-x-1/2 z-2000 pointer-events-none w-full max-w-md px-4 pb-[calc(env(safe-area-inset-bottom,0px)+1rem)]">
@@ -85,11 +156,6 @@ export const ControlCard = ({
         layout
         className="bg-hud backdrop-blur-2xl border border-hud rounded-[2.5rem] pointer-events-auto overflow-hidden shadow-[0_-20px_50px_-12px_rgba(0,0,0,0.5)]"
       >
-        {/* HANDLE */}
-        {/* <div className="w-full h-5 flex items-center justify-center  group">
-          <div className="w-12 h-1 bg-(--text-secondary) opacity-20 rounded-full group-hover:bg-(--accent-primary) transition-all" />
-        </div> */}
-
         {/* CLOCK SECTION */}
         <div
           className="px-8 pb-3 text-center mt-3"
@@ -180,6 +246,12 @@ export const ControlCard = ({
                       isActive ? "Tactical: Aborted" : "Tactical: Initiated",
                       isActive ? "error" : "success"
                     );
+                    if (isActive) {
+                      saveMission();
+                    } else {
+                      initiateMission();
+                      triggerToast("Tactical: Initiated", "success");
+                    }
                   }}
                   disabled={!route}
                   className={`flex-3 h-full rounded-2xl font-black text-[10px] tracking-[0.3em] uppercase transition-all duration-300 border-2 ${
@@ -188,7 +260,7 @@ export const ControlCard = ({
                       : "bg-(--accent-primary) border-(--accent-primary) text-(--bg-page) shadow-[0_0_25px_var(--accent-glow)]"
                   }`}
                 >
-                  {isActive ? "GIVE UP" : "START FOCUS"}
+                  {isActive ? "SECURE & END" : "START FOCUS"}
                 </Button>
 
                 {/* RESET BUTTON (Smart Component) */}
