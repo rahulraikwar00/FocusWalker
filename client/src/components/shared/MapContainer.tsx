@@ -11,21 +11,7 @@ import {
 import "leaflet/dist/leaflet.css";
 import { memo, useEffect, useMemo } from "react";
 import { TentLayer } from "../../features/navigation/TentLayer";
-
-interface MapProps {
-  DEFAULT_LOCATION: L.LatLngExpression;
-  handleMapClick: (e: L.LeafletMouseEvent) => void;
-  currentPos: L.LatLng | null;
-  isActive: boolean;
-  points: { start: L.LatLng | null; end: L.LatLng | null };
-  route: { path: L.LatLngExpression[] } | null;
-  isLocked: boolean;
-  isDark: boolean;
-  tentPositionArray: any;
-  removePoint: (type: "start" | "end", isActive: boolean) => void;
-  isLoadingRoute: boolean;
-  setIsActive: any;
-}
+import { MapProps } from "@/types/types";
 
 /**
  * --- TACTICAL MARKER ICON ---
@@ -91,7 +77,7 @@ export const MapView = memo(
     isLoadingRoute,
     removePoint,
     setIsActive,
-  }: MapProps) => {
+  }: any) => {
     // Choose Tile Provider based on theme
     const tileUrl = useMemo(
       () =>
@@ -205,15 +191,15 @@ export const MapView = memo(
     );
   },
   (prev, next) => {
-    // Optimization: Only re-render if critical visual props change
     return (
       prev.isDark === next.isDark &&
       prev.isActive === next.isActive &&
       prev.isLocked === next.isLocked &&
+      // Check the length of the path instead of the array reference
+      prev.route?.path?.length === next.route?.path?.length &&
       prev.currentPos?.lat === next.currentPos?.lat &&
-      prev.currentPos?.lng === next.currentPos?.lng &&
-      prev.route?.path === next.route?.path &&
-      prev.points === next.points
+      prev.points.start?.lat === next.points.start?.lat &&
+      prev.points.end?.lat === next.points.end?.lat
     );
   }
 );

@@ -5,33 +5,33 @@ import { lineString } from "@turf/helpers";
 import along from "@turf/along";
 import { toggleStayAwake, triggerTactilePulse } from "@/lib/utils";
 import { useGlobal } from "./contexts/GlobalContext";
-import { ActiveRoute, MissionMetrics, SearchResult } from "@/types/types";
+import { SearchResult } from "@/types/types";
+
+const BREAK_DURATION = 25; //in mi
+
 const METERS_PER_STEP = 0.72; // Average step length in meters
-// const BREAK_DURATION = 25; //in min
 
 export function useRouteLogic(speedKmh: number, isWakeLockEnabled: boolean) {
   const [points, setPoints] = useState<{
     start: L.LatLng | null;
     end: L.LatLng | null;
   }>({ start: null, end: null });
-  const [route, setRoute] = useState<ActiveRoute | null>(null);
-
+  const { settings } = useGlobal();
+  const [route, setRoute] = useState<any>(null);
   const [currentPos, setCurrentPos] = useState<L.LatLng | null>(null);
   const [isActive, setIsActive] = useState(false);
   const [progress, setProgress] = useState(0);
   const [isLoadingRoute, setIsLoadingRoute] = useState(false);
-  const [metrics, setMetrics] = useState<MissionMetrics>({
+  const [metrics, setMetrics] = useState({
     steps: 0,
     timeLeft: 0,
     distDone: 0,
   });
-  const [isLocked, setIsLocked] = useState(true); // Default to locked
-  const [tentPositionArray, setTentPositionArray] = useState<
-    [number, number][] | null
-  >(null);
-  const wakeLockResource = useRef<WakeLockSentinel | null>(null);
 
-  const { breakDuration } = useGlobal().settings;
+  const [isLocked, setIsLocked] = useState(true); // Default to locked
+  const [tentPositionArray, setTentPositionArray] = useState<any>(null);
+
+  const wakeLockResource = useRef<WakeLockSentinel | null>(null);
 
   const animRef = useRef<number>(0);
   const lastTimeRef = useRef<number>(0);
@@ -83,25 +83,10 @@ export function useRouteLogic(speedKmh: number, isWakeLockEnabled: boolean) {
     };
   }, [isActive, isWakeLockEnabled]);
 
-  const handleRouteUpdate = useCallback(
-    (r: any) => {
-      const newRoute: ActiveRoute = {
-        path: r.geometry.coordinates.map(
-          (c: any) => [c[1], c[0]] as [number, number]
-        ),
-        rawLine: r.geometry.coordinates,
-        distance: r.distance,
-        duration: r.distance / speedMs,
-      };
-      setRoute(newRoute);
-    },
-    [speedMs]
-  );
   const fetchRoute = useCallback(
     async (start: L.LatLng, end: L.LatLng) => {
       if (!start || !end) return;
       setIsLoadingRoute(true);
-
       try {
         const res = await fetch(
           `https://router.project-osrm.org/route/v1/walking/${start.lng},${start.lat};${end.lng},${end.lat}?overview=full&geometries=geojson`
@@ -110,31 +95,21 @@ export function useRouteLogic(speedKmh: number, isWakeLockEnabled: boolean) {
 
         if (data.code === "Ok" && data.routes?.length > 0) {
           const r = data.routes[0];
-
-          // 1. Process the route data using your helper
-          handleRouteUpdate(r);
-
-          // 2. Calculate tactical "Tent" checkpoints
           const line = lineString(r.geometry.coordinates);
+          setRoute({
+            path: r.geometry.coordinates.map((c: any) => [c[1], c[0]]),
+            line: lineString(r.geometry.coordinates),
+            distance: r.distance,
+            duration: r.distance / speedMs,
+          });
           const tents = calculateTents(line, r.distance);
-          setTentPositionArray(tents.map((t) => [t.latlng.lat, t.latlng.lng]));
+          setTentPositionArray(tents);
 
-          // 3. Set initial mission metrics
           setMetrics({
             steps: 0,
             timeLeft: Math.ceil(r.distance / speedMs),
             distDone: 0,
           });
-
-          // 4. PRE-GENERATE MISSION ID (Optional but recommended)
-          // You can store this in a ref or state so it's ready when they click "START"
-          const startFingerprint = `${start.lat.toFixed(4)},${start.lng.toFixed(
-            4
-          )}`;
-          const endFingerprint = `${end.lat.toFixed(4)},${end.lng.toFixed(4)}`;
-          console.log(
-            `Tactical ID Ready: OP_${startFingerprint}_${endFingerprint}`
-          );
         }
       } catch (err) {
         console.error("OSRM Route Error:", err);
@@ -142,8 +117,10 @@ export function useRouteLogic(speedKmh: number, isWakeLockEnabled: boolean) {
         setIsLoadingRoute(false);
       }
     },
-    [speedMs, handleRouteUpdate] // Added handleRouteUpdate to dependencies
+    [speedMs]
   );
+
+  const breakDuration = settings?.breakDuration || BREAK_DURATION;
 
   const calculateTents = useCallback(
     (line: any, totalDistance: number) => {
@@ -170,38 +147,8 @@ export function useRouteLogic(speedKmh: number, isWakeLockEnabled: boolean) {
       }
       return tents;
     },
-    [speedMs]
+    [speedMs, breakDuration]
   );
-
-  //locacality name using lat lng
-  const getLocalityName = async (lat: number, lon: number): Promise<string> => {
-    try {
-      const response = await fetch(
-        `https://nominatim.openstreetmap.org/reverse?format=jsonv2&lat=${lat}&lon=${lon}`,
-        {
-          headers: {
-            "User-Agent": "FocusWalker-Tactical-App", //
-          },
-        }
-      );
-
-      const data = await response.json();
-
-      const addr = data.address;
-      const locality =
-        addr.suburb ||
-        addr.neighbourhood ||
-        addr.city_district ||
-        addr.town ||
-        addr.village ||
-        addr.city;
-
-      return locality || "Unknown Sector";
-    } catch (error) {
-      console.error("Geocoding failed:", error);
-      return "Unknown Sector";
-    }
-  };
 
   // Inside useRouteLogic.ts
 
@@ -284,7 +231,7 @@ export function useRouteLogic(speedKmh: number, isWakeLockEnabled: boolean) {
 
   // Safe Animation Loop
   useEffect(() => {
-    if (!isActive || !route || !route.rawLine) return;
+    if (!isActive || !route || !route.line) return;
 
     const frame = (time: number) => {
       if (!lastTimeRef.current) lastTimeRef.current = time;
@@ -301,7 +248,7 @@ export function useRouteLogic(speedKmh: number, isWakeLockEnabled: boolean) {
       const dDone = progressRef.current * routeDist;
 
       try {
-        const pt = along(lineString(route.rawLine), dDone / 1000, {
+        const pt = along(route.line, dDone / 1000, {
           units: "kilometers",
         });
         const [lng, lat] = pt.geometry.coordinates;
@@ -388,6 +335,5 @@ export function useRouteLogic(speedKmh: number, isWakeLockEnabled: boolean) {
     handleStartMission,
     removePoint,
     setPoints,
-    getLocalityName,
   };
 }

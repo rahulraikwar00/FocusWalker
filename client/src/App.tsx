@@ -5,12 +5,16 @@ import { QueryClientProvider } from "@tanstack/react-query";
 import { Toaster } from "@/components/ui/toaster";
 import NotFound from "@/pages/not-found";
 import InstallButton from "./components/shared/PWAInstallButton";
-
-// Import your new context providers
 import { GlobalProvider } from "./features/mission/contexts/GlobalContext";
+import { DrawerProvider } from "./features/mission/contexts/DrawerContext";
+import { GlobalSideSheet } from "./components/shared/GlobalSideSheet";
 
 // Lazy load the heavy map component
-const FocusTacticalMap = React.lazy(() => import("@/pages/FocusTacticalMap"));
+const FocusTacticalMap = React.lazy(() =>
+  import("@/pages/FocusTacticalMap").then((module) => ({
+    default: module.FocusTacticalMap,
+  }))
+);
 
 const AppLoading = () => (
   <div className="flex h-screen w-screen items-center justify-center bg-background text-muted-foreground">
@@ -58,14 +62,28 @@ function App() {
       e.preventDefault();
       setInstallPrompt(e);
     });
+
+    const handleContextMenu = (e: MouseEvent) => {
+      // Prevent the default right-click or long-press menu
+      e.preventDefault();
+    };
+
+    document.addEventListener("contextmenu", handleContextMenu);
+
+    return () => {
+      document.removeEventListener("contextmenu", handleContextMenu);
+    };
   }, []);
 
   return (
     <QueryClientProvider client={queryClient}>
       {/* Wrap everything with your new contexts */}
       <GlobalProvider>
-        <Toaster />
-        <Router />
+        <DrawerProvider>
+          <GlobalSideSheet />
+          <Toaster />
+          <Router />
+        </DrawerProvider>
         {/* Pass the state and the function as props */}
         {!isInstalled && installPrompt && <InstallButton />}
       </GlobalProvider>

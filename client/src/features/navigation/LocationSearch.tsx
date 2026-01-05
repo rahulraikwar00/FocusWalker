@@ -4,17 +4,11 @@ import { motion, AnimatePresence } from "framer-motion";
 import { SearchResult } from "@/types/types";
 import { useGlobal } from "@/features/mission/contexts/GlobalContext";
 
-interface LocationSearchProps {
-  points: { start: any; end: any };
-  searchLocation: (query: string) => Promise<SearchResult[]>;
-  onLocationSelect: (loc: SearchResult) => void;
-}
-
 export const LocationSearch = ({
   points,
   searchLocation,
   onLocationSelect,
-}: LocationSearchProps) => {
+}: any) => {
   // 1. Pull search state directly from Global Context
   const { searchQuery, setUI } = useGlobal();
 

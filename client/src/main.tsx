@@ -13,5 +13,8 @@ const BootLoader = () => <div className="bg-[#0a0a0a] h-screen w-full" />;
 createRoot(document.getElementById("root")!).render(
   <Suspense fallback={<BootLoader />}>
     <App />
+    {/* <div className=" flex h-screen w-screen items-center justify-center">
+      GADHI HU ... sorry bhaiya maaf karna, abhi loading chal raha hai...
+    </div> */}
   </Suspense>
 );

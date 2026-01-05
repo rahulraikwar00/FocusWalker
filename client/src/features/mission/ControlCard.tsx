@@ -5,6 +5,10 @@ import { Button } from "../../components/ui/button";
 import { useGlobal } from "./contexts/GlobalContext";
 
 import { TacticalResetButton } from "./TacticalResetButton";
+import { ActiveRoute, RouteData } from "@/types/types";
+
+import { StorageService } from "@/lib/utils";
+import { useMission } from "@/components/shared/useMissionStore";
 
 // --- SUB-COMPONENTS ---
 
@@ -70,14 +74,92 @@ export const ControlCard = ({
   mapActions: any;
 }) => {
   const { triggerToast } = useGlobal();
+  const { activeRoute } = useMission();
   const [isCollapsed, setIsCollapsed] = useState(false);
-
-  const { isActive, progress, metrics, route } = mapState;
-  const { handleStopMission, handleStartMission, reset } = mapActions;
+  const { isActive, progress, metrics, route, checkpoints } = mapState;
+  const { handleStopMission, handleStartMission, reset, getLocalityName } =
+    mapActions;
+  const [currentMissionId, setCurrentMissionId] = useState<string | null>(null);
 
   useEffect(() => {
-    setIsCollapsed(!isCollapsed);
+    setIsCollapsed(route ? false : true);
   }, [route]);
+
+  const generateMissionId = (currentRoute: ActiveRoute) => {
+    const start = currentRoute.path[0];
+    const end = currentRoute.path[currentRoute.path.length - 1];
+
+    // Format: LAT_LNG_LAT_LNG_TIMESTAMP
+    // 2. TYPE CHECK: Ensure they are actually numbers
+    // Sometimes API data comes back as strings
+    const numericLat =
+      typeof start.lat === "number" ? start.lat : parseFloat(start.lat);
+    const numericLng =
+      typeof start.lng === "number" ? start.lng : parseFloat(start.lng);
+    const numericEndLat =
+      typeof end.lat === "number" ? end.lat : parseFloat(end.lat);
+    const numericEndLng =
+      typeof end.lng === "number" ? end.lng : parseFloat(end.lng);
+
+    // 1. GEO FINGERPRINT: Round to 4 decimal places for ~11m accuracy
+    const geoFingerprint = `${numericLat.toFixed(4)}_${numericLng.toFixed(
+      4
+    )}_${numericEndLat.toFixed(4)}_${numericEndLng.toFixed(4)}`;
+    const timeHash = Date.now().toString().slice(-6); // Last 6 digits of timestamp
+
+    return `OP_${geoFingerprint}_${timeHash}`;
+  };
+
+  const initiateMission = async () => {
+    if (currentMissionId) {
+      handleStartMission();
+      return;
+    }
+
+    const missionId = generateMissionId(route);
+    setCurrentMissionId(missionId); // Store the ID for this session
+    const draftMission: RouteData = {
+      id: missionId,
+      missionName: route?.name || "Field Operation",
+      timestamp: new Date().toISOString(),
+      totalDistance: 0,
+      totalDuration: 0,
+      logCount: 0,
+      status: "active",
+      logs: [],
+      originName: "origin TBD",
+      destinationName: "destination TBD",
+    };
+
+    // Save initial draft to IndexedDB
+    await StorageService.saveRouteSummary(draftMission);
+    handleStartMission();
+  };
+
+  const saveMission = async () => {
+    if (!currentMissionId) return; // Guard clause
+    const finalMissionData: RouteData = {
+      id: currentMissionId, // Use the string directly
+      missionName: route?.name || "Field Operation",
+      timestamp: new Date().toISOString(),
+      totalDistance: metrics.distDone,
+      totalDuration: metrics.timeElapsed,
+      logCount: activeRoute ? activeRoute.logs.length : 0,
+      status: "completed",
+      logs: activeRoute ? activeRoute.logs : [],
+      originName: "origin TBD",
+      destinationName: "destination TBD",
+    };
+
+    try {
+      await StorageService.saveRouteSummary(finalMissionData);
+      triggerToast("Intel Secured: Archive Updated", "success");
+      setCurrentMissionId(null); // Clear for next mission
+      handleStopMission();
+    } catch (error) {
+      triggerToast("System Error: Intel Lost", "error");
+    }
+  };
 
   return (
     <div className="absolute bottom-0 left-1/2 -translate-x-1/2 z-2000 pointer-events-none w-full max-w-md px-4 pb-[calc(env(safe-area-inset-bottom,0px)+1rem)]">
@@ -85,27 +167,24 @@ export const ControlCard = ({
         layout
         className="bg-hud backdrop-blur-2xl border border-hud rounded-[2.5rem] pointer-events-auto overflow-hidden shadow-[0_-20px_50px_-12px_rgba(0,0,0,0.5)]"
       >
-        {/* HANDLE */}
-        <button
-          onClick={() => setIsCollapsed(!isCollapsed)}
-          className="w-full flex justify-center p-3 group"
-        >
-          <div className="w-12 h-1 bg-(--text-secondary) opacity-20 rounded-full group-hover:bg-(--accent-primary) transition-all" />
-        </button>
-
         {/* CLOCK SECTION */}
-        <div className="px-8 pb-6 text-center">
+        <div
+          className="px-8 pb-3 text-center mt-3"
+          onClick={() => setIsCollapsed(!isCollapsed)}
+        >
           <div className="flex flex-col items-center">
             <span className="text-[8px] font-black tracking-[0.3em] text-(--accent-primary) uppercase mb-1 flex items-center gap-2">
               <Timer size={10} className={isActive ? "animate-pulse" : ""} />
               {isActive ? "T-MINUS TO EXTRACTION" : "SYSTEM STANDBY"}
             </span>
 
-            <div className="relative z-10 text-5xl flex items-center justify-center">
-              <div className="absolute -inset-4 bg-(--accent-primary)/5 blur-3xl rounded-full opacity-50" />
+            <div
+              className={`relative z-10 ${getFontSize(
+                metrics.timeLeft
+              )} transition-all duration-300 flex items-center justify-center`}
+            >
               <TimeFormat seconds={metrics.timeLeft} />
             </div>
-
             {/* PROGRESS GAUGE */}
             <div className="w-full mt-3 px-2">
               <div className="flex justify-between items-end mb-1.5 opacity-60">
@@ -178,6 +257,12 @@ export const ControlCard = ({
                       isActive ? "Tactical: Aborted" : "Tactical: Initiated",
                       isActive ? "error" : "success"
                     );
+                    if (isActive) {
+                      saveMission();
+                    } else {
+                      initiateMission();
+                      triggerToast("Tactical: Initiated", "success");
+                    }
                   }}
                   disabled={!route}
                   className={`flex-3 h-full rounded-2xl font-black text-[10px] tracking-[0.3em] uppercase transition-all duration-300 border-2 ${
@@ -186,11 +271,11 @@ export const ControlCard = ({
                       : "bg-(--accent-primary) border-(--accent-primary) text-(--bg-page) shadow-[0_0_25px_var(--accent-glow)]"
                   }`}
                 >
-                  {isActive ? "GIVE UP" : "START FOCUS"}
+                  {isActive ? "SECURE & END" : "START FOCUS"}
                 </Button>
 
                 {/* RESET BUTTON (Smart Component) */}
-                <TacticalResetButton onReset={reset} />
+                <TacticalResetButton onReset={reset} isActive={isActive} />
               </div>
             </motion.div>
           )}
@@ -198,4 +283,10 @@ export const ControlCard = ({
       </motion.div>
     </div>
   );
+};
+
+const getFontSize = (seconds: number) => {
+  if (seconds >= 86400) return "text-6xl"; // Days + Hrs + Mins + Secs
+  if (seconds >= 3600) return "text-7xl"; // Hrs + Mins + Secs
+  return "text-8xl"; // Mins + Secs
 };
