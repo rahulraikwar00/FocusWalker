@@ -5,9 +5,6 @@ import { FiMessageSquare } from "react-icons/fi";
 import { GiCampingTent } from "react-icons/gi";
 import { CameraCapture } from "../mission/CameraCapture";
 
-interface Props {
-  onPhotoTaken: (base64: string) => void;
-}
 export const PopUpcard = ({
   index,
   handleMarkerClick,

@@ -5,32 +5,9 @@ import { lineString } from "@turf/helpers";
 import along from "@turf/along";
 import { toggleStayAwake, triggerTactilePulse } from "@/lib/utils";
 import { useGlobal } from "./contexts/GlobalContext";
+import { ActiveRoute, MissionMetrics, SearchResult } from "@/types/types";
 const METERS_PER_STEP = 0.72; // Average step length in meters
 // const BREAK_DURATION = 25; //in min
-
-// Define what an OSRM Route actually looks like
-export interface OSRMRoute {
-  distance: number;
-  duration: number;
-  geometry: string | any; // Usually a polyline string or GeoJSON
-  legs: any[];
-  weight: number;
-  coordinates?: L.LatLng[]; // We add this after parsing the geometry
-  name?: string;
-}
-
-export interface MissionMetrics {
-  steps: number;
-  timeLeft: number;
-  distDone: number;
-}
-
-export interface ActiveRoute {
-  path: [number, number][]; // [lat, lng] for Leaflet
-  rawLine: [number, number][]; // [lng, lat] for Turf calculations
-  distance: number;
-  duration: number;
-}
 
 export function useRouteLogic(speedKmh: number, isWakeLockEnabled: boolean) {
   const [points, setPoints] = useState<{
@@ -288,10 +265,6 @@ export function useRouteLogic(speedKmh: number, isWakeLockEnabled: boolean) {
     [isActive]
   );
 
-  interface SearchResult {
-    name: string;
-    latlng: L.LatLng;
-  }
   // 3. Memoize handleLocationSelect
   const handleLocationSelect = useCallback(
     (result: SearchResult) => {

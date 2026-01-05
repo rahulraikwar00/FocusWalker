@@ -5,6 +5,7 @@ import { lineString } from "@turf/helpers";
 import along from "@turf/along";
 import { toggleStayAwake, triggerTactilePulse } from "@/lib/utils";
 import { useGlobal } from "./contexts/GlobalContext";
+import { SearchResult } from "@/types/types";
 
 const BREAK_DURATION = 25; //in mi
 
@@ -211,10 +212,6 @@ export function useRouteLogic(speedKmh: number, isWakeLockEnabled: boolean) {
     [isActive]
   );
 
-  interface SearchResult {
-    name: string;
-    latlng: L.LatLng;
-  }
   // 3. Memoize handleLocationSelect
   const handleLocationSelect = useCallback(
     (result: SearchResult) => {

@@ -5,11 +5,10 @@ import { Button } from "../../components/ui/button";
 import { useGlobal } from "./contexts/GlobalContext";
 
 import { TacticalResetButton } from "./TacticalResetButton";
-import { CheckPointData, RouteData } from "@/types/types";
+import { ActiveRoute, RouteData } from "@/types/types";
 
 import { StorageService } from "@/lib/utils";
 import { useMission } from "@/components/shared/useMissionStore";
-import { ActiveRoute } from "./useRouteLogic";
 
 // --- SUB-COMPONENTS ---
 
@@ -91,10 +90,22 @@ export const ControlCard = ({
     const end = currentRoute.path[currentRoute.path.length - 1];
 
     // Format: LAT_LNG_LAT_LNG_TIMESTAMP
-    const geoFingerprint = `${start[0].toFixed(4)}${start[1].toFixed(
+    // 2. TYPE CHECK: Ensure they are actually numbers
+    // Sometimes API data comes back as strings
+    const numericLat =
+      typeof start.lat === "number" ? start.lat : parseFloat(start.lat);
+    const numericLng =
+      typeof start.lng === "number" ? start.lng : parseFloat(start.lng);
+    const numericEndLat =
+      typeof end.lat === "number" ? end.lat : parseFloat(end.lat);
+    const numericEndLng =
+      typeof end.lng === "number" ? end.lng : parseFloat(end.lng);
+
+    // 1. GEO FINGERPRINT: Round to 4 decimal places for ~11m accuracy
+    const geoFingerprint = `${numericLat.toFixed(4)}_${numericLng.toFixed(
       4
-    )}_${end[0].toFixed(4)}${end[1].toFixed(4)}`;
-    const timeHash = Date.now().toString(36).toUpperCase();
+    )}_${numericEndLat.toFixed(4)}_${numericEndLng.toFixed(4)}`;
+    const timeHash = Date.now().toString().slice(-6); // Last 6 digits of timestamp
 
     return `OP_${geoFingerprint}_${timeHash}`;
   };

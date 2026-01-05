@@ -11,13 +11,7 @@ import {
 import "leaflet/dist/leaflet.css";
 import { memo, useEffect, useMemo } from "react";
 import { TentLayer } from "../../features/navigation/TentLayer";
-
-export interface MissionTent {
-  id: string;
-  latlng: L.LatLng;
-  distanceMark: number;
-  originalIdx: number;
-}
+import { MapProps } from "@/types/types";
 
 /**
  * --- TACTICAL MARKER ICON ---

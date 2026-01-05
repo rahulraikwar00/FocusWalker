@@ -1,10 +1,5 @@
 import { useGlobal } from "@/features/mission/contexts/GlobalContext";
-
-interface ModalProps {
-  children: React.ReactNode;
-  title?: string;
-  onClose?: () => void;
-}
+import { ModalProps } from "@/types/types";
 
 export function ModalContainer({ children, onClose, title }: ModalProps) {
   const { setUI } = useGlobal();

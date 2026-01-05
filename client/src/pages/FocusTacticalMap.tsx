@@ -4,6 +4,8 @@ import "leaflet/dist/leaflet.css";
 import L from "leaflet";
 import { AnimatePresence } from "framer-motion";
 
+import { MissionTent, MissionMetrics } from "../types/types";
+
 // Components
 import { ControlCard } from "@/features/mission/ControlCard";
 import { UserHeader } from "@/features/profile/UserHeader";
@@ -27,7 +29,7 @@ const MapView = React.lazy(() =>
 
 const DEFAULT_LOCATION = new L.LatLng(20.5937, 78.9629);
 
-export default function FocusTacticalMap() {
+export const FocusTacticalMap = () => {
   // 1. Single Source of Truth from Global Context
   const {
     settings,
@@ -74,14 +76,13 @@ export default function FocusTacticalMap() {
     return {
       ...route,
       // OSRM [lng, lat] -> Leaflet [lat, lng]
-      path: (route.path as any[]).map((coord: any) => {
+      path: route.path.map((coord: L.LatLng) => {
         // Handle array format [lng, lat]
         if (Array.isArray(coord)) {
           return L.latLng(coord[1], coord[0]);
         }
-        // Handle object format {0: lng, 1: lat} from your logs
-        if (coord[0] !== undefined) {
-          return L.latLng(coord[1], coord[0]);
+        if ("lat" in coord && "lng" in coord) {
+          return L.latLng(coord.lat, coord.lng);
         }
         return L.latLng(coord);
       }),
@@ -90,10 +91,9 @@ export default function FocusTacticalMap() {
 
   const formattedTents = useMemo(() => {
     if (!tentPositionArray) return [];
-    return (tentPositionArray as any[]).map((t, i) => ({
+    return tentPositionArray.map((t, i) => ({
       id: `tent-${i}`,
-      // Extracting from the {0: lat, 1: lng} structure seen in your logs
-      latlng: L.latLng(t[0] ?? t.lat, t[1] ?? t.lng),
+      latlng: L.latLng(t[0], t[1]),
       originalIdx: i,
     }));
   }, [tentPositionArray]);
@@ -163,4 +163,4 @@ export default function FocusTacticalMap() {
       </AnimatePresence>
     </div>
   );
-}
+};

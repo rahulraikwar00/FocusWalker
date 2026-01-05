@@ -4,6 +4,7 @@ import { renderToStaticMarkup } from "react-dom/server";
 import L from "leaflet";
 import { GiCampingTent } from "react-icons/gi";
 import { PopUpcard } from "./PopupCard";
+import { TentMarkerProps } from "@/types/types";
 
 // --- RPG ICON ASSET GENERATOR ---
 const createIcon = (side: "left" | "right") =>
@@ -14,10 +15,10 @@ const createIcon = (side: "left" | "right") =>
           className="absolute inset-0 blur-sm opacity-60 animate-pulse"
           style={{ color: "var(--accent-primary)" }}
         >
-          <GiCampingTent size={28} fill="var(--hud-bg)" />
+          <GiCampingTent size={40} fill="var(--hud-bg)" />
         </div>
         <div style={{ color: "var(--accent-primary)" }}>
-          <GiCampingTent size={28} fill="currentColor" />
+          <GiCampingTent size={40} fill="currentColor" />
         </div>
       </div>
     ),
@@ -29,16 +30,6 @@ const createIcon = (side: "left" | "right") =>
 const TENT_LEFT = createIcon("left");
 const TENT_RIGHT = createIcon("right");
 
-interface TentMarkerProps {
-  tent: any;
-  index: number;
-  currentPos: L.LatLng | null;
-  isActive: boolean;
-  setIsActive: (value: boolean) => void; // Changed signature
-  OpenPopup: (tentId: string, marker: L.Marker) => void;
-  ClosePopup: () => void;
-}
-
 export const TentMarker = ({
   tent,
   index,
@@ -48,7 +39,6 @@ export const TentMarker = ({
   OpenPopup,
   ClosePopup,
 }: TentMarkerProps) => {
-  console.log("Rendering TentMarker:", tent);
   const markerRef = useRef<L.Marker>(null);
   // Inside your TentMarker component
   const hasTriggered = useRef(false);
@@ -74,7 +64,7 @@ export const TentMarker = ({
     } catch (err) {
       console.error("Coordinate calculation failed", err);
     }
-  }, [currentPos, isActive, tent.latlng, setIsActive, OpenPopup, tent.id]);
+  }, [isActive, tent.latlng, setIsActive, OpenPopup, tent.id]);
 
   return (
     <Marker

@@ -1,4 +1,10 @@
 import {
+  GlobalContextValue,
+  GlobalState,
+  ToastType,
+  UserData,
+} from "@/types/types";
+import {
   createContext,
   useContext,
   useState,
@@ -10,47 +16,6 @@ import {
 } from "react";
 
 // ==================== TYPES ====================
-
-export type ToastType = "info" | "success" | "warning" | "error";
-
-export interface UserData {
-  id: string;
-  name: string;
-  rank: string;
-  unit: string;
-  clearance: string;
-  avatar: string;
-  bio: string;
-}
-
-interface GlobalState {
-  isDossierOpen: boolean;
-  isSettingsOpen: boolean;
-  isSideSheetOpen: boolean;
-  searchQuery: string;
-  toast: { show: boolean; msg: string; type: ToastType };
-  isLocked: boolean;
-  showWelcome: boolean;
-  settings: {
-    isDark: boolean;
-    speedKmh: number;
-    isWakeLockEnabled: boolean;
-    isHapticsEnabled: boolean;
-    breakDuration: number;
-  };
-  missionStatus: "idle" | "active" | "paused";
-  user: UserData;
-}
-
-interface GlobalContextValue extends GlobalState {
-  setUI: (updates: Partial<GlobalState>) => void;
-  updateSettings: (updates: Partial<GlobalState["settings"]>) => void;
-  updateUser: (updates: Partial<UserData>) => void;
-  triggerToast: (msg: string, type?: ToastType) => void;
-  toggleTheme: () => void;
-  completeOnboarding: () => void;
-  setMissionStatus: (status: GlobalState["missionStatus"]) => void;
-}
 
 const GlobalContext = createContext<GlobalContextValue | undefined>(undefined);
 

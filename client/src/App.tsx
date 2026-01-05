@@ -10,7 +10,11 @@ import { DrawerProvider } from "./features/mission/contexts/DrawerContext";
 import { GlobalSideSheet } from "./components/shared/GlobalSideSheet";
 
 // Lazy load the heavy map component
-const FocusTacticalMap = React.lazy(() => import("@/pages/FocusTacticalMap"));
+const FocusTacticalMap = React.lazy(() =>
+  import("@/pages/FocusTacticalMap").then((module) => ({
+    default: module.FocusTacticalMap,
+  }))
+);
 
 const AppLoading = () => (
   <div className="flex h-screen w-screen items-center justify-center bg-background text-muted-foreground">

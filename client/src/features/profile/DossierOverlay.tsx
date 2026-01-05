@@ -1,7 +1,8 @@
 import React, { useState } from "react";
 import { Avatar } from "../../components/shared/Avatar";
-import { useGlobal, UserData } from "@/features/mission/contexts/GlobalContext";
+import { useGlobal } from "@/features/mission/contexts/GlobalContext";
 import { User, Shield, Target, ChevronRight } from "lucide-react";
+import { UserData } from "@/types/types";
 
 export const PersonnelDossier = () => {
   const { user, setUI, triggerToast } = useGlobal();
@@ -28,8 +29,10 @@ export const PersonnelDossier = () => {
   };
 
   return (
-    <div className="w-full max-w-md mx-auto min-h-sm bg-(--bg-page) text-(--text-primary) font-sans pb-10 
-    overflow-y-auto no-scrollbar">
+    <div
+      className="w-full max-w-md mx-auto min-h-sm bg-(--bg-page) text-(--text-primary) font-sans pb-10 
+    overflow-y-auto no-scrollbar"
+    >
       {/* 1. HEADER */}
       <div className="flex justify-between items-center px-6 pt-6 mb-8">
         <h1 className="text-3xl font-bold tracking-tight">Personnel</h1>

@@ -2,12 +2,6 @@ import { clsx, type ClassValue } from "clsx";
 import { twMerge } from "tailwind-merge";
 import type { CheckPointData, RouteData } from "../types/types";
 
-interface TacticalSettings {
-  speed: number;
-  haptics: boolean;
-  wakeLock: boolean;
-}
-
 export function cn(...inputs: ClassValue[]) {
   return twMerge(clsx(inputs));
 }

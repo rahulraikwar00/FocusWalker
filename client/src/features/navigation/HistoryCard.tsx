@@ -2,8 +2,7 @@ import { Calendar, Trash2, History, Target } from "lucide-react";
 import { RouteData } from "@/types/types";
 
 interface HistoryCardProps {
-  // We extend the omit to ensure we have a count without the heavy array
-  data: Omit<RouteData, "logs"> & { logCount?: number };
+  data: RouteData;
   onSelect: (id: string) => void;
   onDelete: (id: string) => void;
 }
