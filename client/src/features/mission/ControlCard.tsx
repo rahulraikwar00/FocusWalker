@@ -225,13 +225,16 @@ export const ControlCard = ({
                   unit="KM"
                 />
                 <StatItem
-                  label="Kinetic"
+                  label="Steps Count"
                   value={(metrics.steps || 0).toLocaleString()}
-                  unit="PTS"
+                  unit="Steps"
                 />
                 <StatItem
                   label="Potential"
-                  value={`+${Math.floor(progress * 500)}`}
+                  value={XpCalculator({
+                    distance: metrics.distDone,
+                    steps: metrics.steps || 0,
+                  })}
                   unit="XP"
                   isPrimary={isActive}
                 />
@@ -254,13 +257,13 @@ export const ControlCard = ({
                     }
                   }}
                   disabled={!route}
-                  className={`flex-3 h-full rounded-2xl font-black text-[10px] tracking-[0.3em] uppercase transition-all duration-300 border-2 ${
+                  className={`flex-3 h-full rounded-2xl font-black text-md tracking-[0.3em] uppercase transition-all duration-300 border-2 ${
                     isActive
                       ? "bg-transparent border-red-500/50 text-red-500"
                       : "bg-(--accent-primary) border-(--accent-primary) text-(--bg-page) shadow-[0_0_25px_var(--accent-glow)]"
                   }`}
                 >
-                  {isActive ? "SECURE & END" : "START FOCUS"}
+                  {isActive ? "STOP FOCUS" : "START FOCUS"}
                 </Button>
 
                 {/* RESET BUTTON (Smart Component) */}
@@ -278,4 +281,27 @@ const getFontSize = (seconds: number) => {
   if (seconds >= 86400) return "text-6xl"; // Days + Hrs + Mins + Secs
   if (seconds >= 3600) return "text-7xl"; // Hrs + Mins + Secs
   return "text-8xl"; // Mins + Secs
+};
+interface XpCalculatorProps {
+  distance: number; // in kilometers
+  steps: number;
+  bonusMultiplier?: number; // optional bonus, e.g., focus streak
+}
+
+const XpCalculator = ({
+  distance,
+  steps,
+  bonusMultiplier = 0.1,
+}: XpCalculatorProps): number => {
+  // Base XP from distance and steps
+  const distanceXp = distance * 10; // 10 XP per km
+  const stepsXp = steps * 0.5; // 0.5 XP per step
+
+  // Total XP before bonuses
+  const baseXp = distanceXp + stepsXp;
+
+  // Apply bonus multiplier
+  const totalXp = baseXp * bonusMultiplier;
+
+  return Math.round(totalXp);
 };

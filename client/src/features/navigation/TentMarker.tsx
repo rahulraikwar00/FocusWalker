@@ -48,7 +48,6 @@ export const TentMarker = ({
   OpenPopup,
   ClosePopup,
 }: TentMarkerProps) => {
-  console.log("Rendering TentMarker:", tent);
   const markerRef = useRef<L.Marker>(null);
   // Inside your TentMarker component
   const hasTriggered = useRef(false);
