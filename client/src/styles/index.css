@@ -44,6 +44,27 @@
     /* Smooth transition for the "Day/Night" cycle */
     transition: background 0.8s cubic-bezier(0.4, 0, 0.2, 1), color 0.8s ease;
   }
+  /* Add this to your index.css or App.css */
+  html,
+  body,
+  #root {
+    /* Disable selection and callouts */
+    -webkit-user-select: none;
+    -webkit-touch-callout: none;
+    user-select: none;
+
+    /* Disable "Pull to Refresh" and "Overscroll glow" */
+    overscroll-behavior: none;
+
+    /* Disable double-tap to zoom (helps button response time) */
+    touch-action: manipulation;
+  }
+
+  /* Ensure the ControlCard specifically blocks all system gestures */
+  .control-card-handle {
+    touch-action: none; /* Crucial: Tells the browser NOT to scroll or zoom here */
+    -webkit-user-drag: none;
+  }
 }
 @theme {
   --font-sans: "Playpen Sans Thai", cursive, system-ui, sans-serif;
@@ -53,6 +74,14 @@
 }
 
 @layer utilities {
+  .no-scrollbar::-webkit-scrollbar {
+    display: none;
+  }
+  .no-scrollbar {
+    -ms-overflow-style: none;
+    scrollbar-width: none;
+  }
+
   /* src/index.css */
   .custom-marker {
     cursor: pointer;

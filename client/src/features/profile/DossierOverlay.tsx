@@ -1,22 +1,22 @@
 import React, { useState } from "react";
 import { Avatar } from "../../components/shared/Avatar";
 import { useGlobal, UserData } from "@/features/mission/contexts/GlobalContext";
+import { User, Shield, Target, ChevronRight } from "lucide-react";
 
 export const PersonnelDossier = () => {
-  // 1. Hook into Global Context
   const { user, setUI, triggerToast } = useGlobal();
   const randomId = user?.id || `${Math.floor(Math.random() * 9000) + 1000}`;
-  const [profile, setProfile] = useState<UserData>(() => {
-    return {
-      id: randomId, // Store just the number part
-      name: user?.name || "FOCUS WALKER",
-      rank: user?.rank || "Scout",
-      unit: user?.unit || "ALPHA-6",
-      clearance: user?.clearance || "LEVEL 1",
-      avatar: user?.avatar || "",
-      bio: user?.bio || "",
-    };
-  });
+
+  const [profile, setProfile] = useState<UserData>(() => ({
+    id: randomId,
+    name: user?.name || "Focus Walker",
+    rank: user?.rank || "Scout",
+    unit: user?.unit || "Alpha-6",
+    clearance: user?.clearance || "Level 1",
+    avatar: user?.avatar || "",
+    bio: user?.bio || "",
+  }));
+
   const handleApply = () => {
     const updatedUser: UserData = {
       ...profile,
@@ -24,85 +24,132 @@ export const PersonnelDossier = () => {
     };
     setUI({ user: updatedUser, isDossierOpen: false });
     localStorage.setItem("user_dossier", JSON.stringify(updatedUser));
-    triggerToast("Personnel Record Synced", "success");
+    triggerToast("Profile Updated");
   };
 
   return (
-    <div className="max-w-md mx-auto space-y-8 p-2">
-      {/* --- 1. USER IDENTITY --- */}
-      <div className="flex items-center gap-4">
-        <div className="w-16 h-16 bg-(--accent-primary)/10 rounded-2xl flex items-center justify-center border border-(--accent-primary)/20 overflow-hidden">
-          <Avatar seed={profile.name || "Ghost"} size={64} />
+    <div className="w-full max-w-md mx-auto min-h-sm bg-(--bg-page) text-(--text-primary) font-sans pb-10 
+    overflow-y-auto no-scrollbar">
+      {/* 1. HEADER */}
+      <div className="flex justify-between items-center px-6 pt-6 mb-8">
+        <h1 className="text-3xl font-bold tracking-tight">Personnel</h1>
+        <button
+          onClick={handleApply}
+          className="text-(--accent-primary) font-semibold text-lg active:opacity-50 transition-opacity"
+        >
+          Done
+        </button>
+      </div>
+
+      {/* 2. PROFILE HERO */}
+      <div className="flex flex-col items-center mb-8">
+        <div className="w-24 h-24 bg-(--text-secondary)/10 rounded-full flex items-center justify-center overflow-hidden mb-3 shadow-sm border-2 border-(--hud-border)">
+          <Avatar seed={profile.name || "Ghost"} size={96} />
         </div>
-        <div>
-          <h3 className="text-xl font-bold text-(--text-primary)">
-            Personnel Dossier
-          </h3>
-          <p className="text-xs text-(--text-secondary)">
-            ID: {profile.rank.toUpperCase()}-{randomId}
+        <h2 className="text-2xl font-semibold">{profile.name}</h2>
+        <p className="text-(--text-secondary) text-sm font-medium uppercase tracking-wider">
+          {profile.rank} • {profile.clearance}
+        </p>
+      </div>
+
+      <div className="px-4 space-y-8">
+        {/* SECTION: IDENTITY */}
+        <SettingsGroup label="Identity">
+          <SettingsInputRow
+            label="Name"
+            value={profile.name}
+            onChange={(val: any) => setProfile({ ...profile, name: val })}
+            icon={<User className="w-4 h-4 text-(--bg-page)" />}
+            iconBg="bg-(--accent-primary)"
+          />
+
+          {/* ASSIGNED ROLE (ROBUST IOS PICKER STYLE) */}
+          <div className="px-4 py-3 border-b border-(--hud-border)/50 flex items-center justify-between min-h-13">
+            <div className="flex items-center gap-3">
+              <div className="bg-(--text-secondary)/20 p-1.5 rounded-lg flex items-center justify-center">
+                <Target className="w-4 h-4 text-(--text-primary)" />
+              </div>
+              <span className="text-[17px] font-medium">Assigned Role</span>
+            </div>
+
+            <div className="relative flex items-center gap-1">
+              <select
+                value={profile.rank}
+                onChange={(e) =>
+                  setProfile({ ...profile, rank: e.target.value })
+                }
+                className="absolute inset-0 opacity-0 w-full h-full cursor-pointer z-10"
+              >
+                <option value="Scout">Scout</option>
+                <option value="Hunter">Hunter</option>
+                <option value="Ghost">Ghost</option>
+              </select>
+              <span className="text-[17px] text-(--accent-primary)">
+                {profile.rank}
+              </span>
+              <ChevronRight size={16} className="text-(--text-secondary)/40" />
+            </div>
+          </div>
+        </SettingsGroup>
+
+        {/* SECTION: MISSION BRIEFING */}
+        <SettingsGroup label="Mission Briefing">
+          <div className="p-4">
+            <textarea
+              rows={3}
+              value={profile.bio}
+              onChange={(e) => setProfile({ ...profile, bio: e.target.value })}
+              placeholder="Enter mission objectives..."
+              className="w-full bg-transparent text-[17px] text-(--text-primary) outline-none resize-none placeholder:text-(--text-secondary)/30"
+            />
+          </div>
+        </SettingsGroup>
+
+        <div className="text-center">
+          <p className="text-[11px] text-(--text-secondary)/50 font-mono tracking-widest uppercase">
+            Protocol ID: {profile.rank}-{randomId}
           </p>
         </div>
       </div>
-
-      <div className="space-y-6">
-        {/* --- 2. NAME INPUT --- */}
-        <div className="space-y-2">
-          <label className="text-[10px] uppercase tracking-widest font-black text-(--text-secondary) px-1">
-            Tactical Callsign
-          </label>
-          <input
-            type="text"
-            value={profile.name}
-            onChange={(e) => setProfile({ ...profile, name: e.target.value })}
-            placeholder="Enter callsign..."
-            className="w-full bg-(--text-secondary)/5 border border-(--hud-border) rounded-xl px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-(--accent-primary)/30 transition-all text-(--text-primary)"
-          />
-        </div>
-
-        {/* --- 3. ROLE SELECTION --- */}
-        <div className="space-y-2">
-          <label className="text-[10px] uppercase tracking-widest font-black text-(--text-secondary) px-1">
-            Assigned Role
-          </label>
-          <div className="flex gap-2 p-1 bg-(--text-secondary)/5 rounded-xl border border-(--hud-border)">
-            {["Scout", "Hunter", "Ghost"].map((role) => (
-              <button
-                key={role}
-                onClick={() => setProfile({ ...profile, rank: role })}
-                className={`flex-1 py-2 rounded-lg text-xs font-bold transition-all ${
-                  profile.rank === role
-                    ? "bg-(--accent-primary) text-(--bg-page) shadow-lg"
-                    : "text-(--text-secondary) hover:bg-(--text-secondary)/10"
-                }`}
-              >
-                {role}
-              </button>
-            ))}
-          </div>
-        </div>
-
-        {/* --- 4. BIO/STATUS --- */}
-        <div className="space-y-2">
-          <label className="text-[10px] uppercase tracking-widest font-black text-(--text-secondary) px-1">
-            Mission Objective
-          </label>
-          <textarea
-            rows={2}
-            value={profile.bio}
-            onChange={(e) => setProfile({ ...profile, bio: e.target.value })}
-            placeholder="Current status or mission..."
-            className="w-full bg-(--text-secondary)/5 border border-(--hud-border) rounded-xl px-4 py-3 text-sm resize-none focus:outline-none focus:ring-2 focus:ring-(--accent-primary)/30 transition-all text-(--text-primary)"
-          />
-        </div>
-      </div>
-
-      {/* --- 5. ACTION --- */}
-      <button
-        onClick={handleApply}
-        className="w-full py-4 bg-(--accent-primary) text-(--bg-page) rounded-2xl font-black uppercase tracking-widest shadow-[0_0_20px_var(--accent-glow)] hover:brightness-110 active:scale-[0.98] transition-all"
-      >
-        Commit Changes
-      </button>
     </div>
   );
 };
+
+/* --- IPHONE STYLE HELPERS --- */
+/* --- THEMED IPHONE HELPERS --- */
+
+const SettingsGroup = ({
+  label,
+  children,
+}: {
+  label: string;
+  children: React.ReactNode;
+}) => (
+  <div className="space-y-1.5">
+    <h2 className="px-4 text-[13px] uppercase text-(--text-secondary) font-bold tracking-widest opacity-70">
+      {label}
+    </h2>
+    <div className="bg-(--text-secondary)/5 rounded-2xl overflow-hidden border border-(--hud-border) shadow-sm">
+      {children}
+    </div>
+  </div>
+);
+
+const SettingsInputRow = ({ label, value, onChange, icon, iconBg }: any) => (
+  <div className="flex items-center justify-between px-4 py-3 border-b border-(--hud-border)/50 last:border-0 min-h-13">
+    <div className="flex items-center gap-3">
+      <div
+        className={`${iconBg} p-1.5 rounded-lg flex items-center justify-center shadow-sm`}
+      >
+        {icon}
+      </div>
+      <span className="text-[17px] font-medium">{label}</span>
+    </div>
+    <input
+      type="text"
+      value={value}
+      onChange={(e) => onChange(e.target.value)}
+      className="bg-transparent text-(--accent-primary) text-[17px] text-right outline-none w-32 focus:brightness-125 transition-all"
+    />
+  </div>
+);

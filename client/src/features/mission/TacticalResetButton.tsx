@@ -2,8 +2,15 @@ import { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { RotateCcw } from "lucide-react";
 import { Button } from "../../components/ui/button";
+import { boolean } from "drizzle-orm/mysql-core";
 
-export const TacticalResetButton = ({ onReset }: { onReset: () => void }) => {
+export const TacticalResetButton = ({
+  onReset,
+  isActive,
+}: {
+  onReset: () => void;
+  isActive: boolean;
+}) => {
   const [isConfirming, setIsConfirming] = useState(false);
 
   useEffect(() => {
@@ -25,6 +32,7 @@ export const TacticalResetButton = ({ onReset }: { onReset: () => void }) => {
 
   return (
     <Button
+      disabled={isActive}
       onClick={handleHandleClick}
       className={`flex-1 h-full rounded-3xl border transition-all duration-300 relative overflow-hidden ${
         isConfirming

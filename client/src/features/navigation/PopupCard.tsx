@@ -1,140 +1,133 @@
+import { useMission } from "@/components/shared/useMissionStore";
+import { CheckPointData } from "@/types/types";
 import { useEffect, useState } from "react";
-import { FiMessageSquare } from "react-icons/fi";
 import { GiCampingTent } from "react-icons/gi";
+import { CameraCapture } from "../mission/CameraCapture";
+
+interface PopUpCardProps {
+  index: number;
+  tent: any;
+  handleMarkerClick: (id: string | null) => void;
+  setIsActive: (val: boolean) => void;
+}
 
 export const PopUpcard = ({
   index,
-  handleMarkerClick,
   tent,
+  handleMarkerClick,
   setIsActive,
-}: any) => {
+}: PopUpCardProps) => {
   const [note, setNote] = useState("");
   const [isSaving, setIsSaving] = useState(false);
   const [visitCount, setVisitCount] = useState(0);
+  const [capturedPhoto, setCapturedPhoto] = useState<string | null>(null);
 
-  // Load history for this specific tent
+  const { getLogsByStation, addCheckpoint } = useMission();
+
+  const userLocation = tent.coords ?? { lat: 0, lng: 0 };
+
   useEffect(() => {
-    const stationKey = `trek_log_${tent.id}`;
-    const localData = localStorage.getItem(stationKey);
+    const fetchVisitCount = async () => {
+      const logs = await getLogsByStation(tent.id);
+      setVisitCount(logs?.length ?? 0);
+    };
+    fetchVisitCount();
+  }, [tent.id, getLogsByStation]);
 
-    if (localData) {
-      const notes = JSON.parse(localData);
-      setVisitCount(notes.length);
-      // Optional: don't auto-fill 'note' if you want a fresh one every time
-      // setNote(notes[0].message);
-    }
-  }, [tent.id]);
+  const close = () => handleMarkerClick(null);
 
-  const handleSecure = () => {
-    const trimmedNote = note.trim();
-    if (!trimmedNote) return;
-
-    if ("vibrate" in navigator) navigator.vibrate(20);
+  const handleSave = async () => {
     setIsSaving(true);
 
-    const timestamp = new Date().toLocaleString("en-GB", {
-      day: "2-digit",
-      month: "short",
-      hour: "2-digit",
-      minute: "2-digit",
-    });
-
-    const newRecord = {
-      tentId: tent.id,
-      message: trimmedNote,
-      emoji: "⛺",
-      timestamp: timestamp,
+    const newLog: CheckPointData = {
+      id: `log_${Date.now()}`,
+      label: tent.label || "Waypoint",
+      note,
+      timestamp: new Date().toISOString(),
+      distanceMark: tent.distanceMark,
+      photo: capturedPhoto || undefined,
+      coords: userLocation,
     };
 
     try {
-      // 1. Update Global Feed
-      const globalKey = "treklog";
-      const globalLogs = JSON.parse(localStorage.getItem(globalKey) || "[]");
-      localStorage.setItem(
-        globalKey,
-        JSON.stringify([newRecord, ...globalLogs])
-      );
-
-      // 2. Update Station-Specific Array
-      const stationKey = `trek_log_${tent.id}`;
-      const stationLogs = JSON.parse(localStorage.getItem(stationKey) || "[]");
-
-      // PREVENT DUPLICATES: Only save if the message is different from the last one
-      if (stationLogs.length === 0 || stationLogs[0].message !== trimmedNote) {
-        localStorage.setItem(
-          stationKey,
-          JSON.stringify([newRecord, ...stationLogs])
-        );
-      }
-    } catch (error) {
-      console.error("Local Storage is full or disabled:", error);
-    }
-
-    setIsActive(true);
-
-    setTimeout(() => {
-      handleMarkerClick();
-      setNote("");
+      await addCheckpoint(newLog);
+      setCapturedPhoto(null);
+      setIsActive(true);
+      close();
+    } catch (err) {
+      console.error("Failed to save checkpoint", err);
+    } finally {
       setIsSaving(false);
-    }, 400);
+    }
   };
 
   return (
-    <div className="glass-card flex flex-col w-60 overflow-hidden shadow-2xl transition-all duration-500 border border-[var(--hud-border)] bg-[var(--hud-bg)] backdrop-blur-xl">
-      {/* Header Area */}
-      <div className="relative h-24 flex items-center justify-center bg-[var(--accent-glow)]">
-        <div className="absolute top-3 left-3 w-2 h-2 border-t border-l border-tactical/40" />
-        <div className="absolute bottom-3 right-3 w-2 h-2 border-b border-r border-tactical/40" />
-
-        <div className="relative flex flex-col items-center">
-          <GiCampingTent
-            size={42}
-            className="text-tactical filter drop-shadow-[0_0_10px_var(--accent-glow)] mb-1"
-          />
-          <span className="text-[7px] font-black tracking-[0.2em] text-tactical/60 uppercase">
-            {isSaving
-              ? "Syncing Data..."
-              : `Visit #${visitCount + 1} Authorized`}
-          </span>
-        </div>
+    <div className="glass-card flex flex-col w-60 overflow-hidden shadow-2xl border border-(--hud-border) bg-(--hud-bg) backdrop-blur-xl">
+      {/* Header */}
+      <div className="relative h-24 flex items-center justify-center bg-(--accent-glow)">
+        <GiCampingTent
+          size={40}
+          className={`mb-1 transition-all ${
+            isSaving ? "animate-pulse text-white" : "text-tactical"
+          }`}
+        />
+        <span className="absolute bottom-3 text-[8px] tracking-widest uppercase text-tactical/60">
+          {isSaving ? "Saving progress…" : `Visit ${visitCount + 1}`}
+        </span>
       </div>
 
-      {/* Content Area */}
+      {/* Content */}
       <div className="p-5 flex flex-col gap-4">
-        <div className="space-y-1">
-          <span className="block text-[9px] font-black tracking-[0.2em] text-tactical uppercase">
-            Discovery Logged
+        <div className="flex justify-between items-end">
+          <div>
+            <span className="text-[9px] tracking-widest uppercase text-tactical/60">
+              Journey Update
+            </span>
+            <h3 className="text-[14px] font-black uppercase">
+              Waypoint {index}
+            </h3>
+          </div>
+
+          <span className="text-[8px] font-mono text-tactical/40">
+            {userLocation.lat.toFixed(4)} / {userLocation.lng.toFixed(4)}
           </span>
-          <h3 className="text-[14px] font-black italic tracking-tight text-(--text-primary) uppercase">
-            Station {index}
-          </h3>
         </div>
 
-        {/* Input Area */}
-        <div className="relative rounded-xl border border-(--hud-border) bg-(--text-primary)/5 focus-within:bg-(--text-primary)/10 transition-all">
-          <textarea
-            placeholder="What did you find here?"
-            value={note}
-            onChange={(e) => setNote(e.target.value)}
-            disabled={isSaving}
-            className="w-full bg-transparent text-[13px] p-3 text-(--text-primary) font-medium focus:outline-none placeholder:italic placeholder:opacity-30 resize-none h-24 font-sans"
-          />
-        </div>
-
-        {/* Action Button */}
-        <button
-          className={`btn-primary w-full text-[11px] uppercase tracking-widest transition-all py-3 flex flex-col items-center ${
-            isSaving ? "opacity-50 grayscale" : ""
-          }`}
-          onClick={handleSecure}
+        {/* Notes */}
+        <textarea
+          placeholder="What did you notice here?"
+          value={note}
+          onChange={(e) => setNote(e.target.value)}
           disabled={isSaving}
+          className="w-full h-20 rounded-xl bg-(--text-primary)/5 p-3 text-[13px] focus:outline-none resize-none"
+        />
+
+        {/* Photo */}
+        {!capturedPhoto ? (
+          <CameraCapture onPhotoTaken={setCapturedPhoto} />
+        ) : (
+          <div className="relative rounded-lg overflow-hidden">
+            <img
+              src={capturedPhoto}
+              className="h-24 w-full object-cover"
+              alt="Checkpoint"
+            />
+            <button
+              onClick={() => setCapturedPhoto(null)}
+              className="absolute top-2 right-2 text-[9px] px-2 py-1 bg-black/70 text-white rounded"
+            >
+              Remove
+            </button>
+          </div>
+        )}
+
+        {/* Action */}
+        <button
+          onClick={handleSave}
+          disabled={isSaving}
+          className="btn-primary w-full py-3 text-[11px] uppercase tracking-widest"
         >
-          <span className="font-black">
-            {isSaving ? "Stored" : "Secure Log"}
-          </span>
-          <span className="text-[7px] opacity-70 font-medium normal-case">
-            Proceed with your journey
-          </span>
+          {isSaving ? "Recording…" : "Log Progress"}
         </button>
       </div>
     </div>

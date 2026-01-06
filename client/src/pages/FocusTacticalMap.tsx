@@ -1,5 +1,5 @@
 import * as React from "react";
-import { Suspense, useEffect } from "react";
+import { Suspense, useEffect, useMemo } from "react";
 import "leaflet/dist/leaflet.css";
 import L from "leaflet";
 import { AnimatePresence } from "framer-motion";
@@ -12,12 +12,12 @@ import { WelcomeOverlay } from "@/features/profile/WelcomeOverlay";
 import { PersonnelDossier } from "@/features/profile/DossierOverlay";
 import { SystemSettings } from "@/features/profile/SystemSettings";
 import InstallButton from "@/components/shared/PWAInstallButton";
-import ModalContainer from "@/components/shared/ModalContainer";
 
 // Hooks
 import { useGlobal } from "@/features/mission/contexts/GlobalContext";
 import { useRouteLogic } from "@/features/mission/useRouteLogic";
-import { SettingsSideBar } from "@/features/navigation/SettingsSideBar";
+import { SettingsSideBar } from "@/features/profile/SideBarSettings";
+import { ModalContainer } from "@/components/shared/ModalContainer";
 
 const MapView = React.lazy(() =>
   import("@/components/shared/MapContainer").then((module) => ({
@@ -59,6 +59,7 @@ export default function FocusTacticalMap() {
     setPoints,
     isLoadingRoute,
     removePoint,
+    getLocalityName,
   } = useRouteLogic(settings.speedKmh, settings.isWakeLockEnabled);
   useEffect(() => {
     console.log("Current isLoadingRoute state:", isLoadingRoute);
@@ -66,6 +67,36 @@ export default function FocusTacticalMap() {
       console.log("Loader should be hidden now.");
     }
   }, [isLoadingRoute]);
+
+  const leafletRoute = useMemo(() => {
+    if (!route || !route.path) return null;
+
+    return {
+      ...route,
+      // OSRM [lng, lat] -> Leaflet [lat, lng]
+      path: (route.path as any[]).map((coord: any) => {
+        // Handle array format [lng, lat]
+        if (Array.isArray(coord)) {
+          return L.latLng(coord[1], coord[0]);
+        }
+        // Handle object format {0: lng, 1: lat} from your logs
+        if (coord[0] !== undefined) {
+          return L.latLng(coord[1], coord[0]);
+        }
+        return L.latLng(coord);
+      }),
+    };
+  }, [route]);
+
+  const formattedTents = useMemo(() => {
+    if (!tentPositionArray) return [];
+    return (tentPositionArray as any[]).map((t, i) => ({
+      id: `tent-${i}`,
+      // Extracting from the {0: lat, 1: lng} structure seen in your logs
+      latlng: L.latLng(t[0] ?? t.lat, t[1] ?? t.lng),
+      originalIdx: i,
+    }));
+  }, [tentPositionArray]);
 
   return (
     <div className="relative h-dvh w-full overflow-hidden bg-page-bg font-sans text-(--text-primary) transition-colors duration-500">
@@ -81,11 +112,11 @@ export default function FocusTacticalMap() {
             currentPos={currentPos}
             isActive={isActive}
             points={points}
-            route={route}
+            route={leafletRoute}
             isLocked={isLocked}
             isDark={settings.isDark}
             handleMapClick={handleMapClick}
-            tentPositionArray={tentPositionArray}
+            tentPositionArray={formattedTents}
             isLoadingRoute={isLoadingRoute}
             removePoint={removePoint}
             setIsActive={setIsActive}
@@ -107,7 +138,12 @@ export default function FocusTacticalMap() {
         <InstallButton />
         <ControlCard
           mapState={{ isActive, progress, metrics, route }}
-          mapActions={{ handleStopMission, handleStartMission, reset }}
+          mapActions={{
+            handleStopMission,
+            handleStartMission,
+            reset,
+            getLocalityName,
+          }}
         />
       </div>
 

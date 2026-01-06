@@ -83,7 +83,25 @@ export interface SystemSettingsProps {
     haptics: boolean;
   }) => void;
 }
+export interface CheckPointData {
+  id: string;
+  label: string;
+  note: string;
+  timestamp: string;
+  distanceMark: number;
+  photo?: string | null; // Add | null here
+  coords?: { lat: number; lng: number };
+}
 
-export interface PopUpcard {
-  distanceLeft: number;
+export interface RouteData {
+  id: string;
+  missionName: string;
+  originName: string;
+  destinationName: string;
+  totalDistance: number;
+  totalDuration: number;
+  timestamp: string;
+  logs: CheckPointData[];
+  status: "completed" | "aborted" | "active";
+  logCount?: number;
 }
