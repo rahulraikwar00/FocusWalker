@@ -7,7 +7,7 @@ import NotFound from "@/pages/not-found";
 import InstallButton from "./components/shared/PWAInstallButton";
 import { GlobalProvider } from "./features/mission/contexts/GlobalContext";
 import { DrawerProvider } from "./features/mission/contexts/DrawerContext";
-import { GlobalSideSheet } from "./components/shared/GlobalSideSheet";
+import { GlobalSideSheet } from "./features/profile/GlobalSideSheet";
 
 // Lazy load the heavy map component
 const FocusTacticalMap = React.lazy(() => import("@/pages/FocusTacticalMap"));

@@ -89,14 +89,11 @@ export const StorageService = {
 
   // Get all summaries for the sidebar
   async getAllSummaries() {
-    const summaries: any[] = [];
-    await indexStore.iterate((value) => {
+    const summaries: RouteData[] = [];
+    await indexStore.iterate((value: RouteData) => {
       summaries.push(value);
     });
-    return summaries.sort(
-      (a, b) =>
-        new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime()
-    );
+    return summaries;
   },
 
   // Load full data (Summary + Logs)

@@ -1,6 +1,5 @@
 import { useDrawer } from "@/features/mission/contexts/DrawerContext";
 import { MapPin, X, History, ChevronLeft, Loader2 } from "lucide-react";
-import { HistoryCard } from "@/features/navigation/HistoryCard";
 import { useState, useEffect } from "react";
 import { MissionDetailView } from "@/features/mission/MissionDetailView";
 import { StorageService } from "@/lib/utils";
@@ -76,38 +75,8 @@ export const GlobalSideSheet = () => {
               <X size={20} />
             </Button>
           </div>
-
           {/* CONTENT */}
-          <div className="flex-1 overflow-y-auto custom-scrollbar">
-            {isFetchingDetail ? (
-              <div className="h-full flex flex-col items-center justify-center gap-2">
-                <Loader2 className="animate-spin text-tactical" size={24} />
-                <span className="text-[10px] font-black uppercase tracking-tighter opacity-40">
-                  Decrypting...
-                </span>
-              </div>
-            ) : selectedMission ? (
-              <MissionDetailView mission={selectedMission} />
-            ) : (
-              <div className="p-4 space-y-4">
-                {history.length > 0 ? (
-                  history.map((log) => (
-                    <HistoryCard
-                      key={log.id}
-                      data={log}
-                      onSelect={() => handleSelectMission(log)} // The async trigger
-                      onDelete={async (id) => {
-                        // await StorageService.deleteMission(id);
-                        setHistory((prev) => prev.filter((m) => m.id !== id));
-                      }}
-                    />
-                  ))
-                ) : (
-                  <EmptyState />
-                )}
-              </div>
-            )}
-          </div>
+          <MissionDetailView />
         </div>
       </div>
     </>

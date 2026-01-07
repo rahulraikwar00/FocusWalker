@@ -26,7 +26,7 @@ export const HistoryCard = ({ data, onSelect, onDelete }: HistoryCardProps) => {
           </h4>
           <div className="flex items-center gap-2 text-[10px] text-tactical/60 font-mono mt-1">
             <Calendar size={10} className="opacity-70" />
-            {new Date(data.timestamp).toLocaleDateString(undefined, {
+            {new Date(data.timestamp ?? "").toLocaleDateString(undefined, {
               year: "numeric",
               month: "short",
               day: "numeric",
