@@ -85,6 +85,7 @@ export const MapView = memo(
     setIsActive,
   }: any) => {
     // Choose Tile Provider based on theme
+
     const tileUrl = useMemo(
       () =>
         isDark
@@ -178,6 +179,7 @@ export const MapView = memo(
           {/* POIs & Current Position */}
           {tentPositionArray && (
             <TentLayer
+              points={points}
               tentPositionArray={tentPositionArray}
               currentPos={currentPos}
               setIsActive={setIsActive}

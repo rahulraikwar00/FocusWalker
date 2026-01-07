@@ -61,12 +61,6 @@ export default function FocusTacticalMap() {
     removePoint,
     getLocalityName,
   } = useRouteLogic(settings.speedKmh, settings.isWakeLockEnabled);
-  useEffect(() => {
-    console.log("Current isLoadingRoute state:", isLoadingRoute);
-    if (!isLoadingRoute) {
-      console.log("Loader should be hidden now.");
-    }
-  }, [isLoadingRoute]);
 
   const leafletRoute = useMemo(() => {
     if (!route || !route.path) return null;
@@ -137,6 +131,7 @@ export default function FocusTacticalMap() {
         )}
         <InstallButton />
         <ControlCard
+          points={points}
           mapState={{ isActive, progress, metrics, route }}
           mapActions={{
             handleStopMission,

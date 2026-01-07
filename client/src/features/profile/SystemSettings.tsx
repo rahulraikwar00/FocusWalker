@@ -1,32 +1,44 @@
 import { Monitor, Zap, Timer, Bell } from "lucide-react";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { toggleStayAwake, triggerTactilePulse } from "@/lib/utils";
 import { useGlobal } from "@/features/mission/contexts/GlobalContext";
 
 export const SystemSettings = () => {
   const { settings, setUI, triggerToast } = useGlobal();
 
-  const [draft, setDraft] = useState({
-    ...settings,
-    isDark: settings.isDark ?? true,
-    speedKmh: settings.speedKmh ?? 5,
-    isWakeLockEnabled: settings.isWakeLockEnabled ?? true,
-    isHapticsEnabled: settings.isHapticsEnabled ?? true,
-    breakDuration: settings.breakDuration ?? 25, // Change B to b
-  });
+  // Initialize draft directly from settings
+  const [draft, setDraft] = useState({ ...settings });
+
+  // Sync draft if settings change externally while open
+  useEffect(() => {
+    setDraft({ ...settings });
+  }, [settings]);
 
   const commitChanges = () => {
-    setUI({ settings: { ...settings, ...draft }, isSettingsOpen: false });
-    toggleStayAwake(draft.isWakeLockEnabled);
-    if (draft.isHapticsEnabled) triggerTactilePulse("double");
+    // Merge
+    setUI({
+      settings: { ...settings, ...draft },
+      isSettingsOpen: false,
+    });
+
+    // This runs based on the DRAFT value
+    if (draft.isHapticsEnabled) {
+      triggerTactilePulse("double");
+    }
+
     triggerToast("Protocol Updated");
+  };
+  // Helper to update specific draft keys
+  const updateDraft = (key: string, value: any) => {
+    setDraft((prev) => ({ ...prev, [key]: value }));
   };
 
   return (
     <div className="w-full max-w-md mx-auto min-h-sm bg-(--bg-page) text-(--text-primary) font-sans pb-10">
-      {/* 1. HEADER */}
       <div className="flex justify-between items-center px-6 pt-6 mb-8">
-        <h1 className="text-3xl font-bold tracking-tight">Settings</h1>
+        <h1 className="text-3xl font-bold tracking-tight text-white">
+          Settings
+        </h1>
         <button
           onClick={commitChanges}
           className="text-(--accent-primary) font-semibold text-lg active:opacity-50 transition-opacity"
@@ -36,20 +48,16 @@ export const SystemSettings = () => {
       </div>
 
       <div className="px-4 space-y-8">
-        {/* SECTION: SYSTEM PROTOCOLS */}
         <SettingsGroup label="System Protocols">
           <SettingsRow
             label="Stay Awake"
-            icon={<Zap className="w-4 h-4 text-(--bg-page)" />}
+            icon={<Zap className="w-4 h-4 text-black" />}
             iconBg="bg-(--accent-primary)"
             right={
               <ToggleSwitch
                 active={draft.isWakeLockEnabled}
                 onClick={() =>
-                  setDraft({
-                    ...draft,
-                    isWakeLockEnabled: !draft.isWakeLockEnabled,
-                  })
+                  updateDraft("isWakeLockEnabled", !draft.isWakeLockEnabled)
                 }
               />
             }
@@ -62,23 +70,19 @@ export const SystemSettings = () => {
               <ToggleSwitch
                 active={draft.isHapticsEnabled}
                 onClick={() =>
-                  setDraft({
-                    ...draft,
-                    isHapticsEnabled: !draft.isHapticsEnabled,
-                  })
+                  updateDraft("isHapticsEnabled", !draft.isHapticsEnabled)
                 }
               />
             }
           />
         </SettingsGroup>
 
-        {/* SECTION: MISSION PARAMETERS */}
         <SettingsGroup label="Mission Parameters">
           <SettingsRow
             label="Target Speed"
+            subLabel={`${draft.speedKmh} km/h`}
             icon={<Monitor className="w-4 h-4 text-(--text-primary)" />}
             iconBg="bg-(--text-secondary)/10"
-            subLabel={`${draft.speedKmh} km/h`}
           />
           <div className="px-4 pb-5">
             <input
@@ -87,18 +91,16 @@ export const SystemSettings = () => {
               max="20"
               step="0.5"
               value={draft.speedKmh}
-              onChange={(e) =>
-                setDraft({ ...draft, speedKmh: Number(e.target.value) })
-              }
-              className="w-full h-1 bg-(--hud-border) rounded-full appearance-none accent-(--accent-primary) cursor-pointer"
+              onChange={(e) => updateDraft("speedKmh", Number(e.target.value))}
+              className="w-full h-1 bg-white/10 rounded-full appearance-none accent-(--accent-primary) cursor-pointer"
             />
           </div>
 
           <SettingsRow
             label="Break Interval"
+            subLabel={`${draft.breakDuration}m`}
             icon={<Timer className="w-4 h-4 text-(--text-primary)" />}
             iconBg="bg-(--text-secondary)/10"
-            subLabel={`${draft.breakDuration}m`}
           />
           <div className="px-4 pb-5">
             <input
@@ -108,14 +110,14 @@ export const SystemSettings = () => {
               step={5}
               value={draft.breakDuration}
               onChange={(e) =>
-                setDraft({ ...draft, breakDuration: Number(e.target.value) })
+                updateDraft("breakDuration", Number(e.target.value))
               }
-              className="w-full h-1 bg-(--hud-border) rounded-full appearance-none accent-(--accent-primary) cursor-pointer"
+              className="w-full h-1 bg-white/10 rounded-full appearance-none accent-(--accent-primary) cursor-pointer"
             />
           </div>
         </SettingsGroup>
 
-        <div className="text-center opacity-40">
+        <div className="text-center opacity-40 py-4">
           <p className="text-[11px] font-mono uppercase tracking-widest text-(--text-secondary)">
             Focus Walker v2.0.4 • {new Date().getFullYear()}
           </p>
@@ -124,7 +126,6 @@ export const SystemSettings = () => {
     </div>
   );
 };
-
 /* --- THEMED IPHONE SUB-COMPONENTS --- */
 
 const SettingsGroup = ({

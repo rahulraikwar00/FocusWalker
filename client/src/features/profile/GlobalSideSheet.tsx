@@ -7,42 +7,17 @@ import { Button } from "@/components/ui/button";
 
 export const GlobalSideSheet = () => {
   const { isOpen, toggle } = useDrawer();
-  const [history, setHistory] = useState<any[]>([]);
   const [selectedMission, setSelectedMission] = useState<any | null>(null);
-  const [isFetchingDetail, setIsFetchingDetail] = useState(false);
 
-  // 1. Fetch lightweight summaries when drawer opens
-  useEffect(() => {
-    if (isOpen) {
-      const loadHistory = async () => {
-        const summaries = await StorageService.getAllSummaries();
-        setHistory(summaries);
-      };
-      loadHistory();
-    } else {
-      setTimeout(() => setSelectedMission(null), 300);
-    }
-  }, [isOpen]);
-
-  // 2. Fetch HEAVY data (photos/logs) only on click
-  const handleSelectMission = async (summary: any) => {
-    setIsFetchingDetail(true);
-    try {
-      const fullIntel = await StorageService.getFullRoute(summary.id);
-      setSelectedMission(fullIntel);
-    } catch (err) {
-      console.error("Failed to retrieve mission archives", err);
-    } finally {
-      setIsFetchingDetail(false);
-    }
-  };
+  useEffect(() => {}, []);
+  console.log("iam drarer");
 
   return (
     <>
       {/* Overlay */}
       <div
         onClick={toggle}
-        className={`fixed inset-0 bg-black/60 backdrop-blur-md z-[9998] transition-opacity duration-500 ${
+        className={`fixed inset-0 bg-(--bg-hud) backdrop-blur-md z-[9998] transition-opacity duration-500 ${
           isOpen ? "opacity-100" : "opacity-0 pointer-events-none"
         }`}
       />

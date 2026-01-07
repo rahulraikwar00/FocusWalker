@@ -76,32 +76,77 @@ const detailStore = localforage.createInstance({
 });
 
 export const StorageService = {
-  // Save specific logs for a mission
-  async saveLogs(routeId: string, logs: CheckPointData[]) {
-    return await detailStore.setItem(`logs_${routeId}`, logs);
-  },
+  /* =============================
+      ROUTE SUMMARY (INDEX STORE)
+     ============================= */
 
-  // Save the mission summary to the index
-  async saveRouteSummary(route: RouteData) {
+  async saveRouteSummary(route: RouteData, missionId: string) {
     const { logs, ...summary } = route;
-    return await indexStore.setItem(route.id, summary);
+    // Key is: route_123
+    return await indexStore.setItem(`route_${missionId}`, summary);
   },
 
-  // Get all summaries for the sidebar
   async getAllSummaries() {
     const summaries: RouteData[] = [];
     await indexStore.iterate((value: RouteData) => {
       summaries.push(value);
     });
-    return summaries;
+    // Sorting by date (assuming your RouteData has a date field)
+    // is usually helpful for a history list
+    return summaries.reverse();
   },
 
-  // Load full data (Summary + Logs)
-  async getFullRoute(routeId: string): Promise<RouteData | null> {
-    const summary = await indexStore.getItem<any>(routeId);
-    const logs = await detailStore.getItem<CheckPointData[]>(`logs_${routeId}`);
+  async removeRouteSummary(missionId: string) {
+    try {
+      // FIX: Must use the same key format as saveRouteSummary
+      const summaryKey = `route_${missionId}`;
+      const detailKey = `logs_${missionId}`;
+
+      // 1. Remove from the Index (Sidebar)
+      await indexStore.removeItem(summaryKey);
+
+      // 2. Remove from the Details (Heavy Logs/Photos)
+      // This is crucial to prevent "Ghost Data" taking up storage
+      await detailStore.removeItem(detailKey);
+
+      console.log(`Mission ${missionId} purged successfully.`);
+      return true;
+    } catch (error) {
+      console.error("Failed to delete mission:", error);
+      return false;
+    }
+  },
+
+  /* =============================
+           LOG STORAGE
+     ============================= */
+
+  async saveAllLogs(missionId: string, logs: CheckPointData[]) {
+    return await detailStore.setItem(`logs_${missionId}`, logs);
+  },
+
+  async saveLog(missionId: string, log: CheckPointData) {
+    const key = `logs_${missionId}`;
+    const existingLogs =
+      (await detailStore.getItem<CheckPointData[]>(key)) ?? [];
+    existingLogs.push(log);
+    return await detailStore.setItem(key, existingLogs);
+  },
+
+  /* =============================
+           FULL ROUTE LOADER
+     ============================= */
+
+  async getFullRoute(missionId: string): Promise<RouteData | null> {
+    // Key is: route_123
+    const summary = await indexStore.getItem<RouteData>(`route_${missionId}`);
+
     if (!summary) return null;
-    return { ...summary, logs: logs || [] };
+
+    const logs =
+      (await detailStore.getItem<CheckPointData[]>(`logs_${missionId}`)) ?? [];
+
+    return { ...summary, logs };
   },
 };
 
@@ -151,3 +196,20 @@ export const CameraUtils = {
     }
   },
 };
+
+export const getMissionId = (points: {
+  start: L.LatLng | null;
+  end: L.LatLng | null;
+}) => {
+  if (!points.start || !points.end) return "";
+
+  const start = `${points.start.lat.toFixed(5)}_${points.start.lng.toFixed(5)}`;
+  const end = `${points.end.lat.toFixed(5)}_${points.end.lng.toFixed(5)}`;
+
+  return `${start}__TO__${end}`;
+};
+
+// const points: {
+//     start: L.LatLng | null;
+//     end: L.LatLng | null;
+// }

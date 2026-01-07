@@ -1,4 +1,4 @@
-import React, { useEffect, useRef } from "react";
+import React, { useEffect, useRef, useState } from "react";
 import { Popup, Marker } from "react-leaflet";
 import { renderToStaticMarkup } from "react-dom/server";
 import L from "leaflet";
@@ -37,6 +37,7 @@ interface TentMarkerProps {
   setIsActive: (value: boolean) => void; // Changed signature
   OpenPopup: (tentId: string, marker: L.Marker) => void;
   ClosePopup: () => void;
+  points: any;
 }
 
 export const TentMarker = ({
@@ -47,10 +48,13 @@ export const TentMarker = ({
   setIsActive,
   OpenPopup,
   ClosePopup,
+  points,
 }: TentMarkerProps) => {
   const markerRef = useRef<L.Marker>(null);
   // Inside your TentMarker component
   const hasTriggered = useRef(false);
+
+  const [locality, setLocality] = useState<string>("earth");
 
   useEffect(() => {
     if (!currentPos || !tent.latlng || !isActive) return;
@@ -75,6 +79,47 @@ export const TentMarker = ({
     }
   }, [currentPos, isActive, tent.latlng, setIsActive, OpenPopup, tent.id]);
 
+  // async function getLocality(lat: number, lon: number): Promise<string> {
+  //   try {
+  //     const response = await fetch(
+  //       `https://api.bigdatacloud.net/data/reverse-geocode-client?latitude=${lat}&longitude=${lon}&localityLanguage=en`
+  //     );
+  //     const data = await response.json();
+  //     console.log("localtiy data", data);
+
+  //     // Returns 'locality' (e.g., "Brooklyn") or falls back to 'city' (e.g., "New York")
+  //     return data.locality || data.city || "Unknown Location";
+  //   } catch (error) {
+  //     console.error("Geocoding failed:", error);
+  //     return "Unknown Territory";
+  //   }
+  // }
+
+  async function getLocality(lat: number, lng: number): Promise<string> {
+    try {
+      const response = await fetch(
+        `https://api.bigdatacloud.net/data/reverse-geocode-client?latitude=${lat}&longitude=${lng}&localityLanguage=en`
+      );
+      const data = await response.json();
+      // Logic: Neighborhood -> Village/Town -> City
+      return data.locality || data.village || data.city || "Wilderness";
+    } catch (error) {
+      return "Unknown Territory";
+    }
+  }
+
+  useEffect(() => {
+    const handleLocality = async () => {
+      // Small safety check
+      if (!tent.latlng) return;
+
+      const name = await getLocality(tent.latlng.lat, tent.latlng.lng);
+      setLocality(name);
+    };
+
+    handleLocality();
+  }, [tent.latlng.lat, tent.latlng.lng]);
+
   return (
     <Marker
       position={tent.latlng}
@@ -92,10 +137,12 @@ export const TentMarker = ({
         closeButton={false}
       >
         <PopUpcard
+          points={points}
           index={tent.originalIdx}
           handleMarkerClick={ClosePopup}
           tent={tent}
           setIsActive={setIsActive} // Pass this so "Secure Camp" can restart the journey
+          locality={locality}
         />
       </Popup>
     </Marker>

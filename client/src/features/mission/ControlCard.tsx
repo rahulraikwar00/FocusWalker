@@ -7,9 +7,7 @@ import { useGlobal } from "./contexts/GlobalContext";
 import { TacticalResetButton } from "./TacticalResetButton";
 import { CheckPointData, RouteData } from "@/types/types";
 
-import { StorageService } from "@/lib/utils";
-import { useMission } from "@/components/shared/useMissionStore";
-import { ActiveRoute } from "./useRouteLogic";
+import { getMissionId, StorageService } from "@/lib/utils";
 
 // --- SUB-COMPONENTS ---
 
@@ -70,66 +68,61 @@ const TimeFormat = ({ seconds }: { seconds: number }) => {
 export const ControlCard = ({
   mapState,
   mapActions,
+  points,
 }: {
   mapState: any;
   mapActions: any;
+  points: any;
 }) => {
   const { triggerToast } = useGlobal();
-  const { activeRoute } = useMission();
   const [isCollapsed, setIsCollapsed] = useState(false);
   const { isActive, progress, metrics, route, checkpoints } = mapState;
   const { handleStopMission, handleStartMission, reset, getLocalityName } =
     mapActions;
-  const [currentMissionId, setCurrentMissionId] = useState<string>("00");
 
-  useEffect(() => {
-    setIsCollapsed(route ? false : true);
-  }, [route]);
-
-  const generateMissionId = () => {
-    const start = route.path[0];
-    const end = route.path[route.path.length - 1];
-
-    return `OP_${start}_${end}`;
-  };
+  const [missionId, setMissionId] = useState("");
 
   const initiateMission = async () => {
-    if (currentMissionId) {
+    if (missionId) {
       handleStartMission();
       return;
     }
-    const missionId = generateMissionId();
-    setCurrentMissionId(missionId); // Store the ID for this session
+
     const draftMission: RouteData = {
-      id: currentMissionId, // Use the string directly
+      id: missionId, // Use the string directly
       timestamp: new Date().toISOString(),
       totalDistance: metrics.distDone,
       totalDuration: metrics.timeElapsed,
     };
 
-    await StorageService.saveRouteSummary(draftMission);
+    await StorageService.saveRouteSummary(draftMission, missionId);
 
     handleStartMission();
   };
 
   const saveMission = async () => {
-    if (!currentMissionId) return; // Guard clause
+    if (!missionId) return; // Guard clause
     const finalMissionData: RouteData = {
-      id: currentMissionId, // Use the string directly
+      id: missionId, // Use the string directly
       timestamp: new Date().toISOString(),
       totalDistance: metrics.distDone,
       totalDuration: metrics.timeElapsed,
     };
 
     try {
-      await StorageService.saveRouteSummary(finalMissionData);
+      await StorageService.saveRouteSummary(finalMissionData, missionId);
       triggerToast("Intel Secured: Archive Updated", "success");
-      setCurrentMissionId(""); // Clear for next mission
       handleStopMission();
     } catch (error) {
       triggerToast("System Error: Intel Lost", "error");
     }
   };
+  useEffect(() => {
+    if (route) {
+      setMissionId(getMissionId(points));
+    }
+    setIsCollapsed(route ? false : true);
+  }, [route]);
 
   return (
     <div className="absolute bottom-0 left-1/2 -translate-x-1/2 z-2000 pointer-events-none w-full max-w-md px-4 pb-[calc(env(safe-area-inset-bottom,0px)+1rem)]">

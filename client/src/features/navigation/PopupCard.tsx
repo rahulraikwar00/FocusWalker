@@ -1,64 +1,70 @@
-import { useMission } from "@/components/shared/useMissionStore";
 import { CheckPointData } from "@/types/types";
 import { useEffect, useState } from "react";
 import { GiCampingTent } from "react-icons/gi";
 import { CameraCapture } from "../mission/CameraCapture";
+
+import { getMissionId, StorageService } from "@/lib/utils";
+import { useGlobal } from "../mission/contexts/GlobalContext";
 
 interface PopUpCardProps {
   index: number;
   tent: any;
   handleMarkerClick: (id: string | null) => void;
   setIsActive: (val: boolean) => void;
+  points: any;
+  locality: string;
 }
-
 export const PopUpcard = ({
   index,
   tent,
   handleMarkerClick,
   setIsActive,
+  points,
+  locality,
 }: PopUpCardProps) => {
   const [note, setNote] = useState("");
   const [isSaving, setIsSaving] = useState(false);
   const [visitCount, setVisitCount] = useState(0);
-  const [capturedPhoto, setCapturedPhoto] = useState<string | null>(null);
+  const [missionId, setMissionId] = useState("");
 
-  const { getLogsByStation, addCheckpoint } = useMission();
-
-  const userLocation = tent.coords ?? { lat: 0, lng: 0 };
+  const { triggerToast } = useGlobal();
 
   useEffect(() => {
-    const fetchVisitCount = async () => {
-      const logs = await getLogsByStation(tent.id);
-      setVisitCount(logs?.length ?? 0);
-    };
-    fetchVisitCount();
-  }, [tent.id, getLogsByStation]);
+    if (points) {
+      setMissionId(getMissionId(points));
+    }
+  }, []);
+  const userLocation = tent.coords ?? { lat: 0, lng: 0 };
 
   const close = () => handleMarkerClick(null);
 
   const handleSave = async () => {
+    if (!missionId) {
+      console.warn("Mission ID missing, cannot save", points);
+      return;
+    }
+
     setIsSaving(true);
 
-    const newLog: CheckPointData = {
-      id: `log_${Date.now()}`,
-      label: tent.label || "Waypoint",
+    console.log(`Setting up camp in: ${locality}`);
+    const DraftCheckPointData: CheckPointData = {
+      id: `${missionId}${tent.id}`, // each checkpoint should have its OWN id
+      label: locality,
       note,
-      timestamp: new Date().toISOString(),
-      distanceMark: tent.distanceMark,
-      photo: capturedPhoto || undefined,
-      coords: userLocation,
+      timestamp: Date.now().toString(),
+      distanceMark: 12012,
     };
 
     try {
-      await addCheckpoint(newLog);
-      setCapturedPhoto(null);
-      setIsActive(true);
+      await StorageService.saveLog(missionId, DraftCheckPointData);
       close();
-    } catch (err) {
-      console.error("Failed to save checkpoint", err);
-    } finally {
-      setIsSaving(false);
+    } catch (error) {
+      console.log(error);
     }
+    triggerToast("succesfully saved ...closing the diary...", "success");
+    close();
+    setIsActive(true);
+    setIsSaving(false);
   };
 
   return (
@@ -99,27 +105,8 @@ export const PopUpcard = ({
           value={note}
           onChange={(e) => setNote(e.target.value)}
           disabled={isSaving}
-          className="w-full h-20 rounded-xl bg-(--text-primary)/5 p-3 text-[13px] focus:outline-none resize-none"
+          className="w-full h-20 rounded-xl bg-(--bg-primary)/5 p-3 text-[13px] focus:outline-none resize-none"
         />
-
-        {/* Photo */}
-        {!capturedPhoto ? (
-          <CameraCapture onPhotoTaken={setCapturedPhoto} />
-        ) : (
-          <div className="relative rounded-lg overflow-hidden">
-            <img
-              src={capturedPhoto}
-              className="h-24 w-full object-cover"
-              alt="Checkpoint"
-            />
-            <button
-              onClick={() => setCapturedPhoto(null)}
-              className="absolute top-2 right-2 text-[9px] px-2 py-1 bg-black/70 text-white rounded"
-            >
-              Remove
-            </button>
-          </div>
-        )}
 
         {/* Action */}
         <button

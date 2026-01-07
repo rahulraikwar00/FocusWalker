@@ -9,6 +9,7 @@ export const TentLayer = ({
   currentPos,
   isActive,
   setIsActive,
+  points,
 }: any) => {
   const [bounds, setBounds] = useState<L.LatLngBounds | null>(null);
   const activeMarkerRef = useRef<L.Marker | null>(null);
@@ -109,6 +110,7 @@ export const TentLayer = ({
     <>
       {visibleTents.map((tent) => (
         <TentMarker
+          points={points}
           key={`tent-${tent.id}-${tent.originalIdx}`}
           tent={tent}
           index={tent.originalIdx}
