@@ -107,6 +107,7 @@ export const ControlCard = ({
       timestamp: new Date().toISOString(),
       totalDistance: metrics.distDone,
       totalDuration: metrics.timeElapsed,
+      status: "active",
     };
 
     try {

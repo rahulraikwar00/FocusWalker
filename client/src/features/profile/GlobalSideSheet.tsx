@@ -2,7 +2,7 @@ import { useDrawer } from "@/features/mission/contexts/DrawerContext";
 import { MapPin, X, History, ChevronLeft, Loader2 } from "lucide-react";
 import { useState, useEffect } from "react";
 import { MissionDetailView } from "@/features/mission/MissionDetailView";
-import { StorageService } from "@/lib/utils";
+
 import { Button } from "@/components/ui/button";
 
 export const GlobalSideSheet = () => {
@@ -17,14 +17,14 @@ export const GlobalSideSheet = () => {
       {/* Overlay */}
       <div
         onClick={toggle}
-        className={`fixed inset-0 bg-(--bg-hud) backdrop-blur-md z-[9998] transition-opacity duration-500 ${
+        className={`fixed inset-0 bg-(--bg-hud) backdrop-blur-md z-9998 transition-opacity duration-500 ${
           isOpen ? "opacity-100" : "opacity-0 pointer-events-none"
         }`}
       />
 
       {/* Side Sheet */}
       <div
-        className={`fixed top-0 left-0 h-full w-full sm:w-80 md:w-96 bg-(--bg-page) border-r border-(--hud-border) shadow-2xl z-[9999] transition-transform duration-500 cubic-bezier(0.4, 0, 0.2, 1) ${
+        className={`fixed top-0 left-0 h-full w-full sm:w-80 md:w-96 bg-(--bg-page) border-r border-(--hud-border) shadow-2xl z-9999 transition-transform duration-500 cubic-bezier(0.4, 0, 0.2, 1) ${
           isOpen ? "translate-x-0" : "-translate-x-full"
         }`}
       >

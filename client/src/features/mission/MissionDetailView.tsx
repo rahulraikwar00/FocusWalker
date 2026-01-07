@@ -2,7 +2,13 @@ import { StorageService } from "@/lib/utils";
 import { CheckPointData, RouteData } from "@/types/types";
 import { useDrawer } from "./contexts/DrawerContext";
 import { useEffect, useState } from "react";
-import { ChevronDown, Clock, Trash2, ShieldAlert } from "lucide-react";
+import {
+  ChevronDown,
+  Clock,
+  Trash2,
+  ShieldAlert,
+  Image as ImageIcon,
+} from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 
 export const MissionDetailView = () => {
@@ -19,19 +25,23 @@ export const MissionDetailView = () => {
   }, [isOpen]);
 
   return (
-    <div className="flex flex-col h-full max-h-screen overflow-hidden bg-background">
-      <div className="p-4 border-b border-white/5 bg-white/[0.02]">
-        <h2 className="text-[10px] font-black text-tactical tracking-[0.3em] uppercase opacity-60">
-          Telemetry Archives
+    <div className="flex flex-col h-full max-h-screen overflow-hidden bg-[#0a0a0b]">
+      {/* Header */}
+      <div className="p-6 border-b border-white/5 bg-gradient-to-b from-white/[0.04] to-transparent">
+        <h2 className="text-[11px] font-black text-tactical tracking-[0.4em] uppercase">
+          Archive // Telemetry
         </h2>
+        <p className="text-[9px] text-white/30 font-mono mt-1 italic">
+          SECURE DATA ENCLAVE
+        </p>
       </div>
 
-      <div className="flex-1 overflow-y-auto p-3 space-y-3 no-scrollbar custom-scrollbar">
+      <div className="flex-1 overflow-y-auto p-4 space-y-4 custom-scrollbar">
         {missions.length === 0 ? (
-          <div className="flex flex-col items-center justify-center h-64 opacity-20">
-            <ShieldAlert size={32} className="mb-2" />
-            <span className="text-[10px] uppercase tracking-widest">
-              No Logs Found
+          <div className="flex flex-col items-center justify-center h-64 opacity-20 grayscale">
+            <ShieldAlert size={40} strokeWidth={1} className="mb-3" />
+            <span className="text-[10px] uppercase tracking-[0.2em] font-bold">
+              No Data Records
             </span>
           </div>
         ) : (
@@ -59,8 +69,8 @@ const RouteDetailsCard = ({
   const [open, setOpen] = useState(false);
 
   const removeRouteLogs = async (e: React.MouseEvent) => {
-    e.stopPropagation(); // Prevent the accordion from toggling
-    if (confirm("Permanently purge this mission log?")) {
+    e.stopPropagation();
+    if (confirm("PURGE DATA: Are you sure?")) {
       await StorageService.removeRouteSummary(route.id);
       onDelete();
     }
@@ -68,35 +78,35 @@ const RouteDetailsCard = ({
 
   return (
     <div
-      className={`transition-all duration-300 rounded-xl border ${
+      className={`group transition-all duration-500 rounded-xl border ${
         open
-          ? "bg-white/[0.07] border-tactical/40 shadow-xl"
-          : "bg-white/[0.03] border-white/5 hover:border-white/10"
+          ? "bg-white/[0.08] border-tactical/30 shadow-2xl"
+          : "bg-white/[0.02] border-white/5 hover:border-white/10"
       }`}
     >
       <div
         onClick={() => setOpen(!open)}
-        className="w-full flex items-center justify-between p-3 cursor-pointer select-none"
+        className="w-full flex items-center justify-between p-4 cursor-pointer"
       >
-        <div className="flex items-center gap-3">
+        <div className="flex items-center gap-4">
           <div
-            className={`w-1.5 h-1.5 rounded-full ${
-              open ? "bg-tactical animate-pulse" : "bg-white/20"
+            className={`w-2 h-2 rounded-full transition-all duration-500 ${
+              open ? "bg-tactical shadow-[0_0_10px_#4ade80]" : "bg-white/10"
             }`}
           />
-          <div className="flex flex-col items-start">
-            <span className="text-[11px] font-bold text-white uppercase tracking-tight">
-              {route.missionName || `LOG_${route.id.slice(0, 8)}`}
+          <div className="flex flex-col">
+            <span className="text-[12px] font-black text-white/90 uppercase tracking-wider">
+              {route.missionName || "UNNAMED_OP"}
             </span>
-            <span className="text-[9px] text-text-secondary font-mono opacity-40">
-              {new Date().toLocaleDateString()} • {route.id.slice(0, 8)}
+            <span className="text-[9px] text-tactical/50 font-mono uppercase tracking-tighter">
+              ID: {route.id.slice(0, 12)} // {new Date().toLocaleDateString()}
             </span>
           </div>
         </div>
         <ChevronDown
-          size={14}
-          className={`text-white/40 transition-transform duration-300 ${
-            open ? "rotate-180" : ""
+          size={16}
+          className={`text-white/20 transition-transform ${
+            open ? "rotate-180 text-tactical" : ""
           }`}
         />
       </div>
@@ -107,21 +117,19 @@ const RouteDetailsCard = ({
             initial={{ height: 0, opacity: 0 }}
             animate={{ height: "auto", opacity: 1 }}
             exit={{ height: 0, opacity: 0 }}
-            className="overflow-hidden"
           >
-            <div className="px-4 pb-4 pt-2">
-              <div className="flex justify-between items-center mb-4 pb-2 border-b border-white/5">
-                <span className="text-[9px] text-white/30 uppercase tracking-widest font-bold">
-                  Journey Logs
+            <div className="px-5 pb-5 pt-2 space-y-4">
+              <div className="flex justify-between items-center border-b border-white/5 pb-2">
+                <span className="text-[8px] text-white/40 uppercase font-black tracking-widest">
+                  Waypoint Chronology
                 </span>
                 <button
                   onClick={removeRouteLogs}
-                  className="p-1.5 rounded-md hover:bg-red-500/10 text-white/20 hover:text-red-400 transition-all"
+                  className="text-white/20 hover:text-red-400 transition-colors"
                 >
                   <Trash2 size={14} />
                 </button>
               </div>
-
               <CheckPointCard missionId={route.id} />
             </div>
           </motion.div>
@@ -146,44 +154,67 @@ const CheckPointCard = ({ missionId }: { missionId: string }) => {
 
   if (loading)
     return (
-      <div className="text-[9px] text-center py-4 opacity-50 animate-pulse uppercase tracking-widest">
-        Syncing...
-      </div>
-    );
-  if (logs.length === 0)
-    return (
-      <div className="text-[10px] text-center py-4 opacity-40 italic">
-        Log file empty.
+      <div className="text-[9px] text-center py-6 font-mono text-tactical animate-pulse uppercase tracking-[0.3em]">
+        Decoding logs...
       </div>
     );
 
   return (
-    <div className="relative space-y-6 pt-2 ml-1">
-      {/* Visual Timeline Line */}
-      <div className="absolute left-[7px] top-2 bottom-2 w-px bg-gradient-to-b from-tactical/40 via-tactical/10 to-transparent" />
-
+    <div className="relative space-y-8 pl-4 border-l border-white/5 ml-1">
       {logs.map((log) => (
-        <div key={log.id} className="relative pl-6 group/log">
-          {/* Node Point */}
-          <div className="absolute left-0 top-1 w-3.5 h-3.5 rounded-full bg-background border border-tactical/30 flex items-center justify-center">
-            <div className="w-1 h-1 rounded-full bg-tactical shadow-[0_0_5px_rgba(var(--tactical),0.5)]" />
-          </div>
+        <div key={log.id} className="relative group/log">
+          <div className="absolute -left-[21px] top-1 w-2.5 h-2.5 rounded-sm rotate-45 bg-[#0a0a0b] border border-tactical/50 group-hover/log:bg-tactical transition-colors" />
 
-          <div className="flex flex-col gap-1">
-            <div className="flex items-center justify-between">
-              <span className="text-[10px] font-black text-tactical/90 uppercase tracking-tighter">
+          <div className="space-y-2">
+            <div className="flex justify-between items-start">
+              <h4 className="text-[11px] font-black text-white uppercase tracking-wide italic">
                 {log.label}
-              </span>
-              <span className="text-[9px] text-white/20 font-mono flex items-center gap-1">
-                <Clock size={8} /> 12:45
-              </span>
+              </h4>
+              <div className="flex items-center gap-1.5 font-mono text-[9px] text-white/20">
+                <Clock size={10} />{" "}
+                {log.timestamp
+                  ? new Date(parseInt(log.timestamp)).toLocaleTimeString([], {
+                      hour: "2-digit",
+                      minute: "2-digit",
+                    })
+                  : "00:00"}
+              </div>
             </div>
-            <p className="text-[11px] text-text-secondary leading-snug font-medium">
-              {log.note || "No additional data recorded."}
+
+            <p className="text-[12px] text-white/60 leading-relaxed font-medium">
+              {log.note || "System: No analyst commentary provided."}
             </p>
+
+            {/* FIX: Use log.picture instead of the empty photo state */}
+            {log.picture && <ImageDisplay base64String={log.picture} />}
           </div>
         </div>
       ))}
+    </div>
+  );
+};
+
+interface ImageDisplayProps {
+  base64String: string | null;
+}
+
+export const ImageDisplay = ({ base64String }: ImageDisplayProps) => {
+  if (!base64String) return null;
+
+  return (
+    <div className="mt-3 group/img relative overflow-hidden rounded-lg border border-white/10 bg-black/40">
+      <div className="absolute inset-0 bg-tactical/5 opacity-0 group-hover/img:opacity-100 transition-opacity pointer-events-none" />
+      <img
+        src={base64String}
+        alt="Tactical Scan"
+        className="w-full h-auto max-h-48 object-cover opacity-80 group-hover/img:opacity-100 transition-opacity"
+      />
+      <div className="absolute bottom-0 left-0 right-0 p-2 bg-black/60 backdrop-blur-md flex items-center justify-between">
+        <span className="text-[8px] font-black text-tactical uppercase tracking-widest flex items-center gap-1">
+          <ImageIcon size={10} /> Visual_Record.jpg
+        </span>
+        <span className="text-[8px] text-white/40 font-mono">B64_ENCODED</span>
+      </div>
     </div>
   );
 };

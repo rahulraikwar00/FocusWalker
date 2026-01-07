@@ -89,8 +89,8 @@ export const MapView = memo(
     const tileUrl = useMemo(
       () =>
         isDark
-          ? "https://tiles.stadiamaps.com/tiles/alidade_smooth_dark/{z}/{x}/{y}{r}.png"
-          : "https://tiles.stadiamaps.com/tiles/alidade_smooth/{z}/{x}/{y}{r}.png",
+          ? "https://tiles.stadiamaps.com/tiles/alidade_smooth_dark/{z}/{x}/{y}{r}.png?api_key=b3cff5aa-9649-46f1-84b2-1d3de0a1aa01"
+          : "https://tiles.stadiamaps.com/tiles/alidade_smooth/{z}/{x}/{y}{r}.png?api_key=b3cff5aa-9649-46f1-84b2-1d3de0a1aa01",
       [isDark]
     );
 

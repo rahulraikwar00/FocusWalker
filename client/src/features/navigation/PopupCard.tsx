@@ -5,6 +5,8 @@ import { CameraCapture } from "../mission/CameraCapture";
 
 import { getMissionId, StorageService } from "@/lib/utils";
 import { useGlobal } from "../mission/contexts/GlobalContext";
+import { Button } from "@/components/ui/button";
+import { Textarea } from "@/components/ui/textarea";
 
 interface PopUpCardProps {
   index: number;
@@ -26,6 +28,7 @@ export const PopUpcard = ({
   const [isSaving, setIsSaving] = useState(false);
   const [visitCount, setVisitCount] = useState(0);
   const [missionId, setMissionId] = useState("");
+  const [cameraCaptureData, setcameraCaptureData] = useState<string>();
 
   const { triggerToast } = useGlobal();
 
@@ -33,10 +36,15 @@ export const PopUpcard = ({
     if (points) {
       setMissionId(getMissionId(points));
     }
-  }, []);
-  const userLocation = tent.coords ?? { lat: 0, lng: 0 };
+  }, [points]); // Added dependency for safety
 
+  const userLocation = tent.coords ?? { lat: 0, lng: 0 };
   const close = () => handleMarkerClick(null);
+
+  const handleCameraAction = (photoBase64: string) => {
+    setcameraCaptureData(photoBase64);
+    console.log("Photo received in PopUpcard");
+  };
 
   const handleSave = async () => {
     if (!missionId) {
@@ -46,29 +54,38 @@ export const PopUpcard = ({
 
     setIsSaving(true);
 
-    console.log(`Setting up camp in: ${locality}`);
     const DraftCheckPointData: CheckPointData = {
-      id: `${missionId}${tent.id}`, // each checkpoint should have its OWN id
+      id: `${missionId}${tent.id}`,
       label: locality,
       note,
       timestamp: Date.now().toString(),
       distanceMark: 12012,
+      // FIX: Ensure picture is actually included in the save object
+      picture: cameraCaptureData,
     };
 
     try {
       await StorageService.saveLog(missionId, DraftCheckPointData);
+      triggerToast("Successfully saved diary...", "success");
       close();
+      setIsActive(true);
     } catch (error) {
       console.log(error);
+      triggerToast("Error saving progress", "error");
+    } finally {
+      setIsSaving(false);
     }
-    triggerToast("succesfully saved ...closing the diary...", "success");
-    close();
-    setIsActive(true);
-    setIsSaving(false);
   };
 
+  const handleContentClick = (e: React.MouseEvent) => {
+    e.stopPropagation(); // This stops the click from reaching the map
+  };
   return (
-    <div className="glass-card flex flex-col w-60 overflow-hidden shadow-2xl border border-(--hud-border) bg-(--hud-bg) backdrop-blur-xl">
+    <div
+      onClick={handleContentClick}
+      onMouseDown={handleContentClick}
+      className="glass-card flex flex-col w-60 overflow-hidden shadow-2xl border border-(--hud-border) bg-(--hud-bg) backdrop-blur-xl"
+    >
       {/* Header */}
       <div className="relative h-24 flex items-center justify-center bg-(--accent-glow)">
         <GiCampingTent
@@ -93,14 +110,13 @@ export const PopUpcard = ({
               Waypoint {index}
             </h3>
           </div>
-
           <span className="text-[8px] font-mono text-tactical/40">
             {userLocation.lat.toFixed(4)} / {userLocation.lng.toFixed(4)}
           </span>
         </div>
 
         {/* Notes */}
-        <textarea
+        <Textarea
           placeholder="What did you notice here?"
           value={note}
           onChange={(e) => setNote(e.target.value)}
@@ -108,14 +124,33 @@ export const PopUpcard = ({
           className="w-full h-20 rounded-xl bg-(--bg-primary)/5 p-3 text-[13px] focus:outline-none resize-none"
         />
 
+        {/* FIX 1: Pass the function directly so it receives the base64 argument */}
+        {!cameraCaptureData ? (
+          <CameraCapture onCapture={handleCameraAction} />
+        ) : (
+          <div className="relative animate-in fade-in zoom-in duration-300">
+            <img
+              src={cameraCaptureData}
+              alt="Preview"
+              className="w-full h-24 object-cover rounded-lg border border-white/10"
+            />
+            <button
+              onClick={() => setcameraCaptureData(undefined)}
+              className="absolute -top-2 -right-2 bg-red-500 text-white rounded-full w-5 h-5 text-[10px] flex items-center justify-center"
+            >
+              ✕
+            </button>
+          </div>
+        )}
+
         {/* Action */}
-        <button
+        <Button
           onClick={handleSave}
           disabled={isSaving}
           className="btn-primary w-full py-3 text-[11px] uppercase tracking-widest"
         >
           {isSaving ? "Recording…" : "Log Progress"}
-        </button>
+        </Button>
       </div>
     </div>
   );

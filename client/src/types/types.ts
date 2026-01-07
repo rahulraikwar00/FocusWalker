@@ -16,6 +16,7 @@ export interface CheckPointData {
   distanceMark: number;
   photo?: string | null;
   coords?: L.LatLng | null;
+  picture?: string;
 }
 
 export interface RouteData {
