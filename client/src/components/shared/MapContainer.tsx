@@ -85,11 +85,12 @@ export const MapView = memo(
     setIsActive,
   }: any) => {
     // Choose Tile Provider based on theme
+
     const tileUrl = useMemo(
       () =>
         isDark
-          ? "https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png"
-          : "https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png",
+          ? "https://tiles.stadiamaps.com/tiles/alidade_smooth_dark/{z}/{x}/{y}{r}.png?api_key=b3cff5aa-9649-46f1-84b2-1d3de0a1aa01"
+          : "https://tiles.stadiamaps.com/tiles/alidade_smooth/{z}/{x}/{y}{r}.png?api_key=b3cff5aa-9649-46f1-84b2-1d3de0a1aa01",
       [isDark]
     );
 
@@ -178,6 +179,7 @@ export const MapView = memo(
           {/* POIs & Current Position */}
           {tentPositionArray && (
             <TentLayer
+              points={points}
               tentPositionArray={tentPositionArray}
               currentPos={currentPos}
               setIsActive={setIsActive}

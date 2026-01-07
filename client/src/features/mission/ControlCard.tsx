@@ -7,9 +7,7 @@ import { useGlobal } from "./contexts/GlobalContext";
 import { TacticalResetButton } from "./TacticalResetButton";
 import { CheckPointData, RouteData } from "@/types/types";
 
-import { StorageService } from "@/lib/utils";
-import { useMission } from "@/components/shared/useMissionStore";
-import { ActiveRoute } from "./useRouteLogic";
+import { getMissionId, StorageService } from "@/lib/utils";
 
 // --- SUB-COMPONENTS ---
 
@@ -70,85 +68,62 @@ const TimeFormat = ({ seconds }: { seconds: number }) => {
 export const ControlCard = ({
   mapState,
   mapActions,
+  points,
 }: {
   mapState: any;
   mapActions: any;
+  points: any;
 }) => {
   const { triggerToast } = useGlobal();
-  const { activeRoute } = useMission();
   const [isCollapsed, setIsCollapsed] = useState(false);
   const { isActive, progress, metrics, route, checkpoints } = mapState;
   const { handleStopMission, handleStartMission, reset, getLocalityName } =
     mapActions;
-  const [currentMissionId, setCurrentMissionId] = useState<string | null>(null);
 
-  useEffect(() => {
-    setIsCollapsed(route ? false : true);
-  }, [route]);
-
-  const generateMissionId = (currentRoute: ActiveRoute) => {
-    const start = currentRoute.path[0];
-    const end = currentRoute.path[currentRoute.path.length - 1];
-
-    // Format: LAT_LNG_LAT_LNG_TIMESTAMP
-    const geoFingerprint = `${start[0].toFixed(4)}${start[1].toFixed(
-      4
-    )}_${end[0].toFixed(4)}${end[1].toFixed(4)}`;
-    const timeHash = Date.now().toString(36).toUpperCase();
-
-    return `OP_${geoFingerprint}_${timeHash}`;
-  };
+  const [missionId, setMissionId] = useState("");
 
   const initiateMission = async () => {
-    if (currentMissionId) {
+    if (missionId) {
       handleStartMission();
       return;
     }
 
-    const missionId = generateMissionId(route);
-    setCurrentMissionId(missionId); // Store the ID for this session
     const draftMission: RouteData = {
-      id: missionId,
-      missionName: route?.name || "Field Operation",
+      id: missionId, // Use the string directly
       timestamp: new Date().toISOString(),
-      totalDistance: 0,
-      totalDuration: 0,
-      logCount: 0,
-      status: "active",
-      logs: [],
-      originName: "origin TBD",
-      destinationName: "destination TBD",
+      totalDistance: metrics.distDone,
+      totalDuration: metrics.timeElapsed,
     };
 
-    // Save initial draft to IndexedDB
-    await StorageService.saveRouteSummary(draftMission);
+    await StorageService.saveRouteSummary(draftMission, missionId);
+
     handleStartMission();
   };
 
   const saveMission = async () => {
-    if (!currentMissionId) return; // Guard clause
+    if (!missionId) return; // Guard clause
     const finalMissionData: RouteData = {
-      id: currentMissionId, // Use the string directly
-      missionName: route?.name || "Field Operation",
+      id: missionId, // Use the string directly
       timestamp: new Date().toISOString(),
       totalDistance: metrics.distDone,
       totalDuration: metrics.timeElapsed,
-      logCount: activeRoute ? activeRoute.logs.length : 0,
-      status: "completed",
-      logs: activeRoute ? activeRoute.logs : [],
-      originName: "origin TBD",
-      destinationName: "destination TBD",
+      status: "active",
     };
 
     try {
-      await StorageService.saveRouteSummary(finalMissionData);
+      await StorageService.saveRouteSummary(finalMissionData, missionId);
       triggerToast("Intel Secured: Archive Updated", "success");
-      setCurrentMissionId(null); // Clear for next mission
       handleStopMission();
     } catch (error) {
       triggerToast("System Error: Intel Lost", "error");
     }
   };
+  useEffect(() => {
+    if (route) {
+      setMissionId(getMissionId(points));
+    }
+    setIsCollapsed(route ? false : true);
+  }, [route]);
 
   return (
     <div className="absolute bottom-0 left-1/2 -translate-x-1/2 z-2000 pointer-events-none w-full max-w-md px-4 pb-[calc(env(safe-area-inset-bottom,0px)+1rem)]">

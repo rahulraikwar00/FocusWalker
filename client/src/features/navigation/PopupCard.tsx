@@ -1,68 +1,91 @@
-import { useMission } from "@/components/shared/useMissionStore";
 import { CheckPointData } from "@/types/types";
 import { useEffect, useState } from "react";
 import { GiCampingTent } from "react-icons/gi";
 import { CameraCapture } from "../mission/CameraCapture";
+
+import { getMissionId, StorageService } from "@/lib/utils";
+import { useGlobal } from "../mission/contexts/GlobalContext";
+import { Button } from "@/components/ui/button";
+import { Textarea } from "@/components/ui/textarea";
 
 interface PopUpCardProps {
   index: number;
   tent: any;
   handleMarkerClick: (id: string | null) => void;
   setIsActive: (val: boolean) => void;
+  points: any;
+  locality: string;
 }
-
 export const PopUpcard = ({
   index,
   tent,
   handleMarkerClick,
   setIsActive,
+  points,
+  locality,
 }: PopUpCardProps) => {
   const [note, setNote] = useState("");
   const [isSaving, setIsSaving] = useState(false);
   const [visitCount, setVisitCount] = useState(0);
-  const [capturedPhoto, setCapturedPhoto] = useState<string | null>(null);
+  const [missionId, setMissionId] = useState("");
+  const [cameraCaptureData, setcameraCaptureData] = useState<string>();
 
-  const { getLogsByStation, addCheckpoint } = useMission();
-
-  const userLocation = tent.coords ?? { lat: 0, lng: 0 };
+  const { triggerToast } = useGlobal();
 
   useEffect(() => {
-    const fetchVisitCount = async () => {
-      const logs = await getLogsByStation(tent.id);
-      setVisitCount(logs?.length ?? 0);
-    };
-    fetchVisitCount();
-  }, [tent.id, getLogsByStation]);
+    if (points) {
+      setMissionId(getMissionId(points));
+    }
+  }, [points]); // Added dependency for safety
 
+  const userLocation = tent.coords ?? { lat: 0, lng: 0 };
   const close = () => handleMarkerClick(null);
 
+  const handleCameraAction = (photoBase64: string) => {
+    setcameraCaptureData(photoBase64);
+    console.log("Photo received in PopUpcard");
+  };
+
   const handleSave = async () => {
+    if (!missionId) {
+      console.warn("Mission ID missing, cannot save", points);
+      return;
+    }
+
     setIsSaving(true);
 
-    const newLog: CheckPointData = {
-      id: `log_${Date.now()}`,
-      label: tent.label || "Waypoint",
+    const DraftCheckPointData: CheckPointData = {
+      id: `${missionId}${tent.id}`,
+      label: locality,
       note,
-      timestamp: new Date().toISOString(),
-      distanceMark: tent.distanceMark,
-      photo: capturedPhoto || undefined,
-      coords: userLocation,
+      timestamp: Date.now().toString(),
+      distanceMark: 12012,
+      // FIX: Ensure picture is actually included in the save object
+      picture: cameraCaptureData,
     };
 
     try {
-      await addCheckpoint(newLog);
-      setCapturedPhoto(null);
-      setIsActive(true);
+      await StorageService.saveLog(missionId, DraftCheckPointData);
+      triggerToast("Successfully saved diary...", "success");
       close();
-    } catch (err) {
-      console.error("Failed to save checkpoint", err);
+      setIsActive(true);
+    } catch (error) {
+      console.log(error);
+      triggerToast("Error saving progress", "error");
     } finally {
       setIsSaving(false);
     }
   };
 
+  const handleContentClick = (e: React.MouseEvent) => {
+    e.stopPropagation(); // This stops the click from reaching the map
+  };
   return (
-    <div className="glass-card flex flex-col w-60 overflow-hidden shadow-2xl border border-(--hud-border) bg-(--hud-bg) backdrop-blur-xl">
+    <div
+      onClick={handleContentClick}
+      onMouseDown={handleContentClick}
+      className="glass-card flex flex-col w-60 overflow-hidden shadow-2xl border border-(--hud-border) bg-(--hud-bg) backdrop-blur-xl"
+    >
       {/* Header */}
       <div className="relative h-24 flex items-center justify-center bg-(--accent-glow)">
         <GiCampingTent
@@ -87,48 +110,47 @@ export const PopUpcard = ({
               Waypoint {index}
             </h3>
           </div>
-
           <span className="text-[8px] font-mono text-tactical/40">
             {userLocation.lat.toFixed(4)} / {userLocation.lng.toFixed(4)}
           </span>
         </div>
 
         {/* Notes */}
-        <textarea
+        <Textarea
           placeholder="What did you notice here?"
           value={note}
           onChange={(e) => setNote(e.target.value)}
           disabled={isSaving}
-          className="w-full h-20 rounded-xl bg-(--text-primary)/5 p-3 text-[13px] focus:outline-none resize-none"
+          className="w-full h-20 rounded-xl bg-(--bg-primary)/5 p-3 text-[13px] focus:outline-none resize-none"
         />
 
-        {/* Photo */}
-        {!capturedPhoto ? (
-          <CameraCapture onPhotoTaken={setCapturedPhoto} />
+        {/* FIX 1: Pass the function directly so it receives the base64 argument */}
+        {!cameraCaptureData ? (
+          <CameraCapture onCapture={handleCameraAction} />
         ) : (
-          <div className="relative rounded-lg overflow-hidden">
+          <div className="relative animate-in fade-in zoom-in duration-300">
             <img
-              src={capturedPhoto}
-              className="h-24 w-full object-cover"
-              alt="Checkpoint"
+              src={cameraCaptureData}
+              alt="Preview"
+              className="w-full h-24 object-cover rounded-lg border border-white/10"
             />
             <button
-              onClick={() => setCapturedPhoto(null)}
-              className="absolute top-2 right-2 text-[9px] px-2 py-1 bg-black/70 text-white rounded"
+              onClick={() => setcameraCaptureData(undefined)}
+              className="absolute -top-2 -right-2 bg-red-500 text-white rounded-full w-5 h-5 text-[10px] flex items-center justify-center"
             >
-              Remove
+              ✕
             </button>
           </div>
         )}
 
         {/* Action */}
-        <button
+        <Button
           onClick={handleSave}
           disabled={isSaving}
           className="btn-primary w-full py-3 text-[11px] uppercase tracking-widest"
         >
           {isSaving ? "Recording…" : "Log Progress"}
-        </button>
+        </Button>
       </div>
     </div>
   );

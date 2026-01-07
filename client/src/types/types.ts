@@ -1,14 +1,59 @@
 import { ReactNode } from "react";
+import L from "leaflet";
+
+/** --- CORE DATA MODELS --- **/
+
+export interface SearchResult {
+  name: string;
+  latlng: L.LatLng;
+}
+
+export interface CheckPointData {
+  id: string;
+  label: string;
+  note: string;
+  timestamp: string;
+  distanceMark: number;
+  photo?: string | null;
+  coords?: L.LatLng | null;
+  picture?: string;
+}
+
+export interface RouteData {
+  id: string;
+  missionName?: string;
+  originName?: string;
+  destinationName?: string;
+  totalDistance: number;
+  totalDuration: number;
+  timestamp?: string;
+  logs?: CheckPointData[];
+  status?: "completed" | "aborted" | "active";
+  logCount?: number;
+}
+
+// Unified Route structure used by logic and components
+export interface ActiveRoute {
+  path: [number, number][]; // For Leaflet Rendering [lat, lng]
+  rawLine: [number, number][]; // For Turf Logic [lng, lat]
+  distance: number;
+  duration: number;
+}
+
+/** --- COMPONENT PROPS --- **/
 
 export interface StatItemProps {
   label: string;
-  value: string;
+  value: string | number;
   unit: string;
+  isPrimary?: boolean;
 }
 
 export interface HudCardProps {
   isActive: boolean;
   progress: number;
+  isLocked: boolean;
+  route: ActiveRoute | null;
   metrics: {
     timeLeft: number;
     distDone: number;
@@ -18,17 +63,7 @@ export interface HudCardProps {
   handleStartMission: () => void;
   reset: () => void;
   setIsActive: (active: boolean) => void;
-  route: { path: L.LatLngExpression[] } | null;
-  isLocked: boolean;
-  setIsLocked: (active: boolean) => void;
-}
-
-// 1. Individual Item Interface
-export interface StatItemProps {
-  label: string;
-  value: string;
-  unit: string;
-  isPrimary?: boolean;
+  setIsLocked: (locked: boolean) => void;
 }
 
 export interface HUDtopProps {
@@ -40,35 +75,27 @@ export interface HUDtopProps {
   setIsSettingsOpen: (open: boolean) => void;
 }
 
-export interface SearchResult {
-  name: string;
-  latlng: L.LatLng;
+export interface MapProps {
+  DEFAULT_LOCATION: L.LatLngExpression;
+  currentPos: L.LatLng | null;
+  isActive: boolean;
+  isLocked: boolean;
+  isDark: boolean;
+  isLoadingRoute: boolean;
+  points: { start: L.LatLng | null; end: L.LatLng | null };
+  route: ActiveRoute | null;
+  tentPositionArray: L.LatLng[] | null;
+  handleMapClick: (e: L.LeafletMouseEvent) => void;
+  removePoint: (type: "start" | "end", isActive: boolean) => void;
+  setIsActive: (active: boolean) => void;
 }
 
 export interface LocationSearchProps {
   searchQuery: string;
   setSearchQuery: (query: string) => void;
   points: { start: L.LatLng | null; end: L.LatLng | null };
-  // Modified to return a list of results
   searchLocation: (query: string) => Promise<SearchResult[]>;
   onLocationSelect: (location: SearchResult) => void;
-}
-
-export interface MapProps {
-  DEFAULT_LOCATION: L.LatLngExpression;
-  handleMapClick: (e: L.LeafletMouseEvent) => void;
-  currentPos: L.LatLng | null;
-  isActive: boolean;
-  points: { start: L.LatLng | null; end: L.LatLng | null };
-  route: { path: L.LatLngExpression[] } | null;
-  isLocked: boolean;
-  isDark: boolean;
-}
-
-export interface ModalProps {
-  children: ReactNode;
-  onClose: () => void;
-  title?: string;
 }
 
 export interface SystemSettingsProps {
@@ -83,25 +110,9 @@ export interface SystemSettingsProps {
     haptics: boolean;
   }) => void;
 }
-export interface CheckPointData {
-  id: string;
-  label: string;
-  note: string;
-  timestamp: string;
-  distanceMark: number;
-  photo?: string | null; // Add | null here
-  coords?: { lat: number; lng: number };
-}
 
-export interface RouteData {
-  id: string;
-  missionName: string;
-  originName: string;
-  destinationName: string;
-  totalDistance: number;
-  totalDuration: number;
-  timestamp: string;
-  logs: CheckPointData[];
-  status: "completed" | "aborted" | "active";
-  logCount?: number;
+export interface ModalProps {
+  children: ReactNode;
+  onClose: () => void;
+  title?: string;
 }
