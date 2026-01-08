@@ -75,70 +75,86 @@
 
 @layer utilities {
   .paper-ruled {
+    /* This creates the lines */
     background-image: linear-gradient(
       transparent 39px,
       rgba(0, 0, 0, 0.05) 40px
     );
     background-size: 100% 40px;
-    /* Adjust line-height to match the rule-size exactly */
+
+    /* THIS FIXES THE WRAPPING */
     line-height: 40px !important;
+    white-space: pre-wrap; /* Preserves line breaks but wraps normally */
+    overflow-wrap: break-word; /* Breaks long strings/URLs if they hit the edge */
+    word-break: break-word;
+    display: block; /* Ensures it takes up the full width */
+  }
+  /* --- HUD CORE CONTAINERS --- */
+
+  /* The tactical glass card used for popups and panels */
+  .glass-card {
+    background-color: var(--hud-bg);
+    backdrop-filter: blur(20px) saturate(160%);
+    border: 1px solid var(--hud-border);
+    box-shadow: var(--shadow-tactical);
+    border-radius: 2rem;
+    transition: all 0.4s cubic-bezier(0.22, 1, 0.36, 1);
   }
 
-  /* Hide library's default shadow to use our custom one */
-  .spiral-booklet {
-    background: transparent !important;
+  /* High-visibility tactical button */
+  .btn-primary {
+    background-color: var(--accent-primary);
+    color: #000000;
+    font-weight: 800;
+    letter-spacing: -0.02em;
+    border-radius: 1.5rem;
+    padding: 1rem 2rem;
+    box-shadow: 0 4px 0px rgba(0, 0, 0, 0.1);
   }
 
+  .btn-primary:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 8px 20px var(--accent-glow);
+  }
+
+  /* --- MAP & LOGBOOK UTILITIES --- */
+
+  /* Digital logbook flipping perspective (keep for the FlipBook component) */
   .stf__parent {
     perspective: 2500px;
-  }
-
-  .explorer-diary .stf__parent {
-    perspective: 3000px;
-  }
-  .page-paper-texture {
-    background-color: #f4f1ea;
-    /* Subtle paper fiber texture */
-    background-image: url("https://www.transparenttextures.com/patterns/natural-paper.png");
-  }
-
-  /* Make the cover look like weathered leather or canvas */
-  .diary-cover {
-    background-color: #2c241e;
-    background-image: url("https://www.transparenttextures.com/patterns/leather.png");
-    box-shadow: inset -10px 0 20px rgba(0, 0, 0, 0.5),
-      10px 10px 40px rgba(0, 0, 0, 0.6);
-  }
-
-  /* Handwriting Font (Optional but recommended) */
-  @import url("https://fonts.googleapis.com/css2?family=Caveat:wght@400;700&display=swap");
-  .font-handwriting {
-    font-family: "Caveat", cursive;
   }
 
   .no-scrollbar::-webkit-scrollbar {
     display: none;
   }
+
   .no-scrollbar {
     -ms-overflow-style: none;
     scrollbar-width: none;
   }
 
-  /* src/index.css */
   .custom-marker {
     cursor: pointer;
+    transition: transform 0.2s ease;
   }
 
   .custom-marker:hover {
     filter: brightness(1.2) saturate(1.5);
     transform: scale(1.1);
-    transition: transform 0.2s ease;
   }
 
-  /* --- LEAFLET OVERRIDES --- */
+  /* --- LEAFLET / MAP OVERRIDES --- */
 
-  /* --- RPG VERTICAL POPUP FIX --- */
+  .leaflet-container {
+    background: var(--bg-page) !important;
+    outline: 0;
+  }
 
+  .leaflet-tile-pane {
+    filter: var(--map-tiles-filter);
+  }
+
+  /* Removes the default white Leaflet popup styling to allow our glass-card look */
   .leaflet-popup-content-wrapper {
     background: transparent !important;
     box-shadow: none !important;
@@ -147,48 +163,11 @@
 
   .leaflet-popup-content {
     margin: 0 !important;
-    /* Force it to follow our card's width */
     width: fit-content !important;
   }
 
-  .leaflet-popup-tip-container {
-    /* Optional: Hide the triangle tip for a cleaner "floating HUD" look */
-    display: none;
-  }
-
+  .leaflet-popup-tip-container,
   .leaflet-popup-close-button {
     display: none !important;
-  }
-  .glass-card {
-    background-color: var(--hud-bg);
-    backdrop-filter: blur(20px) saturate(160%); /* Increased blur for "Calm" vibe */
-    border: 1px solid var(--hud-border);
-    box-shadow: var(--shadow-tactical);
-    border-radius: 2rem; /* Rounder corners = more friendly/calm */
-    transition: all 0.4s cubic-bezier(0.22, 1, 0.36, 1);
-  }
-
-  .btn-primary {
-    background-color: var(--accent-primary);
-    color: #000000; /* Force black for maximum legibility on Lime */
-    font-weight: 800;
-    letter-spacing: -0.02em;
-    border-radius: 1.5rem;
-    padding: 1rem 2rem;
-    box-shadow: 0 4px 0px rgba(0, 0, 0, 0.1); /* Subtle "pushable" button feel */
-  }
-
-  .btn-primary:hover {
-    transform: translateY(-2px);
-    box-shadow: 0 8px 20px var(--accent-glow);
-  }
-  .leaflet-container {
-    background: var(--bg-page) !important;
-    outline: 0;
-  }
-
-  /* Apply your custom map filter from index.css */
-  .leaflet-tile-pane {
-    filter: var(--map-tiles-filter);
   }
 }
