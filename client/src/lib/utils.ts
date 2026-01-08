@@ -116,7 +116,6 @@ export const StorageService = {
       return false;
     }
   },
-
   /* =============================
            LOG STORAGE
      ============================= */
@@ -147,6 +146,30 @@ export const StorageService = {
       (await detailStore.getItem<CheckPointData[]>(`logs_${missionId}`)) ?? [];
 
     return { ...summary, logs };
+  },
+
+  async getRouteSummary(missionId: string) {
+    return await indexStore.getItem<RouteData>(`route_${missionId}`);
+  },
+
+  async UpdateRouteSummary(missionId: string, updates: {}) {
+    try {
+      const summaryKey = `route_${missionId}`;
+
+      // FIX: Use indexStore instead of localforage to stay in the same database
+      const existingData: any = (await indexStore.getItem(summaryKey)) || {};
+
+      const updatedData = {
+        ...existingData,
+        ...updates,
+      };
+
+      await indexStore.setItem(summaryKey, updatedData);
+      return true;
+    } catch (error) {
+      console.error("Failed to update route summary:", error);
+      return false;
+    }
   },
 };
 

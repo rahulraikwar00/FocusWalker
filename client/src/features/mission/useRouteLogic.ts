@@ -3,7 +3,12 @@ import L from "leaflet";
 import { useState, useRef, useEffect, useCallback } from "react";
 import { lineString } from "@turf/helpers";
 import along from "@turf/along";
-import { toggleStayAwake, triggerTactilePulse } from "@/lib/utils";
+import {
+  getMissionId,
+  StorageService,
+  toggleStayAwake,
+  triggerTactilePulse,
+} from "@/lib/utils";
 import { useGlobal } from "./contexts/GlobalContext";
 const METERS_PER_STEP = 0.72; // Average step length in meters
 // const BREAK_DURATION = 25; //in min
@@ -23,6 +28,8 @@ export interface MissionMetrics {
   steps: number;
   timeLeft: number;
   distDone: number;
+  totalDist?: number;
+  totalTime?: number;
 }
 
 export interface ActiveRoute {
@@ -47,6 +54,8 @@ export function useRouteLogic(speedKmh: number, isWakeLockEnabled: boolean) {
     steps: 0,
     timeLeft: 0,
     distDone: 0,
+    totalDist: 0,
+    totalTime: 0,
   });
   const [isLocked, setIsLocked] = useState(true); // Default to locked
   const [tentPositionArray, setTentPositionArray] = useState<
@@ -142,11 +151,13 @@ export function useRouteLogic(speedKmh: number, isWakeLockEnabled: boolean) {
           const tents = calculateTents(line, r.distance);
           setTentPositionArray(tents.map((t) => [t.latlng.lat, t.latlng.lng]));
 
-          // 3. Set initial mission metrics
+          // ✅ FIX: Use 'r' directly instead of 'route'
           setMetrics({
             steps: 0,
             timeLeft: Math.ceil(r.distance / speedMs),
             distDone: 0,
+            totalDist: r.distance, // Use r.distance
+            totalTime: r.distance / speedMs, // Use calculated duration
           });
 
           // 4. PRE-GENERATE MISSION ID (Optional but recommended)
@@ -349,7 +360,10 @@ export function useRouteLogic(speedKmh: number, isWakeLockEnabled: boolean) {
       if (progressRef.current < 1) {
         animRef.current = requestAnimationFrame(frame);
       } else {
+        const missionid = getMissionId(points);
+        updateMissionStatus("finished", missionid);
         setIsActive(false);
+        reset();
         confetti();
       }
     };
@@ -383,18 +397,48 @@ export function useRouteLogic(speedKmh: number, isWakeLockEnabled: boolean) {
     lastTimeRef.current = 0;
   };
 
+  interface UpdateMissionStatusProps {
+    status: "active" | "paused" | "finished" | "reset";
+    missionId: string;
+  }
+  const updateMissionStatus = async (
+    status: UpdateMissionStatusProps["status"],
+    missionId: string
+  ) => {
+    if (!missionId) return;
+
+    const partialData = {
+      status,
+    };
+    await StorageService.UpdateRouteSummary(missionId, partialData);
+  };
   // 4. Memoize reset
-  const reset = useCallback(() => {
+  const reset = useCallback(async () => {
+    const missionid = getMissionId(points);
+    if (missionid) {
+      await StorageService.removeRouteSummary(missionid);
+    }
+    // 2. Clear UI State
     setPoints({ start: null, end: null });
     setRoute(null);
     setCurrentPos(null);
     setIsActive(false);
     setProgress(0);
     setTentPositionArray(null);
+
+    // 3. Clear Refs
     progressRef.current = 0;
     lastTimeRef.current = 0;
-    setMetrics({ steps: 0, timeLeft: 0, distDone: 0 });
-  }, []);
+
+    // 4. Reset Metrics
+    setMetrics({
+      steps: 0,
+      timeLeft: 0,
+      distDone: 0,
+      totalDist: 0,
+      totalTime: 0,
+    });
+  }, [points]); // 'points' must be a dependency so getMissionId works
   return {
     points,
     route,
@@ -416,5 +460,6 @@ export function useRouteLogic(speedKmh: number, isWakeLockEnabled: boolean) {
     removePoint,
     setPoints,
     getLocalityName,
+    updateMissionStatus,
   };
 }

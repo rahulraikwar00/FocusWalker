@@ -60,6 +60,7 @@ export default function FocusTacticalMap() {
     isLoadingRoute,
     removePoint,
     getLocalityName,
+    updateMissionStatus,
   } = useRouteLogic(settings.speedKmh, settings.isWakeLockEnabled);
 
   const leafletRoute = useMemo(() => {
@@ -138,6 +139,7 @@ export default function FocusTacticalMap() {
             handleStartMission,
             reset,
             getLocalityName,
+            updateMissionStatus,
           }}
         />
       </div>

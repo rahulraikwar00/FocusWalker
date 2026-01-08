@@ -98,6 +98,9 @@ const RouteDetailsCard = ({
             <span className="text-[12px] font-black text-white/90 uppercase tracking-wider">
               {route.missionName || "UNNAMED_OP"}
             </span>
+            <span className="text-[12px] font-black text-white/90 uppercase tracking-wider">
+              {route.status || "UNNAMED_OP"}
+            </span>
             <span className="text-[9px] text-tactical/50 font-mono uppercase tracking-tighter">
               ID: {route.id.slice(0, 12)} // {new Date().toLocaleDateString()}
             </span>
