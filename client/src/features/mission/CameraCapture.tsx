@@ -7,31 +7,67 @@ interface CameraCaptureProps {
 }
 
 export const CameraCapture: React.FC<CameraCaptureProps> = ({ onCapture }) => {
-  // Use HTMLVideoElement for the ref type
   const videoRef = useRef<HTMLVideoElement>(null);
   const [stream, setStream] = useState<MediaStream | null>(null);
   const [isOpen, setIsOpen] = useState(false);
 
   const openCamera = async () => {
     try {
-      const mediaStream = await navigator.mediaDevices.getUserMedia({
-        // 'environment' is best for PWA rear-camera usage (scanning/photos)
-        video: { facingMode: "environment" },
+      // 1. Get a list of all available media devices
+      const devices = await navigator.mediaDevices.enumerateDevices();
+      const videoDevices = devices.filter((d) => d.kind === "videoinput");
+
+      // 2. Find the "Main" camera.
+      // Most phones list the Main sensor as 'Camera 0' or just 'Back Camera'.
+      // The wide-angle is usually labeled 'wide', 'ultra', or 'camera 1'.
+      const mainCamera =
+        videoDevices.find(
+          (device) =>
+            device.label.toLowerCase().includes("0") ||
+            (device.label.toLowerCase().includes("back") &&
+              !device.label.toLowerCase().includes("wide"))
+        ) ||
+        videoDevices.find((d) => d.label.toLowerCase().includes("back")) ||
+        videoDevices[0];
+
+      const constraints: any = {
+        video: {
+          // If we found a specific ID, use it, otherwise fallback to environment
+          deviceId: mainCamera ? { exact: mainCamera.deviceId } : undefined,
+          facingMode: mainCamera ? undefined : "environment",
+
+          // Requesting a high-res but standard aspect ratio
+          width: { ideal: 1920 },
+          height: { ideal: 1080 },
+
+          // 3. Force the zoom to 1x to bypass ultra-wide default
+          advanced: [{ zoom: 1.0 }],
+        },
         audio: false,
-      });
+      };
+
+      const mediaStream = await navigator.mediaDevices.getUserMedia(
+        constraints
+      );
 
       setStream(mediaStream);
       setIsOpen(true);
 
-      // We use a timeout or useEffect to ensure the video element exists before assigning
       if (videoRef.current) {
         videoRef.current.srcObject = mediaStream;
       }
     } catch (err) {
-      console.error("Camera access denied or unavailable:", err);
-      alert(
-        "Unable to access camera. Please ensure you have granted permission."
-      );
+      console.error("Camera access error:", err);
+      // Fallback for older browsers that don't support 'exact' deviceId
+      try {
+        const fallbackStream = await navigator.mediaDevices.getUserMedia({
+          video: { facingMode: "environment" },
+        });
+        setStream(fallbackStream);
+        setIsOpen(true);
+      } catch (fallbackErr) {
+        alert("Unable to access the main sensor. Check permissions.");
+      }
     }
   };
 
@@ -90,18 +126,18 @@ export const CameraCapture: React.FC<CameraCaptureProps> = ({ onCapture }) => {
             className="w-full h-64 border rounded bg-black"
           />
           <div className="flex gap-2 mt-2">
-            <button
+            <Button
               onClick={takePhoto}
               className="flex-1 bg-(--bg-primary) text-white p-2 rounded"
             >
               Capture
-            </button>
-            <button
+            </Button>
+            <Button
               onClick={closeCamera}
               className="flex-1 bg-gray-600 text-white p-2 rounded"
             >
               Cancel
-            </button>
+            </Button>
           </div>
         </div>
       )}
