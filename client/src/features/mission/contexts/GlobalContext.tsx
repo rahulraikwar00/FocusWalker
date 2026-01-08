@@ -1,3 +1,4 @@
+import { StorageService } from "@/lib/utils";
 import {
   createContext,
   useContext,
@@ -38,8 +39,9 @@ interface GlobalState {
     isHapticsEnabled: boolean;
     breakDuration: number;
   };
-  missionStatus: "idle" | "active" | "paused";
+  missionStatus: "finished" | "active" | "paused" | "idle";
   user: UserData;
+  currentMissionId: string | null; // Track which mission is active
 }
 
 interface GlobalContextValue extends GlobalState {
@@ -131,10 +133,25 @@ export function GlobalProvider({ children }: { children: ReactNode }) {
   }, [state.settings.isDark, updateSettings]);
 
   const setMissionStatus = useCallback(
-    (status: GlobalState["missionStatus"]) => {
-      setState((prev) => ({ ...prev, missionStatus: status }));
+    async (status: GlobalState["missionStatus"], missionId?: string) => {
+      const targetId = missionId || state.currentMissionId;
+
+      // Update local React state
+      setState((prev) => ({
+        ...prev,
+        missionStatus: status,
+        currentMissionId: targetId,
+      }));
+
+      // Persist to heavy storage (IndexedDB) via your StorageService
+      if (targetId) {
+        await StorageService.UpdateRouteSummary(targetId, {
+          status: status,
+          lastUpdated: new Date().toISOString(),
+        });
+      }
     },
-    []
+    [state.currentMissionId]
   );
 
   // --- THEME SYNC ---
@@ -194,9 +211,10 @@ const initialDefaultState: GlobalState = {
     breakDuration: 25,
   },
   missionStatus: "idle",
+  currentMissionId: null,
   user: {
     id: "UX-8829",
-    name: "FOCUS WALKER",
+    name: "FocusWalker",
     rank: "Scout",
     unit: "ALPHA-6",
     clearance: "Level 1",

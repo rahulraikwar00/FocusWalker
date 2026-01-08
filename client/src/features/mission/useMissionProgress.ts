@@ -3,6 +3,13 @@ import L from "leaflet";
 import along from "@turf/along";
 import confetti from "canvas-confetti";
 
+interface MetricsProps {
+  steps: number;
+  timeLeft: number;
+  distDone: number;
+  totaltime?: number;
+  totalDist?: number;
+}
 export function useMissionProgress(
   isActive: boolean,
   setIsActive: (v: boolean) => void,
@@ -11,10 +18,12 @@ export function useMissionProgress(
 ) {
   const [progress, setProgress] = useState(0);
   const [currentPos, setCurrentPos] = useState<L.LatLng | null>(null);
-  const [metrics, setMetrics] = useState({
+  const [metrics, setMetrics] = useState<MetricsProps>({
     steps: 0,
     timeLeft: 0,
     distDone: 0,
+    totaltime: 0,
+    totalDist: 0,
   });
 
   const animRef = useRef<number>(0);
@@ -29,6 +38,7 @@ export function useMissionProgress(
         steps: 0,
         timeLeft: Math.ceil(route.duration || 0),
         distDone: 0,
+        totaltime: route.duration,
       });
 
       // Set the marker to the start of the route
@@ -92,7 +102,13 @@ export function useMissionProgress(
     resetProgress: () => {
       progressRef.current = 0;
       setProgress(0);
-      setMetrics({ steps: 0, timeLeft: 0, distDone: 0 });
+      setMetrics({
+        steps: 0,
+        timeLeft: 0,
+        distDone: 0,
+        totalDist: 0,
+        totaltime: 0,
+      });
     },
   };
 }

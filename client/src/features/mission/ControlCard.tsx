@@ -8,6 +8,7 @@ import { TacticalResetButton } from "./TacticalResetButton";
 import { CheckPointData, RouteData } from "@/types/types";
 
 import { getMissionId, StorageService } from "@/lib/utils";
+import { MissionMetrics } from "@/features/mission/useRouteLogic";
 
 // --- SUB-COMPONENTS ---
 
@@ -74,62 +75,82 @@ export const ControlCard = ({
   mapActions: any;
   points: any;
 }) => {
-  const { triggerToast } = useGlobal();
+  const { triggerToast, settings } = useGlobal();
   const [isCollapsed, setIsCollapsed] = useState(false);
-  const { isActive, progress, metrics, route, checkpoints } = mapState;
-  const { handleStopMission, handleStartMission, reset, getLocalityName } =
+  const { isActive, progress, metrics, route } = mapState;
+  const { handleStopMission, handleStartMission, reset, updateMissionStatus } =
     mapActions;
-
   const [missionId, setMissionId] = useState("");
 
-  const initiateMission = async () => {
-    if (missionId) {
-      handleStartMission();
-      return;
-    }
+  const handleToggleMission = async () => {
+    if (!route || !missionId) return;
 
-    const draftMission: RouteData = {
-      id: missionId, // Use the string directly
-      timestamp: new Date().toISOString(),
-      totalDistance: metrics.distDone,
-      totalDuration: metrics.timeElapsed,
-    };
-
-    await StorageService.saveRouteSummary(draftMission, missionId);
-
-    handleStartMission();
-  };
-
-  const saveMission = async () => {
-    if (!missionId) return; // Guard clause
-    const finalMissionData: RouteData = {
-      id: missionId, // Use the string directly
-      timestamp: new Date().toISOString(),
-      totalDistance: metrics.distDone,
-      totalDuration: metrics.timeElapsed,
-      status: "active",
-    };
-
-    try {
-      await StorageService.saveRouteSummary(finalMissionData, missionId);
-      triggerToast("Intel Secured: Archive Updated", "success");
+    if (isActive) {
+      // PAUSE LOGIC
       handleStopMission();
-    } catch (error) {
-      triggerToast("System Error: Intel Lost", "error");
+      await updateMissionStatus("paused", missionId);
+      triggerToast("Tactical: Paused", "error");
+    } else {
+      // START / RESUME LOGIC
+      const existing = await StorageService.getRouteSummary(missionId);
+
+      const speedMs = (settings.speedKmh * 1000) / 3600;
+
+      // ✅ FIX: Calculate totals directly from the route object to avoid stale state
+      const totalDist = route.distance;
+      const totalTime = route.duration / speedMs;
+
+      if (!existing) {
+        const initialMission: RouteData = {
+          id: missionId,
+          timestamp: new Date().toISOString(),
+          status: "active",
+          totalDistance: totalDist,
+          totalDuration: totalTime,
+        };
+
+        console.log("Saving Initial Mission:", initialMission);
+        await StorageService.saveRouteSummary(initialMission, missionId);
+      } else {
+        await updateMissionStatus("active", missionId);
+
+        // Ensure DB is updated with totals even on resume
+        await StorageService.UpdateRouteSummary(missionId, {
+          totalDistance: totalDist,
+          totalTime: totalTime,
+        });
+      }
+
+      handleStartMission();
+      triggerToast("Tactical: Initiated", "success");
     }
   };
+
   useEffect(() => {
-    if (route) {
-      setMissionId(getMissionId(points));
-    }
-    setIsCollapsed(route ? false : true);
-  }, [route]);
+    const syncOnLoad = async () => {
+      if (route) {
+        const id = getMissionId(points);
+        setMissionId(id);
+        setIsCollapsed(false);
+
+        // Check if there's a saved session to alert the system
+        const saved = await StorageService.getRouteSummary(id);
+        if (saved?.status === "paused" || saved?.status === "active") {
+          console.log("Mission ready to resume from local storage");
+        }
+      } else {
+        setIsCollapsed(true);
+      }
+    };
+
+    syncOnLoad();
+  }, [route]); // Triggered when a route is picked
 
   return (
     <div className="absolute bottom-0 left-1/2 -translate-x-1/2 z-2000 pointer-events-none w-full max-w-md px-4 pb-[calc(env(safe-area-inset-bottom,0px)+1rem)]">
       <motion.div
         layout
-        className="bg-hud backdrop-blur-2xl border border-hud rounded-[2.5rem] pointer-events-auto overflow-hidden shadow-[0_-20px_50px_-12px_rgba(0,0,0,0.5)]"
+        className="bg-hud  backdrop-blur-2xl border border-hud rounded-[2.5rem] pointer-events-auto overflow-hidden shadow-[0_-20px_50px_-12px_rgba(0,0,0,0.5)]"
       >
         {/* CLOCK SECTION */}
         <div
@@ -191,7 +212,7 @@ export const ControlCard = ({
               initial={{ height: 0, opacity: 0 }}
               animate={{ height: "auto", opacity: 1 }}
               exit={{ height: 0, opacity: 0 }}
-              className="overflow-hidden border-t border-(--hud-border)"
+              className="overflow-hidden border-t border-(--hud-border) opacity-90"
             >
               <div className="grid grid-cols-3 bg-(--text-secondary)/5 border-y border-(--hud-border)">
                 <StatItem
@@ -218,19 +239,7 @@ export const ControlCard = ({
               <div className="p-4 flex gap-2 h-20">
                 {/* START / STOP */}
                 <Button
-                  onClick={() => {
-                    isActive ? handleStopMission() : handleStartMission();
-                    triggerToast(
-                      isActive ? "Tactical: Aborted" : "Tactical: Initiated",
-                      isActive ? "error" : "success"
-                    );
-                    if (isActive) {
-                      saveMission();
-                    } else {
-                      initiateMission();
-                      triggerToast("Tactical: Initiated", "success");
-                    }
-                  }}
+                  onClick={handleToggleMission}
                   disabled={!route}
                   className={`flex-3 h-full rounded-2xl font-black text-md tracking-[0.3em] uppercase transition-all duration-300 border-2 ${
                     isActive
@@ -238,7 +247,11 @@ export const ControlCard = ({
                       : "bg-(--accent-primary) border-(--accent-primary) text-(--bg-page) shadow-[0_0_25px_var(--accent-glow)]"
                   }`}
                 >
-                  {isActive ? "STOP FOCUS" : "START FOCUS"}
+                  {isActive
+                    ? "PAUSE FOCUS"
+                    : progress > 0
+                    ? "RESUME"
+                    : "START FOCUS"}
                 </Button>
 
                 {/* RESET BUTTON (Smart Component) */}

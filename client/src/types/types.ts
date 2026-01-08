@@ -24,11 +24,11 @@ export interface RouteData {
   missionName?: string;
   originName?: string;
   destinationName?: string;
-  totalDistance: number;
-  totalDuration: number;
-  timestamp?: string;
+  totalDistance?: number;
+  totalDuration?: number;
+  timestamp: string;
   logs?: CheckPointData[];
-  status?: "completed" | "aborted" | "active";
+  status: "completed" | "paused" | "active";
   logCount?: number;
 }
 
