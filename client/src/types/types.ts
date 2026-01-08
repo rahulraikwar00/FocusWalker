@@ -26,7 +26,7 @@ export interface RouteData {
   destinationName?: string;
   totalDistance?: number;
   totalDuration?: number;
-  timestamp?: string;
+  timestamp: string;
   logs?: CheckPointData[];
   status: "completed" | "paused" | "active";
   logCount?: number;

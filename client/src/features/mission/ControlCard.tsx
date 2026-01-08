@@ -150,7 +150,7 @@ export const ControlCard = ({
     <div className="absolute bottom-0 left-1/2 -translate-x-1/2 z-2000 pointer-events-none w-full max-w-md px-4 pb-[calc(env(safe-area-inset-bottom,0px)+1rem)]">
       <motion.div
         layout
-        className="bg-hud opacity-90 backdrop-blur-2xl border border-hud rounded-[2.5rem] pointer-events-auto overflow-hidden shadow-[0_-20px_50px_-12px_rgba(0,0,0,0.5)]"
+        className="bg-hud  backdrop-blur-2xl border border-hud rounded-[2.5rem] pointer-events-auto overflow-hidden shadow-[0_-20px_50px_-12px_rgba(0,0,0,0.5)]"
       >
         {/* CLOCK SECTION */}
         <div
@@ -212,7 +212,7 @@ export const ControlCard = ({
               initial={{ height: 0, opacity: 0 }}
               animate={{ height: "auto", opacity: 1 }}
               exit={{ height: 0, opacity: 0 }}
-              className="overflow-hidden border-t border-(--hud-border)"
+              className="overflow-hidden border-t border-(--hud-border) opacity-90"
             >
               <div className="grid grid-cols-3 bg-(--text-secondary)/5 border-y border-(--hud-border)">
                 <StatItem
