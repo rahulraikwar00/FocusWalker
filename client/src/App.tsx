@@ -13,6 +13,8 @@ import { MissionContextProvider } from "./features/mission/contexts/MissionConte
 // Lazy load the heavy map component
 const FocusTacticalMap = React.lazy(() => import("@/pages/FocusTacticalMap"));
 
+import { HomePage } from "./pages/HomePage";
+
 const AppLoading = () => (
   <div className="flex h-screen w-screen items-center justify-center bg-background text-muted-foreground">
     <p className="animate-pulse">Loading Tactical Interface...</p>
@@ -22,14 +24,21 @@ const AppLoading = () => (
 function Router() {
   return (
     <Switch>
-      <Route
-        path="/"
-        component={() => (
-          <Suspense fallback={<AppLoading />}>
-            <FocusTacticalMap />
-          </Suspense>
-        )}
-      />
+      {/* 1. Use the 'path' first, and use 'exact' for the root */}
+      <Route path="/">
+        <Suspense fallback={<AppLoading />}>
+          <HomePage />
+        </Suspense>
+      </Route>
+
+      {/* 2. Use children instead of an inline component function */}
+      <Route path="/app">
+        <Suspense fallback={<AppLoading />}>
+          <FocusTacticalMap />
+        </Suspense>
+      </Route>
+
+      {/* 3. The Catch-all 'NotFound' must be LAST */}
       <Route component={NotFound} />
     </Switch>
   );
