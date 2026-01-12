@@ -1,5 +1,5 @@
 import * as React from "react";
-import L from "leaflet";
+import L, { point } from "leaflet";
 import {
   MapContainer,
   TileLayer,
@@ -84,7 +84,7 @@ export const MapView = memo(
     removePoint,
     setIsActive,
   }: any) => {
-    // Choose Tile Provider based on theme
+    // Then in your MapView component, add this useMemo:
 
     const tileUrl = useMemo(
       () =>
@@ -133,10 +133,11 @@ export const MapView = memo(
             points={points}
             isLocked={isLocked}
             currentPos={currentPos}
+            route={route}
           />
 
           {/* Start Marker */}
-          {points.start && (
+          {points.start && !isActive && (
             <Marker
               position={points.start}
               icon={starttacticalIcon}
@@ -162,16 +163,16 @@ export const MapView = memo(
               }}
             />
           )}
-
-          {/* Tactical Path (Route) */}
           {route?.path && (
             <Polyline
+              key={route.path.length} // Force re-draw if length changes
               positions={route.path}
               pathOptions={{
                 color: isDark ? "#BFFF04" : "#86B300",
                 weight: 4,
                 opacity: 0.8,
-                dashArray: isActive ? "1, 10" : "none", // Dashed line when active
+                dashArray: isActive ? "1, 10" : "none",
+                pane: "markerPane",
               }}
             />
           )}
@@ -197,18 +198,6 @@ export const MapView = memo(
         </MapContainer>
       </div>
     );
-  },
-  (prev, next) => {
-    return (
-      prev.isDark === next.isDark &&
-      prev.isActive === next.isActive &&
-      prev.isLocked === next.isLocked &&
-      // Check the length of the path instead of the array reference
-      prev.route?.path?.length === next.route?.path?.length &&
-      prev.currentPos?.lat === next.currentPos?.lat &&
-      prev.points.start?.lat === next.points.start?.lat &&
-      prev.points.end?.lat === next.points.end?.lat
-    );
   }
 );
 
@@ -221,6 +210,7 @@ function MapController({
   onMapClick,
   points,
   isLocked,
+  route,
   currentPos,
 }: any) {
   const map = useMap();
@@ -243,11 +233,10 @@ function MapController({
     if (isActive && isLocked && currentPos) {
       map.setView(currentPos, 18, {
         animate: true,
-        duration: 0.5, // Fast enough to keep up with movement
+        duration: 0.5,
       });
       return;
     }
-
     // --- 2. OBJECTIVE REACHED (Pause/Popup Mode) ---
     // If we just stopped at a tent (not the start point)
     if (
@@ -257,7 +246,7 @@ function MapController({
       !currentPos.equals(points.start)
     ) {
       map.flyTo(currentPos, 17, {
-        duration: 0.8, // Smooth cinematic arrival
+        duration: 0.8,
         easeLinearity: 0.25,
       });
       return;
@@ -269,11 +258,11 @@ function MapController({
       const bounds = L.latLngBounds([points.start, points.end]);
       map.flyToBounds(bounds, {
         padding: [80, 80],
-        duration: 1.2, // Grand overview transition
+        duration: 1.2,
         easeLinearity: 0.25,
       });
     }
-  }, [isActive, isLocked, points, map, currentPos]);
+  }, [isActive, isLocked, points, map, currentPos, route]);
 
   return null;
 }

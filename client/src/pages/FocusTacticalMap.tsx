@@ -25,6 +25,12 @@ const MapView = React.lazy(() =>
   }))
 );
 
+// Define the interface clearly
+export interface MissionTent {
+  id: string;
+  latlng: L.LatLng;
+  originalIdx: number;
+}
 const DEFAULT_LOCATION = new L.LatLng(20.5937, 78.9629);
 
 export default function FocusTacticalMap() {
@@ -63,36 +69,22 @@ export default function FocusTacticalMap() {
     updateMissionStatus,
   } = useRouteLogic(settings.speedKmh, settings.isWakeLockEnabled);
 
-  const leafletRoute = useMemo(() => {
-    if (!route || !route.path) return null;
-
-    return {
-      ...route,
-      // OSRM [lng, lat] -> Leaflet [lat, lng]
-      path: (route.path as any[]).map((coord: any) => {
-        // Handle array format [lng, lat]
-        if (Array.isArray(coord)) {
-          return L.latLng(coord[1], coord[0]);
-        }
-        // Handle object format {0: lng, 1: lat} from your logs
-        if (coord[0] !== undefined) {
-          return L.latLng(coord[1], coord[0]);
-        }
-        return L.latLng(coord);
-      }),
-    };
-  }, [route]);
-
-  const formattedTents = useMemo(() => {
+  const formattedTents = useMemo((): MissionTent[] => {
+    // Add explicit return type
     if (!tentPositionArray) return [];
-    return (tentPositionArray as any[]).map((t, i) => ({
-      id: `tent-${i}`,
-      // Extracting from the {0: lat, 1: lng} structure seen in your logs
-      latlng: L.latLng(t[0] ?? t.lat, t[1] ?? t.lng),
-      originalIdx: i,
-    }));
-  }, [tentPositionArray]);
 
+    return (tentPositionArray as any[]).map((t, i) => {
+      // Determine the lat/lng regardless of input format
+      const lat = t.lat ?? t[0] ?? (t.latlng ? t.latlng.lat : 0);
+      const lng = t.lng ?? t[1] ?? (t.latlng ? t.latlng.lng : 0);
+
+      return {
+        id: `tent-${i}`,
+        latlng: L.latLng(lat, lng), // This creates the Leaflet LatLng object
+        originalIdx: i,
+      };
+    });
+  }, [tentPositionArray]);
   return (
     <div className="relative h-dvh w-full overflow-hidden bg-page-bg font-sans text-(--text-primary) transition-colors duration-500">
       {/* LAYER 0: MAP (Bottom) */}
@@ -107,7 +99,7 @@ export default function FocusTacticalMap() {
             currentPos={currentPos}
             isActive={isActive}
             points={points}
-            route={leafletRoute}
+            route={route}
             isLocked={isLocked}
             isDark={settings.isDark}
             handleMapClick={handleMapClick}

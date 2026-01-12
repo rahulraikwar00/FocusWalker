@@ -10,6 +10,7 @@ import {
   triggerTactilePulse,
 } from "@/lib/utils";
 import { useGlobal } from "./contexts/GlobalContext";
+import { useMap } from "react-leaflet";
 const METERS_PER_STEP = 0.72; // Average step length in meters
 // const BREAK_DURATION = 25; //in min
 
@@ -263,20 +264,48 @@ export function useRouteLogic(speedKmh: number, isWakeLockEnabled: boolean) {
       if (isActive) return;
 
       setPoints((p) => {
+        // 3. Logic for setting points
         if (!p.start) {
-          // SET START
           return { ...p, start: e.latlng };
-        } else if (!p.end) {
-          // SET END & TRIGGER ROUTE
+        }
+
+        if (!p.end) {
+          // Trigger the fetch outside or via useEffect for better practice
           fetchRoute(p.start, e.latlng);
           return { ...p, end: e.latlng };
         }
-        // If both exist, ignore map clicks (must remove a point first)
+
         return p;
       });
     },
-    [isActive, fetchRoute]
+    [isActive, fetchRoute] // Include map in dependencies
   );
+
+  //   (e: L.LeafletMouseEvent) => {
+  //     if (isActive) return;
+
+  //     const map = useMap();
+
+  //     setPoints((p) => {
+  //       const currentPos = L.latLng([p.start, p.end] as const);
+  //       map.setView(currentPos, 18, {
+  //         animate: true,
+  //         duration: 0.5, // Fast enough to keep up with movement
+  //       });
+  //       if (!p.start) {
+  //         // SET START
+  //         return { ...p, start: e.latlng };
+  //       } else if (!p.end) {
+  //         // SET END & TRIGGER ROUTE
+  //         fetchRoute(p.start, e.latlng);
+  //         return { ...p, end: e.latlng };
+  //       }
+  //       // If both exist, ignore map clicks (must remove a point first)
+  //       return p;
+  //     });
+  //   },
+  //   [isActive, fetchRoute]
+  // );
 
   const searchLocation = useCallback(
     async (query: string): Promise<SearchResult[]> => {
