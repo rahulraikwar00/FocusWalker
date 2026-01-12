@@ -80,6 +80,8 @@ export const ControlCard = () => {
   const route = missionStates.route;
   const isActive = missionStates.missionStatus === "active";
   const metrics = missionStates.metrics;
+
+  console.log("missionstartes", missionStates);
   const handleToggleMission = async () => {
     if (!route || !missionStates.currentMissionId) return;
 
@@ -133,34 +135,42 @@ export const ControlCard = () => {
   };
 
   useEffect(() => {
-    const syncOnLoad = async () => {
-      if (route) {
-        const { start, end } = missionStates.position;
+    setIsCollapsed(!isCollapsed);
+  }, [missionStates.route]);
+  useEffect(() => {
+    // 1. Simple Visibility Toggle
+    if (missionStates.route) {
+      setIsCollapsed(false);
+    } else {
+      setIsCollapsed(true);
+      return; // Exit early if no route
+    }
 
-        if (start && end) {
-          const startLatLng = L.latLng(start);
-          const endLatLng = L.latLng(end);
+    // 2. ID Synchronization (Only if ID is missing)
+    const syncId = async () => {
+      const { start, end } = missionStates.position;
+      if (start && end && !missionStates.currentMissionId) {
+        const id = getMissionId({
+          start: L.latLng(start),
+          end: L.latLng(end),
+        });
 
-          const id = getMissionId({
-            start: startLatLng,
-            end: endLatLng,
-          });
-          // Now you can safely use the ID
-          setMissionStates((prev) => ({ ...prev, currentMissionId: id }));
-          // Check if there's a saved session to alert the system
-          const saved = await StorageService.getRouteSummary(id);
-          if (saved?.status === "paused" || saved?.status === "active") {
-            console.log("Mission ready to resume from local storage");
-          }
+        setMissionStates((prev) => ({ ...prev, currentMissionId: id }));
+
+        const saved = await StorageService.getRouteSummary(id);
+        if (saved?.status === "paused" || saved?.status === "active") {
+          console.log("Mission ready to resume");
         }
-        setIsCollapsed(false);
-      } else {
-        setIsCollapsed(true);
       }
     };
 
-    syncOnLoad();
-  }, [missionStates.route === route]); // Triggered when a route is picked
+    syncId();
+    // We only care if the route object itself changes or coordinates are set
+  }, [
+    missionStates.route,
+    !!missionStates.position.start,
+    !!missionStates.position.end,
+  ]);
 
   return (
     <div className="absolute bottom-0 left-1/2 -translate-x-1/2 z-2000 pointer-events-none w-full max-w-md px-4 pb-[calc(env(safe-area-inset-bottom,0px)+1rem)]">

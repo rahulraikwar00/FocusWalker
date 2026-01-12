@@ -8,6 +8,7 @@ import InstallButton from "./components/shared/PWAInstallButton";
 import { GlobalProvider } from "./features/mission/contexts/GlobalContext";
 import { DrawerProvider } from "./features/mission/contexts/DrawerContext";
 import { GlobalSideSheet } from "./features/profile/GlobalSideSheet";
+import { MissionContextProvider } from "./features/mission/contexts/MissionContext";
 
 // Lazy load the heavy map component
 const FocusTacticalMap = React.lazy(() => import("@/pages/FocusTacticalMap"));
@@ -75,11 +76,13 @@ function App() {
     <QueryClientProvider client={queryClient}>
       {/* Wrap everything with your new contexts */}
       <GlobalProvider>
-        <DrawerProvider>
-          <GlobalSideSheet />
-          <Toaster />
-          <Router />
-        </DrawerProvider>
+        <MissionContextProvider>
+          <DrawerProvider>
+            <GlobalSideSheet />
+            <Toaster />
+            <Router />
+          </DrawerProvider>
+        </MissionContextProvider>
         {/* Pass the state and the function as props */}
         {!isInstalled && installPrompt && <InstallButton />}
       </GlobalProvider>

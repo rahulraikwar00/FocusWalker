@@ -130,18 +130,17 @@ export function useRouteLogic() {
           const tents = calculateTents(line, r.distance).map(
             (t) => [t.latlng.lat, t.latlng.lng] as [number, number] // Cast to Tuple
           );
-          const newId = getMissionId({ start, end });
 
           setMissionStates((prev) => ({
             ...prev,
-            currentMissionId: newId,
             route: newRoute,
             checkPoints: tents,
             metrics: {
               ...prev.metrics,
+              progress: 0,
               steps: 0,
-              timeLeft: Math.ceil(r.distance / speedMs),
               distDone: 0,
+              timeLeft: Math.ceil(r.distance / speedMs),
               totalDist: r.distance,
               totalTime: r.distance / speedMs,
             },
@@ -162,9 +161,31 @@ export function useRouteLogic() {
         setIsLoadingRoute(false);
       }
     },
-    [missionStates.position.start, missionStates.position.end]
+    [speedMs, setMissionStates]
   );
 
+  useEffect(() => {
+    const { start, end } = missionStates.position;
+
+    // Only run if we have both points but no ID yet
+    if (start && end && !missionStates.currentMissionId) {
+      const newId = getMissionId({
+        start: L.latLng(start),
+        end: L.latLng(end),
+      });
+
+      setMissionStates((prev) => ({
+        ...prev,
+        currentMissionId: newId,
+      }));
+
+      console.log("Tactical ID Synchronized:", newId);
+    }
+  }, [
+    missionStates.position.start,
+    missionStates.position.end,
+    missionStates.currentMissionId,
+  ]);
   const calculateTents = useCallback(
     (line: any, totalDistance: number) => {
       const segmentMinutes = breakDuration;
@@ -195,34 +216,71 @@ export function useRouteLogic() {
 
   //locacality name using lat lng
   const getLocalityName = async (lat: number, lon: number): Promise<string> => {
-    try {
-      const response = await fetch(
-        `https://nominatim.openstreetmap.org/reverse?format=jsonv2&lat=${lat}&lon=${lon}`,
-        {
-          headers: {
-            "User-Agent": "FocusWalker-Tactical-App", //
-          },
-        }
-      );
+    // try {
+    //   const response = await fetch(
+    //     `https://nominatim.openstreetmap.org/reverse?format=jsonv2&lat=${lat}&lon=${lon}`,
+    //     {
+    //       headers: {
+    //         "User-Agent": "FocusWalker-Tactical-App", //
+    //       },
+    //     }
+    //   );
 
-      const data = await response.json();
+    //   const data = await response.json();
 
-      const addr = data.address;
-      const locality =
-        addr.suburb ||
-        addr.neighbourhood ||
-        addr.city_district ||
-        addr.town ||
-        addr.village ||
-        addr.city;
+    //   const addr = data.address;
+    //   const locality =
+    //     addr.suburb ||
+    //     addr.neighbourhood ||
+    //     addr.city_district ||
+    //     addr.town ||
+    //     addr.village ||
+    //     addr.city;
 
-      return locality || "Unknown Sector";
-    } catch (error) {
-      console.error("Geocoding failed:", error);
-      return "Unknown Sector";
-    }
+    //   return locality || "Unknown Sector";
+    // } catch (error) {
+    //   console.error("Geocoding failed:", error);
+    //   return "Unknown Sector";
+    // }
+    return "testNameLocality";
   };
 
+  const normalize = (coord: number) => Math.round(coord * 1000000) / 1000000;
+  const handleMapClick = useCallback(
+    (e: L.LeafletMouseEvent) => {
+      if (isActive) return;
+
+      const clickedCoord: [number, number] = [
+        normalize(e.latlng.lat),
+        normalize(e.latlng.lng),
+      ];
+
+      // 1. Determine the logic BEFORE setting state
+      const currentStart = missionStates.position.start;
+      const currentEnd = missionStates.position.end;
+
+      if (!currentStart) {
+        // SET START
+        setMissionStates((prev) => ({
+          ...prev,
+          position: { ...prev.position, start: clickedCoord },
+        }));
+      } else if (!currentEnd) {
+        // SET END AND FETCH
+        const startLatLng = L.latLng(currentStart);
+        const endLatLng = L.latLng(clickedCoord);
+
+        // Call this OUTSIDE the setter
+        fetchRoute(startLatLng, endLatLng);
+
+        setMissionStates((prev) => ({
+          ...prev,
+          position: { ...prev.position, end: clickedCoord },
+        }));
+      }
+    },
+    [isActive, missionStates.position, fetchRoute, setMissionStates]
+  );
   // Inside useRouteLogic.ts
 
   const removePoint = (type: "start" | "end", isActive: boolean) => {
@@ -267,40 +325,6 @@ export function useRouteLogic() {
     triggerTactilePulse("short");
   };
 
-  const handleMapClick = useCallback(
-    (e: L.LeafletMouseEvent) => {
-      if (isActive) return;
-
-      // Convert Leaflet object to your State's tuple format [number, number]
-      const clickedCoord: [number, number] = [e.latlng.lat, e.latlng.lng];
-
-      setMissionStates((prev) => {
-        // 1. If no start point exists
-        if (!prev.position.start) {
-          return {
-            ...prev,
-            position: { ...prev.position, start: clickedCoord },
-          };
-        }
-
-        // 2. If start exists but no end point exists
-        if (!prev.position.end) {
-          const startLatLng = L.latLng(prev.position.start);
-          const endLatLng = L.latLng(clickedCoord);
-          fetchRoute(startLatLng, endLatLng);
-
-          return {
-            ...prev,
-            position: { ...prev.position, end: clickedCoord },
-          };
-        }
-
-        return prev;
-      });
-    },
-    [isActive, fetchRoute, setMissionStates] // Added setMissionStates to dependencies
-  );
-
   const searchLocation = useCallback(
     async (query: string): Promise<SearchResult[]> => {
       if (!query || isActive) return [];
@@ -330,7 +354,10 @@ export function useRouteLogic() {
   const handleLocationSelect = useCallback(
     (result: SearchResult) => {
       // 1. Ensure the format is [lat, lng] to match MissionState
-      const newLoc: [number, number] = [result.latlng.lat, result.latlng.lng];
+      const newLoc: [number, number] = [
+        normalize(result.latlng.lat),
+        normalize(result.latlng.lng),
+      ];
 
       setMissionStates((prev) => {
         // 2. Logic: If no start, set start. Otherwise, set end and fetch.
@@ -420,13 +447,7 @@ export function useRouteLogic() {
       if (animRef.current) cancelAnimationFrame(animRef.current);
       lastTimeRef.current = 0;
     };
-  }, [
-    isActive,
-    missionStates.route,
-    speedMs,
-    setMissionStates,
-    missionStates.position,
-  ]);
+  }, [isActive, missionStates.route, speedMs, setMissionStates]);
 
   const handleStartMission = async () => {
     // 1. Hardware Feedback
