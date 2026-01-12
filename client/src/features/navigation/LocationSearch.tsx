@@ -3,20 +3,13 @@ import { useEffect, useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { SearchResult } from "@/types/types";
 import { useGlobal } from "@/features/mission/contexts/GlobalContext";
+import { useRouteLogic } from "../mission/useRouteLogic";
+import { useMissionContext } from "../mission/contexts/MissionContext";
 
-interface LocationSearchProps {
-  points: { start: any; end: any };
-  searchLocation: (query: string) => Promise<SearchResult[]>;
-  onLocationSelect: (loc: SearchResult) => void;
-}
-
-export const LocationSearch = ({
-  points,
-  searchLocation,
-  onLocationSelect,
-}: LocationSearchProps) => {
-  // 1. Pull search state directly from Global Context
+export const LocationSearch = () => {
   const { searchQuery, setUI } = useGlobal();
+  const { missionStates } = useMissionContext();
+  const { searchLocation, handleLocationSelect } = useRouteLogic();
 
   const [results, setResults] = useState<SearchResult[]>([]);
   const [isSearching, setIsSearching] = useState(false);
@@ -36,7 +29,7 @@ export const LocationSearch = ({
   };
 
   const selectLocation = (loc: SearchResult) => {
-    onLocationSelect(loc);
+    handleLocationSelect(loc);
     setResults([]);
     updateQuery(""); // Clear global search state
   };
@@ -85,7 +78,9 @@ export const LocationSearch = ({
               }
             }}
             placeholder={
-              !points.start ? "Target: Origin Location" : "Target: Destination"
+              !missionStates.position.start
+                ? "Target: Origin Location"
+                : "Target: Destination"
             }
             className="bg-transparent border-none outline-none text-sm w-full py-3 text-(--text-primary) placeholder:text-(--text-primary)/40 italic font-medium"
           />
