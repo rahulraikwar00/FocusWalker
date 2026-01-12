@@ -24,7 +24,6 @@ export const PopUpcard = ({
   const [note, setNote] = useState("");
   const [isSaving, setIsSaving] = useState(false);
   const [visitCount, setVisitCount] = useState(0);
-  const [missionId, setMissionId] = useState("");
   const [cameraCaptureData, setcameraCaptureData] = useState<string>();
   const { missionStates, setMissionStates } = useMissionContext();
 
@@ -39,7 +38,7 @@ export const PopUpcard = ({
   };
 
   const handleSave = async () => {
-    if (!missionId) {
+    if (!missionStates.currentMissionId) {
       console.warn("Mission ID missing, cannot save");
       return;
     }
@@ -47,7 +46,7 @@ export const PopUpcard = ({
     setIsSaving(true);
 
     const DraftCheckPointData: CheckPointData = {
-      id: `${missionId}${tent.id}`,
+      id: `${missionStates.currentMissionId}${tent.id}`,
       label: locality,
       note,
       timestamp: Date.now().toString(),
@@ -57,7 +56,10 @@ export const PopUpcard = ({
     };
 
     try {
-      await StorageService.saveLog(missionId, DraftCheckPointData);
+      await StorageService.saveLog(
+        missionStates.currentMissionId,
+        DraftCheckPointData
+      );
       triggerToast("Successfully saved diary...", "success");
       close();
       setMissionStates({

@@ -3,17 +3,11 @@ import HTMLFlipBook from "react-pageflip";
 import { motion, AnimatePresence } from "framer-motion";
 import {
   X,
-  Clock,
   MapPin,
   ChevronRight,
   Trash2,
-  BookOpen,
   ShieldAlert,
   Image as ImageIcon,
-  ChevronLeft,
-  History,
-  Activity,
-  CheckCircle2,
   Navigation,
 } from "lucide-react";
 import { StorageService } from "@/lib/utils";
@@ -333,7 +327,7 @@ export const TacticalDiary = ({ mission, logs, onClose }: any) => {
           </span>
           <span className="text-white/40 text-[10px] font-mono uppercase tracking-widest">
             {new Date(mission.timestamp).toLocaleDateString()} // REF_
-            {mission.id.slice(0, 4)}
+            {mission.id}
           </span>
         </div>
       </div>

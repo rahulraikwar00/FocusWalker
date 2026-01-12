@@ -81,7 +81,6 @@ export const ControlCard = () => {
   const isActive = missionStates.missionStatus === "active";
   const metrics = missionStates.metrics;
 
-  console.log("missionstartes", missionStates);
   const handleToggleMission = async () => {
     if (!route || !missionStates.currentMissionId) return;
 
