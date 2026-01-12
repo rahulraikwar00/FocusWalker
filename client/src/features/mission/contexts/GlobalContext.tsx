@@ -39,9 +39,7 @@ interface GlobalState {
     isHapticsEnabled: boolean;
     breakDuration: number;
   };
-  missionStatus: "finished" | "active" | "paused" | "idle";
   user: UserData;
-  currentMissionId: string | null; // Track which mission is active
 }
 
 interface GlobalContextValue extends GlobalState {
@@ -51,7 +49,6 @@ interface GlobalContextValue extends GlobalState {
   triggerToast: (msg: string, type?: ToastType) => void;
   toggleTheme: () => void;
   completeOnboarding: () => void;
-  setMissionStatus: (status: GlobalState["missionStatus"]) => void;
 }
 
 const GlobalContext = createContext<GlobalContextValue | undefined>(undefined);
@@ -132,28 +129,6 @@ export function GlobalProvider({ children }: { children: ReactNode }) {
     updateSettings({ isDark: !state.settings.isDark });
   }, [state.settings.isDark, updateSettings]);
 
-  const setMissionStatus = useCallback(
-    async (status: GlobalState["missionStatus"], missionId?: string) => {
-      const targetId = missionId || state.currentMissionId;
-
-      // Update local React state
-      setState((prev) => ({
-        ...prev,
-        missionStatus: status,
-        currentMissionId: targetId,
-      }));
-
-      // Persist to heavy storage (IndexedDB) via your StorageService
-      if (targetId) {
-        await StorageService.UpdateRouteSummary(targetId, {
-          status: status,
-          lastUpdated: new Date().toISOString(),
-        });
-      }
-    },
-    [state.currentMissionId]
-  );
-
   // --- THEME SYNC ---
   useEffect(() => {
     const root = window.document.documentElement;
@@ -174,7 +149,6 @@ export function GlobalProvider({ children }: { children: ReactNode }) {
       triggerToast,
       toggleTheme,
       completeOnboarding,
-      setMissionStatus,
     }),
     [
       state,
@@ -184,7 +158,6 @@ export function GlobalProvider({ children }: { children: ReactNode }) {
       triggerToast,
       toggleTheme,
       completeOnboarding,
-      setMissionStatus,
     ]
   );
 
@@ -210,8 +183,6 @@ const initialDefaultState: GlobalState = {
     isHapticsEnabled: true,
     breakDuration: 25,
   },
-  missionStatus: "idle",
-  currentMissionId: null,
   user: {
     id: "UX-8829",
     name: "FocusWalker",

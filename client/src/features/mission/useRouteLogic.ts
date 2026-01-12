@@ -11,6 +11,8 @@ import {
 } from "@/lib/utils";
 import { useGlobal } from "./contexts/GlobalContext";
 import { useMap } from "react-leaflet";
+import { useMissionContext, MissionState } from "./contexts/MissionContext";
+import { start } from "repl";
 const METERS_PER_STEP = 0.72; // Average step length in meters
 // const BREAK_DURATION = 25; //in min
 
@@ -40,35 +42,18 @@ export interface ActiveRoute {
   duration: number;
 }
 
-export function useRouteLogic(speedKmh: number, isWakeLockEnabled: boolean) {
-  const [points, setPoints] = useState<{
-    start: L.LatLng | null;
-    end: L.LatLng | null;
-  }>({ start: null, end: null });
-  const [route, setRoute] = useState<ActiveRoute | null>(null);
-
-  const [currentPos, setCurrentPos] = useState<L.LatLng | null>(null);
-  const [isActive, setIsActive] = useState(false);
-  const [progress, setProgress] = useState(0);
+export function useRouteLogic() {
+  const { missionStates, setMissionStates } = useMissionContext();
   const [isLoadingRoute, setIsLoadingRoute] = useState(false);
-  const [metrics, setMetrics] = useState<MissionMetrics>({
-    steps: 0,
-    timeLeft: 0,
-    distDone: 0,
-    totalDist: 0,
-    totalTime: 0,
-  });
   const [isLocked, setIsLocked] = useState(true); // Default to locked
-  const [tentPositionArray, setTentPositionArray] = useState<
-    [number, number][] | null
-  >(null);
   const wakeLockResource = useRef<WakeLockSentinel | null>(null);
-
-  const { breakDuration } = useGlobal().settings;
-
+  const { breakDuration, isWakeLockEnabled, speedKmh } = useGlobal().settings;
   const animRef = useRef<number>(0);
   const lastTimeRef = useRef<number>(0);
   const progressRef = useRef(0);
+
+  const isActive = missionStates.missionStatus === "active";
+  const missionid = missionStates.currentMissionId;
 
   // Speed converted to meters per second
   const speedMs = (speedKmh * 1000) / 3600;
@@ -116,20 +101,6 @@ export function useRouteLogic(speedKmh: number, isWakeLockEnabled: boolean) {
     };
   }, [isActive, isWakeLockEnabled]);
 
-  const handleRouteUpdate = useCallback(
-    (r: any) => {
-      const newRoute: ActiveRoute = {
-        path: r.geometry.coordinates.map(
-          (c: any) => [c[1], c[0]] as [number, number]
-        ),
-        rawLine: r.geometry.coordinates,
-        distance: r.distance,
-        duration: r.distance / speedMs,
-      };
-      setRoute(newRoute);
-    },
-    [speedMs]
-  );
   const fetchRoute = useCallback(
     async (start: L.LatLng, end: L.LatLng) => {
       if (!start || !end) return;
@@ -145,22 +116,35 @@ export function useRouteLogic(speedKmh: number, isWakeLockEnabled: boolean) {
           const r = data.routes[0];
 
           // 1. Process the route data using your helper
-          handleRouteUpdate(r);
+          const newRoute: ActiveRoute = {
+            path: r.geometry.coordinates.map(
+              (c: any) => [c[1], c[0]] as [number, number]
+            ),
+            rawLine: r.geometry.coordinates,
+            distance: r.distance,
+            duration: r.distance / speedMs,
+          };
 
           // 2. Calculate tactical "Tent" checkpoints
           const line = lineString(r.geometry.coordinates);
-          const tents = calculateTents(line, r.distance);
-          setTentPositionArray(tents.map((t) => [t.latlng.lat, t.latlng.lng]));
+          const tents = calculateTents(line, r.distance).map(
+            (t) => [t.latlng.lat, t.latlng.lng] as [number, number] // Cast to Tuple
+          );
 
-          // ✅ FIX: Use 'r' directly instead of 'route'
-          setMetrics({
-            steps: 0,
-            timeLeft: Math.ceil(r.distance / speedMs),
-            distDone: 0,
-            totalDist: r.distance, // Use r.distance
-            totalTime: r.distance / speedMs, // Use calculated duration
-          });
-
+          setMissionStates((prev) => ({
+            ...prev,
+            route: newRoute,
+            checkPoints: tents,
+            metrics: {
+              ...prev.metrics,
+              progress: 0,
+              steps: 0,
+              distDone: 0,
+              timeLeft: Math.ceil(r.distance / speedMs),
+              totalDist: r.distance,
+              totalTime: r.distance / speedMs,
+            },
+          }));
           // 4. PRE-GENERATE MISSION ID (Optional but recommended)
           // You can store this in a ref or state so it's ready when they click "START"
           const startFingerprint = `${start.lat.toFixed(4)},${start.lng.toFixed(
@@ -177,9 +161,31 @@ export function useRouteLogic(speedKmh: number, isWakeLockEnabled: boolean) {
         setIsLoadingRoute(false);
       }
     },
-    [speedMs, handleRouteUpdate] // Added handleRouteUpdate to dependencies
+    [speedMs, setMissionStates]
   );
 
+  useEffect(() => {
+    const { start, end } = missionStates.position;
+
+    // Only run if we have both points but no ID yet
+    if (start && end && !missionStates.currentMissionId) {
+      const newId = getMissionId({
+        start: L.latLng(start),
+        end: L.latLng(end),
+      });
+
+      setMissionStates((prev) => ({
+        ...prev,
+        currentMissionId: newId,
+      }));
+
+      console.log("Tactical ID Synchronized:", newId);
+    }
+  }, [
+    missionStates.position.start,
+    missionStates.position.end,
+    missionStates.currentMissionId,
+  ]);
   const calculateTents = useCallback(
     (line: any, totalDistance: number) => {
       const segmentMinutes = breakDuration;
@@ -210,102 +216,114 @@ export function useRouteLogic(speedKmh: number, isWakeLockEnabled: boolean) {
 
   //locacality name using lat lng
   const getLocalityName = async (lat: number, lon: number): Promise<string> => {
-    try {
-      const response = await fetch(
-        `https://nominatim.openstreetmap.org/reverse?format=jsonv2&lat=${lat}&lon=${lon}`,
-        {
-          headers: {
-            "User-Agent": "FocusWalker-Tactical-App", //
-          },
-        }
-      );
+    // try {
+    //   const response = await fetch(
+    //     `https://nominatim.openstreetmap.org/reverse?format=jsonv2&lat=${lat}&lon=${lon}`,
+    //     {
+    //       headers: {
+    //         "User-Agent": "FocusWalker-Tactical-App", //
+    //       },
+    //     }
+    //   );
 
-      const data = await response.json();
+    //   const data = await response.json();
 
-      const addr = data.address;
-      const locality =
-        addr.suburb ||
-        addr.neighbourhood ||
-        addr.city_district ||
-        addr.town ||
-        addr.village ||
-        addr.city;
+    //   const addr = data.address;
+    //   const locality =
+    //     addr.suburb ||
+    //     addr.neighbourhood ||
+    //     addr.city_district ||
+    //     addr.town ||
+    //     addr.village ||
+    //     addr.city;
 
-      return locality || "Unknown Sector";
-    } catch (error) {
-      console.error("Geocoding failed:", error);
-      return "Unknown Sector";
-    }
+    //   return locality || "Unknown Sector";
+    // } catch (error) {
+    //   console.error("Geocoding failed:", error);
+    //   return "Unknown Sector";
+    // }
+    return "testNameLocality";
   };
 
+  const normalize = (coord: number) => Math.round(coord * 1000000) / 1000000;
+  const handleMapClick = useCallback(
+    (e: L.LeafletMouseEvent) => {
+      if (isActive) return;
+
+      const clickedCoord: [number, number] = [
+        normalize(e.latlng.lat),
+        normalize(e.latlng.lng),
+      ];
+
+      // 1. Determine the logic BEFORE setting state
+      const currentStart = missionStates.position.start;
+      const currentEnd = missionStates.position.end;
+
+      if (!currentStart) {
+        // SET START
+        setMissionStates((prev) => ({
+          ...prev,
+          position: { ...prev.position, start: clickedCoord },
+        }));
+      } else if (!currentEnd) {
+        // SET END AND FETCH
+        const startLatLng = L.latLng(currentStart);
+        const endLatLng = L.latLng(clickedCoord);
+
+        // Call this OUTSIDE the setter
+        fetchRoute(startLatLng, endLatLng);
+
+        setMissionStates((prev) => ({
+          ...prev,
+          position: { ...prev.position, end: clickedCoord },
+        }));
+      }
+    },
+    [isActive, missionStates.position, fetchRoute, setMissionStates]
+  );
   // Inside useRouteLogic.ts
 
   const removePoint = (type: "start" | "end", isActive: boolean) => {
     if (isActive) return;
-    setPoints((prev) => {
-      setRoute(null);
-      setTentPositionArray(null);
-      setProgress(0);
+
+    // Use a functional update (prev => ...) to ensure you have the latest state
+    setMissionStates((prev) => {
+      // Shared reset values to avoid repetition
+      const resetBase = {
+        ...prev,
+        missionStatus: "idle" as const,
+        currentMissionId: "",
+        metrics: {
+          steps: 0,
+          progress: 0,
+          distDone: 0,
+          totalDist: 0,
+          timeLeft: 0,
+          totalTime: 0,
+        },
+        route: null,
+        checkPoints: null,
+      };
 
       if (type === "start") {
-        // If start is removed, we usually want to clear everything
-        // because the destination was relative to that start.
-        return { start: null, end: null };
+        return {
+          ...resetBase,
+          position: {}, // Resets all: current, start, and end
+        };
       } else {
-        return { ...prev, end: null };
+        return {
+          ...resetBase,
+          position: {
+            ...prev.position,
+            current: undefined, // Use undefined for optional fields
+            end: undefined,
+          },
+        };
       }
     });
 
     triggerTactilePulse("short");
   };
-
-  const handleMapClick = useCallback(
-    (e: L.LeafletMouseEvent) => {
-      if (isActive) return;
-
-      setPoints((p) => {
-        // 3. Logic for setting points
-        if (!p.start) {
-          return { ...p, start: e.latlng };
-        }
-
-        if (!p.end) {
-          // Trigger the fetch outside or via useEffect for better practice
-          fetchRoute(p.start, e.latlng);
-          return { ...p, end: e.latlng };
-        }
-
-        return p;
-      });
-    },
-    [isActive, fetchRoute] // Include map in dependencies
-  );
-
-  //   (e: L.LeafletMouseEvent) => {
-  //     if (isActive) return;
-
-  //     const map = useMap();
-
-  //     setPoints((p) => {
-  //       const currentPos = L.latLng([p.start, p.end] as const);
-  //       map.setView(currentPos, 18, {
-  //         animate: true,
-  //         duration: 0.5, // Fast enough to keep up with movement
-  //       });
-  //       if (!p.start) {
-  //         // SET START
-  //         return { ...p, start: e.latlng };
-  //       } else if (!p.end) {
-  //         // SET END & TRIGGER ROUTE
-  //         fetchRoute(p.start, e.latlng);
-  //         return { ...p, end: e.latlng };
-  //       }
-  //       // If both exist, ignore map clicks (must remove a point first)
-  //       return p;
-  //     });
-  //   },
-  //   [isActive, fetchRoute]
-  // );
 
   const searchLocation = useCallback(
     async (query: string): Promise<SearchResult[]> => {
@@ -335,31 +353,48 @@ export function useRouteLogic(speedKmh: number, isWakeLockEnabled: boolean) {
   // 3. Memoize handleLocationSelect
   const handleLocationSelect = useCallback(
     (result: SearchResult) => {
-      const newLoc = result.latlng;
-      setPoints((p) => {
-        if (!p.start) {
-          // setCurrentPos(newLoc);
-          return { ...p, start: newLoc };
+      // 1. Ensure the format is [lat, lng] to match MissionState
+      const newLoc: [number, number] = [
+        normalize(result.latlng.lat),
+        normalize(result.latlng.lng),
+      ];
+
+      setMissionStates((prev) => {
+        // 2. Logic: If no start, set start. Otherwise, set end and fetch.
+        if (!prev.position.start) {
+          return {
+            ...prev,
+            position: { ...prev.position, start: newLoc },
+          };
         } else {
-          fetchRoute(p.start, newLoc);
-          return { ...p, end: newLoc };
+          const startLatLng = L.latLng(prev.position.start);
+          const endLatLng = L.latLng(newLoc);
+          fetchRoute(startLatLng, endLatLng);
+
+          return {
+            ...prev,
+            position: { ...prev.position, end: newLoc },
+          };
         }
       });
     },
-    [fetchRoute]
+    [fetchRoute, setMissionStates] // Proper dependencies
   );
 
   // Safe Animation Loop
   useEffect(() => {
-    if (!isActive || !route || !route.rawLine) return;
+    if (!isActive || !missionStates.route || !missionStates.route.rawLine)
+      return;
+    console.log("start animation..");
 
     const frame = (time: number) => {
       if (!lastTimeRef.current) lastTimeRef.current = time;
       const delta = (time - lastTimeRef.current) / 1000;
       lastTimeRef.current = time;
 
-      // Ensure we don't divide by zero
-      const routeDist = route.distance || 1;
+      const routeData = missionStates.route!;
+      const routeDist = routeData.distance || 1;
+
       progressRef.current = Math.min(
         progressRef.current + (delta * speedMs) / routeDist,
         1
@@ -368,20 +403,29 @@ export function useRouteLogic(speedKmh: number, isWakeLockEnabled: boolean) {
       const dDone = progressRef.current * routeDist;
 
       try {
-        const pt = along(lineString(route.rawLine), dDone / 1000, {
+        // Turf.js uses [lng, lat]
+        const pt = along(lineString(routeData.rawLine), dDone / 1000, {
           units: "kilometers",
         });
         const [lng, lat] = pt.geometry.coordinates;
 
-        setCurrentPos(new L.LatLng(lat, lng));
-        setProgress(progressRef.current);
-        setMetrics({
-          steps: Math.floor(dDone / METERS_PER_STEP),
-          timeLeft: Math.ceil(
-            (route.duration || 0) * (1 - progressRef.current)
-          ),
-          distDone: dDone,
-        });
+        // Update Global State
+        setMissionStates((prev) => ({
+          ...prev,
+          position: {
+            ...prev.position,
+            current: [lat, lng], // Map to [Lat, Lng]
+          },
+          metrics: {
+            ...prev.metrics,
+            progress: progressRef.current,
+            distDone: dDone,
+            steps: Math.floor(dDone / METERS_PER_STEP),
+            timeLeft: Math.ceil(
+              (routeData.duration || 0) * (1 - progressRef.current)
+            ),
+          },
+        }));
       } catch (e) {
         console.error("Animation Point Error:", e);
       }
@@ -389,39 +433,38 @@ export function useRouteLogic(speedKmh: number, isWakeLockEnabled: boolean) {
       if (progressRef.current < 1) {
         animRef.current = requestAnimationFrame(frame);
       } else {
-        const missionid = getMissionId(points);
-        updateMissionStatus("finished", missionid);
-        setIsActive(false);
-        reset();
+        setMissionStates({
+          ...missionStates,
+          missionStatus: "finished",
+        });
+        reset(); // Ensure reset clears local refs too
         confetti();
       }
     };
 
     animRef.current = requestAnimationFrame(frame);
     return () => {
-      cancelAnimationFrame(animRef.current);
+      if (animRef.current) cancelAnimationFrame(animRef.current);
       lastTimeRef.current = 0;
     };
-  }, [isActive, route, speedMs]);
+  }, [isActive, missionStates.route, speedMs, setMissionStates]);
 
   const handleStartMission = async () => {
     // 1. Hardware Feedback
     triggerTactilePulse("double");
-
-    // 2. System Settings (WakeLock)
-    if (isWakeLockEnabled) {
-      await toggleStayAwake(true);
-    }
-
-    // 3. Local State Change
-    setIsActive(true);
+    setMissionStates({
+      ...missionStates,
+      missionStatus: "active",
+    });
   };
 
   const handleStopMission = async () => {
     await toggleStayAwake(false);
     triggerTactilePulse("short");
-    setIsActive(false);
-    // Important: Don't reset everything, just stop the movement
+    setMissionStates({
+      ...missionStates,
+      missionStatus: "paused",
+    });
     cancelAnimationFrame(animRef.current);
     lastTimeRef.current = 0;
   };
@@ -442,40 +485,43 @@ export function useRouteLogic(speedKmh: number, isWakeLockEnabled: boolean) {
     await StorageService.UpdateRouteSummary(missionId, partialData);
   };
   // 4. Memoize reset
+  // 1. Call hooks at the top level of your component
+
   const reset = useCallback(async () => {
-    const missionid = getMissionId(points);
+    // 2. Get the ID from the state we already have at the top level
+    const missionid = missionStates.currentMissionId;
+
     if (missionid) {
       await StorageService.removeRouteSummary(missionid);
     }
-    // 2. Clear UI State
-    setPoints({ start: null, end: null });
-    setRoute(null);
-    setCurrentPos(null);
-    setIsActive(false);
-    setProgress(0);
-    setTentPositionArray(null);
 
-    // 3. Clear Refs
+    // 3. Reset Global Context State in one go
+    setMissionStates((prev) => ({
+      ...prev,
+      missionStatus: "idle",
+      currentMissionId: null,
+      position: {}, // Clears start, end, and current
+      metrics: {
+        steps: 0,
+        progress: 0,
+        distDone: 0,
+        totalDist: 0,
+        timeLeft: 0,
+        totalTime: 0,
+      },
+      route: null,
+      checkPoints: null,
+    }));
+
     progressRef.current = 0;
     lastTimeRef.current = 0;
 
-    // 4. Reset Metrics
-    setMetrics({
-      steps: 0,
-      timeLeft: 0,
-      distDone: 0,
-      totalDist: 0,
-      totalTime: 0,
-    });
-  }, [points]); // 'points' must be a dependency so getMissionId works
+    // If setPoints/setRoute are still local states, clear them here:
+    // setPoints({ start: null, end: null });
+  }, [missionStates.currentMissionId, setMissionStates, isActive]);
+
   return {
-    points,
-    route,
-    currentPos,
     isActive,
-    setIsActive,
-    progress,
-    metrics,
     handleMapClick,
     searchLocation,
     reset,
@@ -483,11 +529,9 @@ export function useRouteLogic(speedKmh: number, isWakeLockEnabled: boolean) {
     setIsLocked,
     isLocked,
     handleLocationSelect,
-    tentPositionArray,
     handleStopMission,
     handleStartMission,
     removePoint,
-    setPoints,
     getLocalityName,
     updateMissionStatus,
   };

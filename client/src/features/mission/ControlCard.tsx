@@ -5,10 +5,15 @@ import { Button } from "../../components/ui/button";
 import { useGlobal } from "./contexts/GlobalContext";
 
 import { TacticalResetButton } from "./TacticalResetButton";
-import { CheckPointData, RouteData } from "@/types/types";
+import { RouteData } from "@/types/types";
 
 import { getMissionId, StorageService } from "@/lib/utils";
-import { MissionMetrics } from "@/features/mission/useRouteLogic";
+import {
+  MissionMetrics,
+  useRouteLogic,
+} from "@/features/mission/useRouteLogic";
+import { useMissionContext } from "./contexts/MissionContext";
+import L from "leaflet";
 
 // --- SUB-COMPONENTS ---
 
@@ -66,33 +71,29 @@ const TimeFormat = ({ seconds }: { seconds: number }) => {
 
 // --- MAIN COMPONENT ---
 
-export const ControlCard = ({
-  mapState,
-  mapActions,
-  points,
-}: {
-  mapState: any;
-  mapActions: any;
-  points: any;
-}) => {
+export const ControlCard = () => {
+  const { missionStates, setMissionStates } = useMissionContext();
   const { triggerToast, settings } = useGlobal();
   const [isCollapsed, setIsCollapsed] = useState(false);
-  const { isActive, progress, metrics, route } = mapState;
   const { handleStopMission, handleStartMission, reset, updateMissionStatus } =
-    mapActions;
-  const [missionId, setMissionId] = useState("");
+    useRouteLogic();
+  const route = missionStates.route;
+  const isActive = missionStates.missionStatus === "active";
+  const metrics = missionStates.metrics;
 
   const handleToggleMission = async () => {
-    if (!route || !missionId) return;
+    if (!route || !missionStates.currentMissionId) return;
 
     if (isActive) {
       // PAUSE LOGIC
       handleStopMission();
-      await updateMissionStatus("paused", missionId);
+      await updateMissionStatus("paused", missionStates.currentMissionId);
       triggerToast("Tactical: Paused", "error");
     } else {
       // START / RESUME LOGIC
-      const existing = await StorageService.getRouteSummary(missionId);
+      const existing = await StorageService.getRouteSummary(
+        missionStates.currentMissionId
+      );
 
       const speedMs = (settings.speedKmh * 1000) / 3600;
 
@@ -102,7 +103,7 @@ export const ControlCard = ({
 
       if (!existing) {
         const initialMission: RouteData = {
-          id: missionId,
+          id: missionStates.currentMissionId,
           timestamp: new Date().toISOString(),
           status: "active",
           totalDistance: totalDist,
@@ -110,15 +111,21 @@ export const ControlCard = ({
         };
 
         console.log("Saving Initial Mission:", initialMission);
-        await StorageService.saveRouteSummary(initialMission, missionId);
+        await StorageService.saveRouteSummary(
+          initialMission,
+          missionStates.currentMissionId
+        );
       } else {
-        await updateMissionStatus("active", missionId);
+        await updateMissionStatus("active", missionStates.currentMissionId);
 
         // Ensure DB is updated with totals even on resume
-        await StorageService.UpdateRouteSummary(missionId, {
-          totalDistance: totalDist,
-          totalTime: totalTime,
-        });
+        await StorageService.UpdateRouteSummary(
+          missionStates.currentMissionId,
+          {
+            totalDistance: totalDist,
+            totalTime: totalTime,
+          }
+        );
       }
 
       handleStartMission();
@@ -127,24 +134,42 @@ export const ControlCard = ({
   };
 
   useEffect(() => {
-    const syncOnLoad = async () => {
-      if (route) {
-        const id = getMissionId(points);
-        setMissionId(id);
-        setIsCollapsed(false);
+    setIsCollapsed(!isCollapsed);
+  }, [missionStates.route]);
+  useEffect(() => {
+    // 1. Simple Visibility Toggle
+    if (missionStates.route) {
+      setIsCollapsed(false);
+    } else {
+      setIsCollapsed(true);
+      return; // Exit early if no route
+    }
 
-        // Check if there's a saved session to alert the system
+    // 2. ID Synchronization (Only if ID is missing)
+    const syncId = async () => {
+      const { start, end } = missionStates.position;
+      if (start && end && !missionStates.currentMissionId) {
+        const id = getMissionId({
+          start: L.latLng(start),
+          end: L.latLng(end),
+        });
+
+        setMissionStates((prev) => ({ ...prev, currentMissionId: id }));
+
         const saved = await StorageService.getRouteSummary(id);
         if (saved?.status === "paused" || saved?.status === "active") {
-          console.log("Mission ready to resume from local storage");
+          console.log("Mission ready to resume");
         }
-      } else {
-        setIsCollapsed(true);
       }
     };
 
-    syncOnLoad();
-  }, [route]); // Triggered when a route is picked
+    syncId();
+    // We only care if the route object itself changes or coordinates are set
+  }, [
+    missionStates.route,
+    !!missionStates.position.start,
+    !!missionStates.position.end,
+  ]);
 
   return (
     <div className="absolute bottom-0 left-1/2 -translate-x-1/2 z-2000 pointer-events-none w-full max-w-md px-4 pb-[calc(env(safe-area-inset-bottom,0px)+1rem)]">
@@ -177,7 +202,7 @@ export const ControlCard = ({
                   Progress
                 </span>
                 <span className="text-[10px] font-black text-(--accent-primary)">
-                  {(progress * 100).toFixed(0)}%
+                  {(metrics.progress * 100).toFixed(0)}%
                 </span>
               </div>
               <div className="relative flex gap-0.5 h-1.5 w-full">
@@ -186,13 +211,13 @@ export const ControlCard = ({
                     key={i}
                     className="relative flex-1 h-full bg-(--text-secondary)/10 rounded-[1px]"
                   >
-                    {progress > i / 20 && (
+                    {metrics.progress > i / 20 && (
                       <motion.div
                         layoutId={`seg-${i}`}
                         className="absolute inset-0 bg-(--accent-primary) rounded-[1px]"
                         style={{
                           boxShadow:
-                            progress < (i + 1) / 20
+                            metrics.progress < (i + 1) / 20
                               ? "0 0 8px var(--accent-glow)"
                               : "none",
                         }}
@@ -249,7 +274,7 @@ export const ControlCard = ({
                 >
                   {isActive
                     ? "PAUSE FOCUS"
-                    : progress > 0
+                    : metrics.progress > 0
                     ? "RESUME"
                     : "START FOCUS"}
                 </Button>

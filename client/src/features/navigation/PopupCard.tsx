@@ -7,36 +7,27 @@ import { getMissionId, StorageService } from "@/lib/utils";
 import { useGlobal } from "../mission/contexts/GlobalContext";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
+import { useMissionContext } from "../mission/contexts/MissionContext";
 
 interface PopUpCardProps {
   index: number;
   tent: any;
   handleMarkerClick: (id: string | null) => void;
-  setIsActive: (val: boolean) => void;
-  points: any;
   locality: string;
 }
 export const PopUpcard = ({
   index,
   tent,
   handleMarkerClick,
-  setIsActive,
-  points,
   locality,
 }: PopUpCardProps) => {
   const [note, setNote] = useState("");
   const [isSaving, setIsSaving] = useState(false);
   const [visitCount, setVisitCount] = useState(0);
-  const [missionId, setMissionId] = useState("");
   const [cameraCaptureData, setcameraCaptureData] = useState<string>();
+  const { missionStates, setMissionStates } = useMissionContext();
 
   const { triggerToast } = useGlobal();
-
-  useEffect(() => {
-    if (points) {
-      setMissionId(getMissionId(points));
-    }
-  }, [points]); // Added dependency for safety
 
   const userLocation = tent.coords ?? { lat: 0, lng: 0 };
   const close = () => handleMarkerClick(null);
@@ -47,15 +38,15 @@ export const PopUpcard = ({
   };
 
   const handleSave = async () => {
-    if (!missionId) {
-      console.warn("Mission ID missing, cannot save", points);
+    if (!missionStates.currentMissionId) {
+      console.warn("Mission ID missing, cannot save");
       return;
     }
 
     setIsSaving(true);
 
     const DraftCheckPointData: CheckPointData = {
-      id: `${missionId}${tent.id}`,
+      id: `${missionStates.currentMissionId}${tent.id}`,
       label: locality,
       note,
       timestamp: Date.now().toString(),
@@ -65,10 +56,16 @@ export const PopUpcard = ({
     };
 
     try {
-      await StorageService.saveLog(missionId, DraftCheckPointData);
+      await StorageService.saveLog(
+        missionStates.currentMissionId,
+        DraftCheckPointData
+      );
       triggerToast("Successfully saved diary...", "success");
       close();
-      setIsActive(true);
+      setMissionStates({
+        ...missionStates,
+        missionStatus: "active",
+      });
     } catch (error) {
       console.log(error);
       triggerToast("Error saving progress", "error");

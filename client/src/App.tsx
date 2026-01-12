@@ -8,9 +8,12 @@ import InstallButton from "./components/shared/PWAInstallButton";
 import { GlobalProvider } from "./features/mission/contexts/GlobalContext";
 import { DrawerProvider } from "./features/mission/contexts/DrawerContext";
 import { GlobalSideSheet } from "./features/profile/GlobalSideSheet";
+import { MissionContextProvider } from "./features/mission/contexts/MissionContext";
 
 // Lazy load the heavy map component
 const FocusTacticalMap = React.lazy(() => import("@/pages/FocusTacticalMap"));
+
+import { HomePage } from "./pages/HomePage";
 
 const AppLoading = () => (
   <div className="flex h-screen w-screen items-center justify-center bg-background text-muted-foreground">
@@ -21,14 +24,21 @@ const AppLoading = () => (
 function Router() {
   return (
     <Switch>
-      <Route
-        path="/"
-        component={() => (
-          <Suspense fallback={<AppLoading />}>
-            <FocusTacticalMap />
-          </Suspense>
-        )}
-      />
+      {/* 1. Use the 'path' first, and use 'exact' for the root */}
+      <Route path="/">
+        <Suspense fallback={<AppLoading />}>
+          <HomePage />
+        </Suspense>
+      </Route>
+
+      {/* 2. Use children instead of an inline component function */}
+      <Route path="/app">
+        <Suspense fallback={<AppLoading />}>
+          <FocusTacticalMap />
+        </Suspense>
+      </Route>
+
+      {/* 3. The Catch-all 'NotFound' must be LAST */}
       <Route component={NotFound} />
     </Switch>
   );
@@ -75,11 +85,13 @@ function App() {
     <QueryClientProvider client={queryClient}>
       {/* Wrap everything with your new contexts */}
       <GlobalProvider>
-        <DrawerProvider>
-          <GlobalSideSheet />
-          <Toaster />
-          <Router />
-        </DrawerProvider>
+        <MissionContextProvider>
+          <DrawerProvider>
+            <GlobalSideSheet />
+            <Toaster />
+            <Router />
+          </DrawerProvider>
+        </MissionContextProvider>
         {/* Pass the state and the function as props */}
         {!isInstalled && installPrompt && <InstallButton />}
       </GlobalProvider>
