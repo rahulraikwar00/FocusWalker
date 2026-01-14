@@ -1,4 +1,3 @@
-import { StorageService } from "@/lib/utils";
 import {
   createContext,
   useContext,
@@ -72,8 +71,9 @@ export const MissionContextProvider = ({
     useState<MissionState>(initialDefaultState);
 
   useEffect(() => {
+    console.log("setting the item");
     localStorage.setItem("missionData", JSON.stringify(missionStates));
-  }, [missionStates.missionStatus, missionStates]);
+  }, [missionStates.missionStatus]);
 
   // 3. Optimized provider value
   return (

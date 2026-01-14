@@ -1,4 +1,3 @@
-import { StorageService } from "@/lib/utils";
 import {
   createContext,
   useContext,
@@ -22,6 +21,7 @@ export interface UserData {
   clearance: string;
   avatar: string;
   bio: string;
+  location?: [number, number] | null;
 }
 
 interface GlobalState {

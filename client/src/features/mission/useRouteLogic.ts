@@ -288,7 +288,8 @@ export function useRouteLogic() {
 
     // Use a functional update (prev => ...) to ensure you have the latest state
     setMissionStates((prev) => {
-      // Shared reset values to avoid repetition
+      // Shared
+      //  values to avoid repetition
       const resetBase = {
         ...prev,
         missionStatus: "idle" as const,
@@ -381,6 +382,43 @@ export function useRouteLogic() {
     [fetchRoute, setMissionStates] // Proper dependencies
   );
 
+  const handleDestinationSelect = useCallback(
+    (dest: any) => {
+      // 1. Normalize the destination coordinates to [lat, lng]
+      const endLoc: [number, number] = [
+        normalize(dest.lat),
+        normalize(dest.lng),
+      ];
+
+      setMissionStates((prev) => {
+        // 2. Safety Check: Ensure we have a start location from the previous GPS step
+        if (!prev.position.start) {
+          console.error("Navigation Error: No starting coordinates found.");
+          return prev;
+        }
+
+        // 3. Create Leaflet objects to satisfy fetchRoute signature
+        const startLatLng = L.latLng(
+          prev.position.start[0],
+          prev.position.start[1]
+        );
+        const endLatLng = L.latLng(endLoc[0], endLoc[1]);
+
+        // 4. Trigger the route generation engine
+        fetchRoute(startLatLng, endLatLng);
+
+        // 5. Update state with the chosen "Zenith" (Destination)
+        return {
+          ...prev,
+          position: {
+            ...prev.position,
+            end: endLoc,
+          },
+        };
+      });
+    },
+    [fetchRoute, setMissionStates] // Dependencies to prevent stale closures
+  );
   // Safe Animation Loop
   useEffect(() => {
     if (!isActive || !missionStates.route || !missionStates.route.rawLine)
@@ -418,8 +456,8 @@ export function useRouteLogic() {
           },
           metrics: {
             ...prev.metrics,
-            progress: progressRef.current,
-            distDone: dDone,
+            progress: Math.floor(progressRef.current),
+            distDone: Math.floor(dDone),
             steps: Math.floor(dDone / METERS_PER_STEP),
             timeLeft: Math.ceil(
               (routeData.duration || 0) * (1 - progressRef.current)
@@ -437,7 +475,7 @@ export function useRouteLogic() {
           ...missionStates,
           missionStatus: "finished",
         });
-        reset(); // Ensure reset clears local refs too
+        reset("finished"); // Ensure reset clears local refs too
         confetti();
       }
     };
@@ -487,40 +525,52 @@ export function useRouteLogic() {
   // 4. Memoize reset
   // 1. Call hooks at the top level of your component
 
-  const reset = useCallback(async () => {
-    // 2. Get the ID from the state we already have at the top level
-    const missionid = missionStates.currentMissionId;
+  const reset = useCallback(
+    async (type: "finished" | "paused") => {
+      // We use the functional update to get the absolute latest state
+      setMissionStates((prev) => {
+        const missionid = prev.currentMissionId;
+        if (missionid && type === "paused") {
+          StorageService.removeRouteSummary(missionid);
+        }
 
-    if (missionid) {
-      await StorageService.removeRouteSummary(missionid);
-    }
+        if (type === "paused") {
+          return {
+            ...prev,
+            missionStatus: "idle",
+            currentMissionId: null,
+            position: {},
+            metrics: {
+              steps: 0,
+              progress: 0,
+              distDone: 0,
+              totalDist: 0,
+              timeLeft: 0,
+              totalTime: 0,
+            },
+            route: null,
+            checkPoints: null,
+          };
+        } else {
+          return {
+            ...prev,
+            missionStatus: "finished",
+            currentMissionId: null,
+            route: null,
+            checkPoints: null,
+          };
+        }
+      });
 
-    // 3. Reset Global Context State in one go
-    setMissionStates((prev) => ({
-      ...prev,
-      missionStatus: "idle",
-      currentMissionId: null,
-      position: {}, // Clears start, end, and current
-      metrics: {
-        steps: 0,
-        progress: 0,
-        distDone: 0,
-        totalDist: 0,
-        timeLeft: 0,
-        totalTime: 0,
-      },
-      route: null,
-      checkPoints: null,
-    }));
-
-    progressRef.current = 0;
-    lastTimeRef.current = 0;
-
-    // If setPoints/setRoute are still local states, clear them here:
-    // setPoints({ start: null, end: null });
-  }, [missionStates.currentMissionId, setMissionStates, isActive]);
+      // Reset refs outside the state update
+      progressRef.current = 0;
+      lastTimeRef.current = 0;
+    },
+    [setMissionStates] // Much cleaner dependency array
+  );
 
   return {
+    handleDestinationSelect,
     isActive,
     handleMapClick,
     searchLocation,
