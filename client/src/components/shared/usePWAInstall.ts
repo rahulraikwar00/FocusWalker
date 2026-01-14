@@ -31,7 +31,7 @@ export function usePWAInstall() {
     window.addEventListener("appinstalled", onInstall);
 
     // If already in PWA mode, never show the button
-    if (isStandalone) setIsVisible(false);
+    setIsVisible(false);
 
     return () => {
       window.removeEventListener("beforeinstallprompt", handler);
@@ -41,7 +41,6 @@ export function usePWAInstall() {
 
   const handleInstall = async () => {
     if (isIOS) {
-      // For iOS, we can't trigger a prompt, so we trigger a "Help" UI
       alert("Click the 'Share' icon and then 'Add to Home Screen' to install.");
       return;
     }

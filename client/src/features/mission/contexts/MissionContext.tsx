@@ -33,7 +33,7 @@ export interface MissionState {
   };
   searchQuery: string;
   route: ActiveRoute | null; // Changed from [] to any[] for flexibility
-  checkPoints: [number, number][] | null; // Changed from [] to any[] for flexibility
+  checkPoints: [number, number][] | null; // Changed from [] to any[] for
 }
 
 // 1. Define the shape of what the Context actually holds (State + SetState)

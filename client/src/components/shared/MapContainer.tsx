@@ -78,7 +78,7 @@ const endtacticalIcon = L.divIcon({
 export const MapView = memo(({}: any) => {
   const DEFAULT_LOCATION = new L.LatLng(20.5937, 78.9629);
   const { missionStates, setMissionStates } = useMissionContext();
-  const { settings } = useGlobal();
+  const { settings, user } = useGlobal();
   const { handleMapClick, isActive, isLoadingRoute, removePoint } =
     useRouteLogic();
 
@@ -167,6 +167,7 @@ export const MapView = memo(({}: any) => {
           />
         )}
 
+        {/* usersr currt postion  */}
         {/* POIs & Current Position */}
         {missionStates.checkPoints && <TentLayer />}
         {missionStates.position.current && (

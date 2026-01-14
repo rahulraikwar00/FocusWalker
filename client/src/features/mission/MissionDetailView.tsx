@@ -1,4 +1,10 @@
-import React, { useEffect, useState, useRef, useMemo } from "react";
+import React, {
+  useEffect,
+  useState,
+  useRef,
+  useMemo,
+  useCallback,
+} from "react";
 import HTMLFlipBook from "react-pageflip";
 import { motion, AnimatePresence } from "framer-motion";
 import {
@@ -11,8 +17,9 @@ import {
   Navigation,
 } from "lucide-react";
 import { StorageService } from "@/lib/utils";
-import { RouteData, CheckPointData } from "@/types/types";
+import { RouteData, CheckPointData, MissionState } from "@/types/types";
 import { useDrawer } from "./contexts/DrawerContext";
+import { useMissionContext } from "./contexts/MissionContext";
 
 // ==================== MAIN COMPONENT ====================
 export const MissionDetailView = () => {
@@ -22,8 +29,9 @@ export const MissionDetailView = () => {
     mission: RouteData;
     logs: CheckPointData[];
   } | null>(null);
-  const { isOpen } = useDrawer();
+  const { isOpen, toggle } = useDrawer();
 
+  const { missionStates, setMissionStates } = useMissionContext();
   const loadMissions = async () => {
     const details = await StorageService.getAllSummaries();
 
@@ -64,6 +72,34 @@ export const MissionDetailView = () => {
     }
   };
 
+  const handleContinueMission = () => {
+    console.log("handleContinueMission function is not implemeted yes");
+    return null;
+  };
+
+  const hydrateMission = (
+    dbRecord: RouteData,
+    fullDetails: any
+  ): MissionState => ({
+    missionStatus: dbRecord.status === "paused" ? "paused" : "active",
+    currentMissionId: dbRecord.id,
+    position: {
+      start: dbRecord.start,
+      end: dbRecord.end,
+      current: dbRecord.current,
+    },
+    metrics: {
+      steps: fullDetails.steps || 0,
+      progress: fullDetails.progress || 0,
+      distDone: dbRecord.totalDistance || 0,
+      totalDist: fullDetails.totalDistance || 0,
+      timeLeft: 0,
+      totalTime: dbRecord.totalDuration || 0,
+    },
+    searchQuery: dbRecord.destinationName || "",
+    route: fullDetails.geometry || null,
+    checkPoints: fullDetails.checkPoints,
+  });
   return (
     <div className="flex flex-col h-full overflow-hidden bg-transparent relative">
       <div className="flex-1 overflow-y-auto px-6 space-y-4 no-scrollbar pb-32 z-10">
@@ -85,6 +121,22 @@ export const MissionDetailView = () => {
             >
               <div className="absolute top-4 right-4 flex items-center gap-2 z-30">
                 <StatusChip status={route.status || "completed"} />
+
+                {/* NEW: Continue Button for Non-Completed Missions
+                {(route.status === "active" || route.status === "paused") && (
+                  <button
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      handleContinueMission();
+                    }}
+                    className="relative z-50 p-2 rounded-lg bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 hover:bg-emerald-500 hover:text-white transition-all active:scale-90 flex items-center gap-2"
+                  >
+                    <Navigation size={14} />
+                    <span className="text-[9px] font-bold uppercase tracking-tighter">
+                      Resume
+                    </span>
+                  </button>
+                )} */}
 
                 {/* 5. THE BUTTON FIXES */}
                 <button

@@ -13,6 +13,7 @@ import { useGlobal } from "./contexts/GlobalContext";
 import { useMap } from "react-leaflet";
 import { useMissionContext, MissionState } from "./contexts/MissionContext";
 import { start } from "repl";
+import { User } from "lucide-react";
 const METERS_PER_STEP = 0.72; // Average step length in meters
 // const BREAK_DURATION = 25; //in min
 
@@ -384,40 +385,39 @@ export function useRouteLogic() {
 
   const handleDestinationSelect = useCallback(
     (dest: any) => {
-      // 1. Normalize the destination coordinates to [lat, lng]
+      // 1. Normalize coordinates immediately
       const endLoc: [number, number] = [
         normalize(dest.lat),
         normalize(dest.lng),
       ];
 
       setMissionStates((prev) => {
-        // 2. Safety Check: Ensure we have a start location from the previous GPS step
-        if (!prev.position.start) {
-          console.error("Navigation Error: No starting coordinates found.");
+        // 2. Determine start location from current state
+        const effectiveStart = prev.position.start || prev.position.current;
+
+        // 3. Fail if we have absolutely no way to know where we are
+        if (!effectiveStart) {
+          console.error(
+            "Navigation Error: No coordinates available to initialize start."
+          );
           return prev;
         }
-
-        // 3. Create Leaflet objects to satisfy fetchRoute signature
-        const startLatLng = L.latLng(
-          prev.position.start[0],
-          prev.position.start[1]
-        );
+        const startLatLng = L.latLng(effectiveStart[0], effectiveStart[1]);
         const endLatLng = L.latLng(endLoc[0], endLoc[1]);
-
-        // 4. Trigger the route generation engine
         fetchRoute(startLatLng, endLatLng);
 
-        // 5. Update state with the chosen "Zenith" (Destination)
+        // 5. Return the full updated state in ONE go
         return {
           ...prev,
           position: {
             ...prev.position,
-            end: endLoc,
+            start: effectiveStart, // Ensures start is populated if it was missing
+            end: endLoc, // Sets the destination
           },
         };
       });
     },
-    [fetchRoute, setMissionStates] // Dependencies to prevent stale closures
+    [fetchRoute, setMissionStates]
   );
   // Safe Animation Loop
   useEffect(() => {
@@ -522,24 +522,35 @@ export function useRouteLogic() {
     };
     await StorageService.UpdateRouteSummary(missionId, partialData);
   };
-  // 4. Memoize reset
-  // 1. Call hooks at the top level of your component
+
+  const { user } = useGlobal();
 
   const reset = useCallback(
     async (type: "finished" | "paused") => {
-      // We use the functional update to get the absolute latest state
-      setMissionStates((prev) => {
-        const missionid = prev.currentMissionId;
-        if (missionid && type === "paused") {
-          StorageService.removeRouteSummary(missionid);
-        }
+      // 1. Move Side Effects OUT of the state setter
+      // We use the 'missionStates' variable directly from the component scope
+      const missionid = missionStates.currentMissionId;
+      if (missionid && type === "paused") {
+        StorageService.removeRouteSummary(missionid);
+      }
 
+      // 2. Capture the location from the Hook, not the state
+      const currentPos = user.location
+        ? (user.location as [number, number])
+        : null;
+
+      // 3. Perform the State Update (Purely for updating data)
+      setMissionStates((prev) => {
         if (type === "paused") {
           return {
             ...prev,
             missionStatus: "idle",
             currentMissionId: null,
-            position: {},
+            position: {
+              end: null,
+              current: currentPos,
+              start: currentPos, // Set start to the user's current location
+            },
             metrics: {
               steps: 0,
               progress: 0,
@@ -562,11 +573,12 @@ export function useRouteLogic() {
         }
       });
 
-      // Reset refs outside the state update
+      // Reset refs
       progressRef.current = 0;
       lastTimeRef.current = 0;
     },
-    [setMissionStates] // Much cleaner dependency array
+    // ADD dependencies here so the function knows when location or ID changes
+    [setMissionStates, user.location, missionStates.currentMissionId]
   );
 
   return {

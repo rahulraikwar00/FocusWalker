@@ -221,15 +221,12 @@ interface Destination {
 export const DestinationSelector = ({ onSelectDestination }: any) => {
   const [expandedId, setExpandedId] = useState<string | null>(null);
   const { isOpen, toggle } = useDrawer();
-  // Define the type as a tuple of numbers or null
   const [userLocation, setUserLocation] = useState<[number, number] | null>(
     null
   );
   const { user } = useGlobal();
 
   useEffect(() => {
-    // We sync when the component "notices" a location is available
-    // This ensures the data is ready before the user even looks at it
     if (user?.location) {
       setUserLocation(user.location);
     }
@@ -296,26 +293,26 @@ export const DestinationSelector = ({ onSelectDestination }: any) => {
     return parts.length > 0 ? parts.join(" ") : "0m";
   };
   return (
-    <div className="w-full max-w-2xl  flex flex-col h-[85vh] bg-white dark:bg-zinc-950 rounded-[2rem] overflow-hidden border border-zinc-100 dark:border-zinc-800 shadow-xl">
-      {/* Header */}
-      <div className="shrink-0 px-8 pt-8 pb-6 flex justify-between items-end">
+    <div className="w-full max-w-lg mx-auto flex flex-col h-[75vh] md:h-[80vh] bg-[var(--hud-bg)] backdrop-blur-md rounded-2xl overflow-hidden border border-[var(--hud-border)] shadow-2xl">
+      {/* Header: More compact, uses theme colors */}
+      <div className="shrink-0 px-6 pt-6 pb-4 flex justify-between items-end border-b border-[var(--hud-border)]">
         <div>
-          <span className="text-xs font-medium text-zinc-400 dark:text-zinc-500 block mb-1">
-            Explorer
+          <span className="text-[10px] font-bold uppercase tracking-[0.2em] text-[var(--text-secondary)] block mb-1">
+            Navigation / Nearby
           </span>
-          <h2 className="text-3xl font-semibold tracking-tight text-zinc-900 dark:text-zinc-100">
-            Nearby Trails
+          <h2 className="text-xl md:text-2xl font-bold tracking-tight text-[var(--text-primary)]">
+            Select Trail
           </h2>
         </div>
-        <div className="px-4 py-1.5 rounded-full bg-zinc-50 dark:bg-zinc-900 border border-zinc-100 dark:border-zinc-800">
-          <p className="text-xs font-medium text-zinc-600 dark:text-zinc-400">
-            {sortedDestinations.length} routes found
+        <div className="px-3 py-1 rounded-md bg-[var(--accent-glow)] border border-[var(--accent-primary)]/20">
+          <p className="text-[10px] font-bold text-[var(--accent-primary)] uppercase">
+            {sortedDestinations.length} Active
           </p>
         </div>
       </div>
 
-      {/* List */}
-      <div className="flex-1 overflow-y-auto px-6 space-y-4 no-scrollbar pb-8 pt-2">
+      {/* List: Improved padding and spacing */}
+      <div className="flex-1 overflow-y-auto px-4 py-4 space-y-3 no-scrollbar">
         <LayoutGroup>
           {sortedDestinations.map((dest) => {
             const isExpanded = expandedId === dest.id;
@@ -330,98 +327,99 @@ export const DestinationSelector = ({ onSelectDestination }: any) => {
                 layout
                 key={dest.id}
                 onClick={() => setExpandedId(isExpanded ? null : dest.id)}
-                className={`relative overflow-hidden cursor-pointer rounded-3xl transition-all duration-500 ${
+                className={`relative overflow-hidden cursor-pointer rounded-xl border transition-all duration-300 ${
                   isExpanded
-                    ? "bg-zinc-50 dark:bg-zinc-900 shadow-inner border-transparent"
-                    : "bg-white dark:bg-zinc-950 border border-zinc-100 dark:border-zinc-800 shadow-sm hover:border-zinc-300 dark:hover:border-zinc-700"
+                    ? "bg-[var(--hud-bg)] border-[var(--accent-primary)]/40 shadow-lg"
+                    : "bg-transparent border-[var(--hud-border)] hover:bg-white/5"
                 }`}
               >
                 <div
                   className={`flex ${
-                    isExpanded ? "flex-col" : "flex-row h-28"
+                    isExpanded ? "flex-col" : "flex-row h-20 md:h-24"
                   }`}
                 >
-                  {/* Image */}
+                  {/* Image: Scaled down to be less bulky */}
                   <motion.div
                     layout
-                    className={`relative overflow-hidden transform-gpu ${
-                      isExpanded ? "h-56" : "w-28 shrink-0"
+                    className={`relative overflow-hidden ${
+                      isExpanded ? "h-40 md:h-48" : "w-20 md:w-24 shrink-0"
                     }`}
                   >
                     <motion.img
                       layout
                       src={dest.img}
-                      className="w-full h-full object-cover"
+                      className="w-full h-full object-cover grayscale-[0.2] brightness-90"
                     />
                     {isExpanded && (
-                      <div className="absolute inset-0 bg-black/10" />
+                      <div className="absolute inset-0 bg-black/20" />
                     )}
                   </motion.div>
 
-                  {/* Content */}
-                  <div className="flex-1 p-5 flex flex-col justify-center">
-                    <div className="flex justify-between items-start">
+                  {/* Content: Tightened layout */}
+                  <div className="flex-1 p-3 md:p-4 flex flex-col justify-center">
+                    <div className="flex justify-between items-start gap-2">
                       <motion.div layout="position">
-                        <div className="flex items-center gap-2 mb-2">
-                          <span
-                            className={`text-[10px] font-medium px-2 py-0.5 rounded-full border ${
-                              isExpanded
-                                ? "bg-white dark:bg-zinc-800"
-                                : "bg-zinc-100 dark:bg-zinc-800"
-                            } border-zinc-200 dark:border-zinc-700 text-zinc-600 dark:text-zinc-400`}
-                          >
+                        <div className="flex items-center gap-2 mb-1">
+                          <span className="text-[9px] font-bold px-1.5 py-0.5 rounded bg-[var(--hud-border)] text-[var(--text-secondary)] uppercase">
                             {difficulty.label}
                           </span>
-                          <span className="text-xs text-zinc-400">
-                            • {timeDisplay}
+                          <span className="text-[10px] text-[var(--text-secondary)] font-mono">
+                            {timeDisplay}
                           </span>
                         </div>
-
                         <h3
-                          className={`font-semibold text-zinc-900 dark:text-zinc-100 tracking-tight transition-all ${
-                            isExpanded ? "text-2xl" : "text-lg"
+                          className={`font-bold text-[var(--text-primary)] leading-tight ${
+                            isExpanded
+                              ? "text-lg md:text-xl"
+                              : "text-sm md:text-base"
                           }`}
                         >
                           {dest.name}
                         </h3>
                         {!isExpanded && (
-                          <p className="text-sm text-zinc-500">{dest.city}</p>
+                          <p className="text-[11px] text-[var(--text-secondary)] opacity-70">
+                            {dest.city}
+                          </p>
                         )}
                       </motion.div>
 
                       {!isExpanded && (
-                        <motion.div layout="position" className="text-right">
-                          <p className="text-xl font-light text-zinc-900 dark:text-zinc-100 leading-none">
+                        <motion.div
+                          layout="position"
+                          className="text-right shrink-0"
+                        >
+                          <p className="text-sm md:text-base font-mono font-bold text-[var(--accent-primary)] leading-none">
                             {Math.round(dest.distance || 0)}
                           </p>
-                          <p className="text-[10px] font-medium text-zinc-400 uppercase tracking-wider mt-1">
+                          <p className="text-[8px] font-bold text-[var(--text-secondary)] uppercase mt-1">
                             KM
                           </p>
                         </motion.div>
                       )}
                     </div>
 
+                    {/* Expanded Details: More technical feel */}
                     <AnimatePresence>
                       {isExpanded && (
                         <motion.div
                           initial={{ opacity: 0 }}
                           animate={{ opacity: 1 }}
                           exit={{ opacity: 0 }}
-                          className="mt-6 flex gap-8 border-t border-zinc-200/50 dark:border-zinc-800 pt-5"
+                          className="mt-4 grid grid-cols-2 gap-4 border-t border-[var(--hud-border)] pt-4"
                         >
                           <div>
-                            <p className="text-[10px] font-medium text-zinc-400 uppercase tracking-wide mb-1">
-                              Distance
+                            <p className="text-[9px] font-bold text-[var(--text-secondary)] uppercase mb-0.5">
+                              Vector
                             </p>
-                            <p className="text-base font-medium text-zinc-900 dark:text-zinc-100">
-                              {Math.round(dest.distance || 0)}km
+                            <p className="text-sm font-mono text-[var(--text-primary)]">
+                              {Math.round(dest.distance || 0)} KM
                             </p>
                           </div>
-                          <div className="border-l border-zinc-200 dark:border-zinc-800 pl-8">
-                            <p className="text-[10px] font-medium text-zinc-400 uppercase tracking-wide mb-1">
-                              Walking Time
+                          <div>
+                            <p className="text-[9px] font-bold text-[var(--text-secondary)] uppercase mb-0.5">
+                              ETA
                             </p>
-                            <p className="text-base font-medium text-zinc-900 dark:text-zinc-100">
+                            <p className="text-sm font-mono text-[var(--text-primary)]">
                               {timeDisplay}
                             </p>
                           </div>
@@ -431,41 +429,31 @@ export const DestinationSelector = ({ onSelectDestination }: any) => {
                   </div>
                 </div>
 
+                {/* Bottom Actions for Expanded State */}
                 <AnimatePresence>
                   {isExpanded && (
                     <motion.div
                       initial={{ height: 0, opacity: 0 }}
                       animate={{ height: "auto", opacity: 1 }}
                       exit={{ height: 0, opacity: 0 }}
-                      transition={{ duration: 0.4, ease: "easeInOut" }}
+                      className="px-4 pb-4"
                     >
-                      <div className="px-5 pb-6">
-                        <p className="text-sm leading-relaxed text-zinc-500 dark:text-zinc-400 mb-6 pt-4 border-t border-zinc-200/50 dark:border-zinc-800">
-                          {dest.desc}
-                        </p>
-
-                        <div className="flex items-center gap-2 mb-6 text-zinc-400">
-                          <div className="w-1.5 h-1.5 rounded-full bg-emerald-400" />
-                          <span className="text-xs">
-                            {dest.activeWalkers} others are walking here now
-                          </span>
-                        </div>
-
-                        <div className="flex gap-3">
-                          <Button
-                            onClick={(e: any) => {
-                              if (isOpen) toggle();
-                              e.stopPropagation();
-                              onSelectDestination(dest);
-                            }}
-                            className="flex-1 py-6 bg-zinc-900 dark:bg-zinc-100 text-white dark:text-zinc-950 rounded-2xl text-sm font-medium transition-transform active:scale-[0.98]"
-                          >
-                            Begin this journey
-                          </Button>
-                          <Button className="p-4 bg-white dark:bg-zinc-800 rounded-2xl text-zinc-600 dark:text-zinc-300 border border-zinc-200 dark:border-zinc-700 active:scale-[0.98] transition-transform">
-                            <Compass size={20} strokeWidth={1.5} />
-                          </Button>
-                        </div>
+                      <p className="text-xs leading-relaxed text-[var(--text-secondary)] mb-4 pb-4 border-t border-[var(--hud-border)] pt-3">
+                        {dest.desc}
+                      </p>
+                      <div className="flex gap-2">
+                        <button
+                          onClick={(e: any) => {
+                            e.stopPropagation();
+                            onSelectDestination(dest);
+                          }}
+                          className="flex-1 py-3 bg-[var(--accent-primary)] text-black rounded-lg text-xs font-black uppercase tracking-tighter hover:scale-[1.02] active:scale-95 transition-transform"
+                        >
+                          Lock Coordinates
+                        </button>
+                        <button className="p-3 bg-[var(--hud-bg)] border border-[var(--hud-border)] text-[var(--text-primary)] rounded-lg hover:bg-white/5">
+                          <Compass size={18} />
+                        </button>
                       </div>
                     </motion.div>
                   )}
