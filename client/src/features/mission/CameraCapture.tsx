@@ -115,48 +115,43 @@ export const CameraCapture: React.FC<CameraCaptureProps> = ({ onCapture }) => {
   };
 
   return (
-    <div className="flex flex-col gap-2 w-full max-w-md mx-auto">
+    <div className="w-full h-auto flex items-center justify-center ">
       {!isOpen ? (
-        <Button onClick={openCamera} className="w-full">
-          <Camera className="mr-2 h-4 w-4" /> Open Camera
-        </Button>
+        <button
+          onClick={openCamera}
+          className="w-full h-auto flex flex-col items-center gap-3 "
+        >
+          <div className="p-1">
+            <Camera size={30} />
+          </div>
+        </button>
       ) : (
-        <div className="relative bg-black rounded-lg overflow-hidden border shadow-lg">
+        <div className="relative w-full h-48 bg-black">
+          {/* Minimal Viewfinder: Just a soft vignette */}
+          <div className="absolute inset-0 z-10 pointer-events-none shadow-[inset_0_0_60px_rgba(0,0,0,0.4)]" />
+
           <video
             ref={videoRef}
             autoPlay
             playsInline
-            muted // PC browsers often require 'muted' to autoplay video
-            className="w-full h-auto min-h-60 block"
+            muted
+            className="w-full h-full object-cover transition-opacity duration-1000"
           />
 
-          <div className="absolute top-4 right-4 flex flex-col gap-2">
-            {devices.length > 1 && (
-              <Button
-                size="icon"
-                variant="secondary"
-                className="rounded-full opacity-80 hover:opacity-100"
-                onClick={switchCamera}
-              >
-                <RefreshCw className="h-4 w-4" />
-              </Button>
-            )}
-          </div>
-
-          <div className="p-4 flex gap-3 bg-white/10 backdrop-blur-sm">
-            <Button
-              onClick={takePhoto}
-              className="flex-1 bg-blue-600 hover:bg-blue-700"
-            >
-              Take Photo
-            </Button>
-            <Button
+          <div className="absolute bottom-4 left-0 w-full px-6 flex justify-between items-center z-20">
+            <button
               onClick={closeCamera}
-              variant="destructive"
-              className="flex-1"
+              className="text-[10px] font-bold text-white/60 uppercase tracking-widest px-2 py-1"
             >
               Cancel
-            </Button>
+            </button>
+            <button
+              onClick={takePhoto}
+              className="w-12 h-12 rounded-full bg-white flex items-center justify-center shadow-2xl scale-100 active:scale-90 transition-transform"
+            >
+              <div className="w-10 h-10 rounded-full border border-black/5" />
+            </button>
+            <div className="w-10" /> {/* Spacer for balance */}
           </div>
         </div>
       )}
