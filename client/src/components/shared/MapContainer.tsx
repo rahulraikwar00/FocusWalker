@@ -79,7 +79,7 @@ export const MapView = memo(({}: any) => {
   const DEFAULT_LOCATION = new L.LatLng(20.5937, 78.9629);
   const { missionStates, setMissionStates } = useMissionContext();
   const { settings } = useGlobal();
-  const { handleMapClick, isActive, isLocked, isLoadingRoute, removePoint } =
+  const { handleMapClick, isActive, isLoadingRoute, removePoint } =
     useRouteLogic();
 
   const tileUrl = useMemo(

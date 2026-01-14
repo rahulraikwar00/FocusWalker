@@ -21,7 +21,7 @@ export default function InstallButton() {
                  pointer-events-auto cursor-pointer border-none"
     >
       <Download size={14} strokeWidth={3} />
-      <span>{isIOS ? "Setup Link" : "Install App"}</span>
+      {/* <span>{isIOS ? "Setup Link" : "Install App"}</span> */}
     </button>
   );
 }

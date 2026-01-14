@@ -1,5 +1,5 @@
 import { Button } from "@/components/ui/button";
-import { Camera } from "lucide-react";
+import { Camera, RefreshCw } from "lucide-react";
 import React, { useRef, useState, useEffect } from "react";
 
 interface CameraCaptureProps {
@@ -10,131 +10,150 @@ export const CameraCapture: React.FC<CameraCaptureProps> = ({ onCapture }) => {
   const videoRef = useRef<HTMLVideoElement>(null);
   const [stream, setStream] = useState<MediaStream | null>(null);
   const [isOpen, setIsOpen] = useState(false);
+  const [devices, setDevices] = useState<MediaDeviceInfo[]>([]);
+  const [currentDeviceIndex, setCurrentDeviceIndex] = useState(0);
 
-  const openCamera = async () => {
-    try {
-      // 1. Get a list of all available media devices
-      const devices = await navigator.mediaDevices.enumerateDevices();
-      const videoDevices = devices.filter((d) => d.kind === "videoinput");
+  // 1. Sync the video element with the stream whenever the stream changes
+  useEffect(() => {
+    if (videoRef.current && stream) {
+      videoRef.current.srcObject = stream;
 
-      // 2. Find the "Main" camera.
-      // Most phones list the Main sensor as 'Camera 0' or just 'Back Camera'.
-      // The wide-angle is usually labeled 'wide', 'ultra', or 'camera 1'.
-      const mainCamera =
-        videoDevices.find(
-          (device) =>
-            device.label.toLowerCase().includes("0") ||
-            (device.label.toLowerCase().includes("back") &&
-              !device.label.toLowerCase().includes("wide"))
-        ) ||
-        videoDevices.find((d) => d.label.toLowerCase().includes("back")) ||
-        videoDevices[0];
-
-      const constraints: any = {
-        video: {
-          // If we found a specific ID, use it, otherwise fallback to environment
-          deviceId: mainCamera ? { exact: mainCamera.deviceId } : undefined,
-          facingMode: mainCamera ? undefined : "environment",
-
-          // Requesting a high-res but standard aspect ratio
-          width: { ideal: 1920 },
-          height: { ideal: 1080 },
-
-          // 3. Force the zoom to 1x to bypass ultra-wide default
-          advanced: [{ zoom: 1.0 }],
-        },
-        audio: false,
+      // PC/Chrome sometimes needs an explicit play call
+      videoRef.current.onloadedmetadata = () => {
+        videoRef.current?.play().catch((e) => console.error("Play error:", e));
       };
+    }
+  }, [stream]);
 
-      const mediaStream = await navigator.mediaDevices.getUserMedia(
-        constraints
-      );
+  // 2. Initialize device list
+  const initDevices = async () => {
+    try {
+      const initialStream = await navigator.mediaDevices.getUserMedia({
+        video: true,
+      });
+      const allDevices = await navigator.mediaDevices.enumerateDevices();
+      const videoInputs = allDevices.filter((d) => d.kind === "videoinput");
 
-      setStream(mediaStream);
-      setIsOpen(true);
+      // Sort to find the "Main" camera
+      const sorted = videoInputs.sort((a, b) => {
+        const labelA = a.label.toLowerCase();
+        const labelB = b.label.toLowerCase();
+        if (
+          labelA.includes("0") ||
+          (labelA.includes("back") && !labelA.includes("wide"))
+        )
+          return -1;
+        return 0;
+      });
 
-      if (videoRef.current) {
-        videoRef.current.srcObject = mediaStream;
-      }
+      setDevices(sorted);
+      initialStream.getTracks().forEach((track) => track.stop()); // Stop the test stream
+      return sorted;
     } catch (err) {
-      console.error("Camera access error:", err);
-      // Fallback for older browsers that don't support 'exact' deviceId
-      try {
-        const fallbackStream = await navigator.mediaDevices.getUserMedia({
-          video: { facingMode: "environment" },
-        });
-        setStream(fallbackStream);
-        setIsOpen(true);
-      } catch (fallbackErr) {
-        alert("Unable to access the main sensor. Check permissions.");
-      }
+      console.error("Permission denied or no camera found", err);
+      return [];
     }
   };
 
-  // Necessary to link the stream to the video element once it renders
-  useEffect(() => {
-    if (isOpen && videoRef.current && stream) {
-      videoRef.current.srcObject = stream;
+  const startCamera = async (
+    index: number,
+    availableDevices: MediaDeviceInfo[]
+  ) => {
+    // Clean up old stream
+    if (stream) {
+      stream.getTracks().forEach((track) => track.stop());
     }
-  }, [isOpen, stream]);
+
+    const device = availableDevices[index];
+    const constraints = {
+      video: {
+        deviceId: device ? { exact: device.deviceId } : undefined,
+        width: { ideal: 1280 },
+        height: { ideal: 720 },
+      },
+    };
+
+    try {
+      const newStream = await navigator.mediaDevices.getUserMedia(constraints);
+      setStream(newStream);
+      setIsOpen(true);
+    } catch (err) {
+      console.error("Error starting camera:", err);
+    }
+  };
+
+  const openCamera = async () => {
+    const available = await initDevices();
+    if (available.length > 0) {
+      await startCamera(0, available);
+    }
+  };
+
+  const switchCamera = () => {
+    const nextIndex = (currentDeviceIndex + 1) % devices.length;
+    setCurrentDeviceIndex(nextIndex);
+    startCamera(nextIndex, devices);
+  };
 
   const takePhoto = () => {
-    const video = videoRef.current;
-    if (!video || !stream) return;
-
+    if (!videoRef.current) return;
     const canvas = document.createElement("canvas");
-    canvas.width = video.videoWidth;
-    canvas.height = video.videoHeight;
-
+    canvas.width = videoRef.current.videoWidth;
+    canvas.height = videoRef.current.videoHeight;
     const ctx = canvas.getContext("2d");
-    if (!ctx) return;
-
-    ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
-
-    const base64 = canvas.toDataURL("image/jpeg", 0.9);
-    onCapture(base64);
-    closeCamera();
+    if (ctx) {
+      ctx.drawImage(videoRef.current, 0, 0);
+      onCapture(canvas.toDataURL("image/jpeg", 0.9));
+      closeCamera();
+    }
   };
 
   const closeCamera = () => {
-    if (stream) {
-      stream.getTracks().forEach((track) => track.stop());
-      setStream(null);
-    }
+    stream?.getTracks().forEach((track) => track.stop());
+    setStream(null);
     setIsOpen(false);
   };
 
-  // Cleanup on unmount
-  useEffect(() => {
-    return () => {
-      stream?.getTracks().forEach((track) => track.stop());
-    };
-  }, [stream]);
-
   return (
-    <div className="flex flex-col gap-2">
+    <div className="flex flex-col gap-2 w-full max-w-md mx-auto">
       {!isOpen ? (
-        <Button onClick={openCamera}>
-          <Camera />
+        <Button onClick={openCamera} className="w-full">
+          <Camera className="mr-2 h-4 w-4" /> Open Camera
         </Button>
       ) : (
-        <div className="relative">
+        <div className="relative bg-black rounded-lg overflow-hidden border shadow-lg">
           <video
             ref={videoRef}
             autoPlay
-            playsInline // CRITICAL for PWA/iOS to prevent full-screen takeover
-            className="w-full h-64 border rounded bg-black"
+            playsInline
+            muted // PC browsers often require 'muted' to autoplay video
+            className="w-full h-auto min-h-60 block"
           />
-          <div className="flex gap-2 mt-2">
+
+          <div className="absolute top-4 right-4 flex flex-col gap-2">
+            {devices.length > 1 && (
+              <Button
+                size="icon"
+                variant="secondary"
+                className="rounded-full opacity-80 hover:opacity-100"
+                onClick={switchCamera}
+              >
+                <RefreshCw className="h-4 w-4" />
+              </Button>
+            )}
+          </div>
+
+          <div className="p-4 flex gap-3 bg-white/10 backdrop-blur-sm">
             <Button
               onClick={takePhoto}
-              className="flex-1 bg-(--bg-primary) text-white p-2 rounded"
+              className="flex-1 bg-blue-600 hover:bg-blue-700"
             >
-              Capture
+              Take Photo
             </Button>
             <Button
               onClick={closeCamera}
-              className="flex-1 bg-gray-600 text-white p-2 rounded"
+              variant="destructive"
+              className="flex-1"
             >
               Cancel
             </Button>

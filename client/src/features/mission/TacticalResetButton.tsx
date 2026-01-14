@@ -8,7 +8,7 @@ export const TacticalResetButton = ({
   onReset,
   isActive,
 }: {
-  onReset: () => void;
+  onReset: (type: "paused" | "finished") => void;
   isActive: boolean;
 }) => {
   const [isConfirming, setIsConfirming] = useState(false);
@@ -25,7 +25,7 @@ export const TacticalResetButton = ({
       setIsConfirming(true);
       if (navigator.vibrate) navigator.vibrate(10);
     } else {
-      onReset();
+      onReset("paused");
       setIsConfirming(false);
     }
   };

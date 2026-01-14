@@ -82,7 +82,6 @@ export const StorageService = {
 
   async saveRouteSummary(route: RouteData, missionId: string) {
     const { logs, ...summary } = route;
-    // Key is: route_123
     return await indexStore.setItem(`route_${missionId}`, summary);
   },
 

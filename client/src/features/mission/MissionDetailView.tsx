@@ -26,6 +26,9 @@ export const MissionDetailView = () => {
 
   const loadMissions = async () => {
     const details = await StorageService.getAllSummaries();
+
+    console.log(details);
+
     setMissions(
       details.sort(
         (a, b) =>
@@ -40,6 +43,7 @@ export const MissionDetailView = () => {
 
   const openBook = async (mission: RouteData) => {
     const fullData = await StorageService.getFullRoute(mission.id);
+    console.log("fullData", fullData);
     setActiveDiary({ mission, logs: fullData?.logs || [] });
   };
 
