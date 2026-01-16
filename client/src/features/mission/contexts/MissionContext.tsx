@@ -99,7 +99,6 @@ export const MissionContextProvider = ({
     };
     hydrate();
   }, []);
-  console.log("acive mission", missionStates);
   useEffect(() => {
     if (!isInitialized || missionStates.missionStatus === "idle") return;
     StorageService.saveMission(missionStates);
