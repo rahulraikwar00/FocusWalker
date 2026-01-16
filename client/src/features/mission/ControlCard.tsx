@@ -5,15 +5,12 @@ import { Button } from "../../components/ui/button";
 import { useGlobal } from "./contexts/GlobalContext";
 
 import { TacticalResetButton } from "./TacticalResetButton";
-import { RouteData } from "@/types/types";
 
-import { getMissionId, StorageService } from "@/lib/utils";
-import {
-  MissionMetrics,
-  useRouteLogic,
-} from "@/features/mission/useRouteLogic";
-import { useMissionContext } from "./contexts/MissionContext";
+import { getMissionId } from "@/lib/utils";
+import { useRouteLogic } from "@/features/mission/useRouteLogic";
+import { MissionState, useMissionContext } from "./contexts/MissionContext";
 import L from "leaflet";
+import { StorageService } from "@/lib/storageService";
 
 // --- SUB-COMPONENTS ---
 
@@ -91,7 +88,7 @@ export const ControlCard = () => {
       triggerToast("Tactical: Paused", "error");
     } else {
       // START / RESUME LOGIC
-      const existing = await StorageService.getRouteSummary(
+      const existing = await StorageService.getFullMission(
         missionStates.currentMissionId
       );
 
@@ -102,30 +99,23 @@ export const ControlCard = () => {
       const totalTime = route.duration / speedMs;
 
       if (!existing) {
-        const initialMission: RouteData = {
-          id: missionStates.currentMissionId,
-          timestamp: new Date().toISOString(),
-          status: "active",
-          totalDistance: totalDist,
-          totalDuration: totalTime,
+        const initialMission: MissionState = {
+          ...missionStates,
+          checkPoints: missionStates.checkPoints,
+          timeStamp: Date.now().toLocaleString(),
         };
-
-        console.log("Saving Initial Mission:", initialMission);
-        await StorageService.saveRouteSummary(
-          initialMission,
-          missionStates.currentMissionId
-        );
+        await StorageService.saveMission(initialMission);
       } else {
         await updateMissionStatus("active", missionStates.currentMissionId);
 
         // Ensure DB is updated with totals even on resume
-        await StorageService.UpdateRouteSummary(
-          missionStates.currentMissionId,
-          {
-            totalDistance: totalDist,
+        await StorageService.updateMission(missionStates.currentMissionId, {
+          metrics: {
+            ...missionStates.metrics,
+            totalDist: totalDist,
             totalTime: totalTime,
-          }
-        );
+          },
+        });
       }
 
       handleStartMission();
@@ -156,8 +146,13 @@ export const ControlCard = () => {
 
         setMissionStates((prev) => ({ ...prev, currentMissionId: id }));
 
-        const saved = await StorageService.getRouteSummary(id);
-        if (saved?.status === "paused" || saved?.status === "active") {
+        const saved = await StorageService.getFullMission(
+          missionStates.currentMissionId
+        );
+        if (
+          saved?.missionStatus === "paused" ||
+          saved?.missionStatus === "active"
+        ) {
           console.log("Mission ready to resume");
         }
       }

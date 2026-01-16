@@ -58,24 +58,37 @@ const GlobalContext = createContext<GlobalContextValue | undefined>(undefined);
 export function GlobalProvider({ children }: { children: ReactNode }) {
   const toastTimerRef = useRef<NodeJS.Timeout | null>(null);
 
-  // 1. Initialize State with LocalStorage fallbacks
   const [state, setState] = useState<GlobalState>(() => {
     if (typeof window === "undefined") return initialDefaultState;
 
-    const savedUser = localStorage.getItem("user_dossier");
-    const savedSettings = localStorage.getItem("app_settings");
-    const onboardingDone = localStorage.getItem("onboarding_complete");
+    try {
+      const savedUser = localStorage.getItem("user_dossier");
+      const savedSettings = localStorage.getItem("app_settings");
+      const onboardingDone = localStorage.getItem("onboarding_complete");
 
-    return {
-      ...initialDefaultState,
-      user: savedUser ? JSON.parse(savedUser) : initialDefaultState.user,
-      settings: savedSettings
-        ? JSON.parse(savedSettings)
-        : initialDefaultState.settings,
-      showWelcome: onboardingDone !== "true",
-    };
+      // Helper to safely parse and merge
+      const parse = (json: string | null, fallback: any) => {
+        if (!json) return fallback;
+        try {
+          const parsed = JSON.parse(json);
+          return { ...fallback, ...parsed };
+        } catch {
+          return fallback;
+        }
+      };
+
+      return {
+        ...initialDefaultState,
+        user: parse(savedUser, initialDefaultState.user),
+        settings: parse(savedSettings, initialDefaultState.settings),
+        showWelcome: onboardingDone !== "true",
+      };
+    } catch (error) {
+      // If the whole logic fails, return defaults instead of crashing
+      console.error("Global State Hydration Failed:", error);
+      return initialDefaultState;
+    }
   });
-
   // --- PERSISTENCE LAYER ---
   // Background sync to LocalStorage whenever settings or user data change
   useEffect(() => {
@@ -101,6 +114,10 @@ export function GlobalProvider({ children }: { children: ReactNode }) {
     },
     []
   );
+  const resetApp = useCallback(() => {
+    localStorage.clear();
+    window.location.reload();
+  }, []);
 
   const updateUser = useCallback((updates: Partial<UserData>) => {
     setState((prev) => ({
@@ -109,8 +126,14 @@ export function GlobalProvider({ children }: { children: ReactNode }) {
     }));
   }, []);
 
+  useEffect(() => {
+    localStorage.setItem(
+      "onboarding_complete",
+      (!state.showWelcome).toString()
+    );
+  }, [state.showWelcome]);
+
   const completeOnboarding = useCallback(() => {
-    localStorage.setItem("onboarding_complete", "true");
     setState((prev) => ({ ...prev, showWelcome: false }));
   }, []);
 
@@ -148,11 +171,13 @@ export function GlobalProvider({ children }: { children: ReactNode }) {
       updateUser,
       triggerToast,
       toggleTheme,
+      resetApp,
       completeOnboarding,
     }),
     [
       state,
       setUI,
+      resetApp,
       updateSettings,
       updateUser,
       triggerToast,

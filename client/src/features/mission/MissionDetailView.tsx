@@ -16,32 +16,32 @@ import {
   Image as ImageIcon,
   Navigation,
 } from "lucide-react";
-import { StorageService } from "@/lib/utils";
-import { RouteData, CheckPointData, MissionState } from "@/types/types";
+import { CheckPointData } from "@/types/types";
 import { useDrawer } from "./contexts/DrawerContext";
-import { useMissionContext } from "./contexts/MissionContext";
+import { MissionState, useMissionContext } from "./contexts/MissionContext";
+import { StorageService } from "@/lib/storageService";
 
 // ==================== MAIN COMPONENT ====================
 export const MissionDetailView = () => {
-  const [missions, setMissions] = useState<RouteData[]>([]);
+  const [missions, setMissions] = useState<MissionState[]>([]);
   const [purgeTarget, setPurgeTarget] = useState<string | null>(null);
   const [activeDiary, setActiveDiary] = useState<{
-    mission: RouteData;
+    mission: MissionState;
     logs: CheckPointData[];
   } | null>(null);
   const { isOpen, toggle } = useDrawer();
 
   const { missionStates, setMissionStates } = useMissionContext();
   const loadMissions = async () => {
-    const details = await StorageService.getAllSummaries();
-
-    console.log(details);
+    const details = await StorageService.getAllMissions();
 
     setMissions(
-      details.sort(
-        (a, b) =>
-          new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime()
-      )
+      details.sort((a, b) => {
+        // Direct string comparison (Descending order)
+        if (b.timeStamp < a.timeStamp) return -1;
+        if (b.timeStamp > a.timeStamp) return 1;
+        return 0;
+      })
     );
   };
 
@@ -49,20 +49,21 @@ export const MissionDetailView = () => {
     if (isOpen) loadMissions();
   }, [isOpen]);
 
-  const openBook = async (mission: RouteData) => {
-    const fullData = await StorageService.getFullRoute(mission.id);
-    console.log("fullData", fullData);
-    setActiveDiary({ mission, logs: fullData?.logs || [] });
+  const openBook = async (mission: MissionState) => {
+    const fullData = await StorageService.getFullMission(
+      mission.currentMissionId
+    );
+    setActiveDiary({ mission, logs: fullData?.checkPoints || [] });
   };
 
   const deleteMission = async (id: string) => {
     try {
       // Await the storage removal first
-      await StorageService.removeRouteSummary(id);
+      await StorageService.deleteMission(id);
 
       // Update UI state
       setMissions((currentMissions) => {
-        return currentMissions.filter((m) => m.id !== id);
+        return currentMissions.filter((m) => m.currentMissionId !== id);
       });
 
       console.log(`Mission ${id} successfully purged.`);
@@ -77,29 +78,6 @@ export const MissionDetailView = () => {
     return null;
   };
 
-  const hydrateMission = (
-    dbRecord: RouteData,
-    fullDetails: any
-  ): MissionState => ({
-    missionStatus: dbRecord.status === "paused" ? "paused" : "active",
-    currentMissionId: dbRecord.id,
-    position: {
-      start: dbRecord.start,
-      end: dbRecord.end,
-      current: dbRecord.current,
-    },
-    metrics: {
-      steps: fullDetails.steps || 0,
-      progress: fullDetails.progress || 0,
-      distDone: dbRecord.totalDistance || 0,
-      totalDist: fullDetails.totalDistance || 0,
-      timeLeft: 0,
-      totalTime: dbRecord.totalDuration || 0,
-    },
-    searchQuery: dbRecord.destinationName || "",
-    route: fullDetails.geometry || null,
-    checkPoints: fullDetails.checkPoints,
-  });
   return (
     <div className="flex flex-col h-full overflow-hidden bg-transparent relative">
       <div className="flex-1 overflow-y-auto px-6 space-y-4 no-scrollbar pb-32 z-10">
@@ -113,14 +91,14 @@ export const MissionDetailView = () => {
         ) : (
           missions.map((route) => (
             <motion.div
-              key={route.id}
+              key={route.currentMissionId}
               whileHover={{ x: 5, backgroundColor: "var(--accent-glow)" }}
               // 4. MOVE CLICK HANDLER TO THE SPECIFIC CONTAINER
               onClick={() => openBook(route)}
               className="group relative p-6 rounded-xl bg-(--hud-bg) border border-(--hud-border) cursor-pointer transition-all duration-500 overflow-hidden"
             >
               <div className="absolute top-4 right-4 flex items-center gap-2 z-30">
-                <StatusChip status={route.status || "completed"} />
+                <StatusChip status={route.missionStatus || "completed"} />
 
                 {/* NEW: Continue Button for Non-Completed Missions
                 {(route.status === "active" || route.status === "paused") && (
@@ -143,7 +121,7 @@ export const MissionDetailView = () => {
                   onClick={(e) => {
                     e.stopPropagation();
                     e.preventDefault();
-                    setPurgeTarget(route.id);
+                    setPurgeTarget(route.currentMissionId);
                   }}
                   className="relative z-50 p-2 rounded-lg bg-red-500/10 border border-red-500/20 text-red-400 hover:bg-red-500 hover:text-white transition-all active:scale-90"
                 >
@@ -153,7 +131,7 @@ export const MissionDetailView = () => {
 
               <div className="flex flex-col gap-1 relative z-10 pointer-events-none">
                 <span className="text-[9px] font-mono text-(--text-secondary) tracking-widest uppercase opacity-60">
-                  {new Date(route.timestamp).toLocaleDateString()}
+                  {new Date(route.timeStamp).toLocaleDateString()}
                 </span>
 
                 <h3 className="text-lg font-light text-(--text-primary) group-hover:text-(--accent-primary) transition-colors leading-tight max-w-[70%]">
@@ -166,7 +144,7 @@ export const MissionDetailView = () => {
                       Path
                     </span>
                     <span className="text-xs font-mono text-(--text-primary)">
-                      {((route.totalDistance || 0) / 1000).toFixed(2)}km
+                      {((route.metrics.totalDist || 0) / 1000).toFixed(2)}km
                     </span>
                   </div>
                   <div className="flex flex-col">
@@ -174,7 +152,7 @@ export const MissionDetailView = () => {
                       Time
                     </span>
                     <span className="text-xs font-mono text-(--text-primary)">
-                      {((route.totalDuration || 0) / 3600).toFixed(1)}h
+                      {((route.metrics.totalTime || 0) / 3600).toFixed(1)}h
                     </span>
                   </div>
 
@@ -204,7 +182,7 @@ export const MissionDetailView = () => {
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
-            className="fixed inset-0 z-[200] flex items-center justify-center p-6 bg-black/80 backdrop-blur-sm"
+            className="fixed inset-0 z-200 flex items-center justify-center p-6 bg-black/80 backdrop-blur-sm"
           >
             <motion.div
               initial={{ scale: 0.9, opacity: 0 }}

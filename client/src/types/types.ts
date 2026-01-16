@@ -9,7 +9,8 @@ export interface SearchResult {
 }
 
 export interface CheckPointData {
-  id: string;
+  checkPointId: string;
+  missionId: string; // <--- The "Foreign Key" connecting to MissionState.currentMissionId
   label: string;
   note: string;
   timestamp: string;
@@ -19,42 +20,22 @@ export interface CheckPointData {
   picture?: string;
 }
 
-export interface RouteData {
-  id: string;
-  missionName?: string;
-  originName?: string;
-  destinationName?: string;
-  totalDistance?: number;
-  totalDuration?: number;
-  timestamp: string;
-  start: [number, number];
-  end: [number, number];
-  current: [number, number];
-  logs?: CheckPointData[];
-  status: "completed" | "paused" | "active";
-  logCount?: number;
-}
+// export interface RouteData {
+//   id: string;
+//   missionName?: string;
+//   originName?: string;
+//   destinationName?: string;
+//   totalDistance?: number;
+//   totalDuration?: number;
+//   timestamp: string;
+//   start: [number, number];
+//   end: [number, number];
+//   current: [number, number];
+//   logs?: CheckPointData[];
+//   status: "completed" | "paused" | "active";
+//   logCount?: number;
+// }
 
-export interface MissionState {
-  missionStatus: "finished" | "active" | "paused" | "idle";
-  currentMissionId: string | null;
-  position: {
-    current?: [number, number] | null;
-    start?: [number, number] | null;
-    end?: [number, number] | null;
-  };
-  metrics: {
-    steps: number;
-    progress: number;
-    distDone: number;
-    totalDist: number;
-    timeLeft: number;
-    totalTime: number;
-  };
-  searchQuery: string;
-  route: ActiveRoute | null; // Changed from [] to any[] for flexibility
-  checkPoints: [number, number][] | null; // Changed from [] to any[] for
-}
 // Unified Route structure used by logic and components
 export interface ActiveRoute {
   path: [number, number][]; // For Leaflet Rendering [lat, lng]

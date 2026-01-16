@@ -24,21 +24,16 @@ const AppLoading = () => (
 function Router() {
   return (
     <Switch>
-      {/* 1. Use the 'path' first, and use 'exact' for the root */}
       <Route path="/">
         <Suspense fallback={<AppLoading />}>
           <HomePage />
         </Suspense>
       </Route>
-
-      {/* 2. Use children instead of an inline component function */}
       <Route path="/app">
         <Suspense fallback={<AppLoading />}>
           <FocusTacticalMap />
         </Suspense>
       </Route>
-
-      {/* 3. The Catch-all 'NotFound' must be LAST */}
       <Route component={NotFound} />
     </Switch>
   );

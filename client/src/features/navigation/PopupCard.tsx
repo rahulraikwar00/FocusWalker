@@ -3,11 +3,12 @@ import { useEffect, useState } from "react";
 import { GiCampingTent } from "react-icons/gi";
 import { CameraCapture } from "../mission/CameraCapture";
 
-import { getMissionId, StorageService } from "@/lib/utils";
+import { getMissionId } from "@/lib/utils";
 import { useGlobal } from "../mission/contexts/GlobalContext";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { useMissionContext } from "../mission/contexts/MissionContext";
+import { StorageService } from "@/lib/storageService";
 
 interface PopUpCardProps {
   index: number;
@@ -45,18 +46,29 @@ export const PopUpcard = ({
 
     setIsSaving(true);
 
+    // export interface CheckPointData {
+    //   checkPointId: string;
+    //   missionId: string; // <--- The "Foreign Key" connecting to MissionState.currentMissionId
+    //   label: string;
+    //   note: string;
+    //   timestamp: string;
+    //   distanceMark: number;
+    //   photo?: string | null;
+    //   coords?: L.LatLng | null;
+    //   picture?: string;
+    // }
     const DraftCheckPointData: CheckPointData = {
-      id: `${missionStates.currentMissionId}${tent.id}`,
+      checkPointId: `${missionStates.currentMissionId}${tent.id}`,
+      missionId: missionStates.currentMissionId,
       label: locality,
       note,
-      timestamp: Date.now().toString(),
+      timestamp: new Date().toISOString(),
       distanceMark: 12012,
-      // FIX: Ensure picture is actually included in the save object
       picture: cameraCaptureData,
     };
 
     try {
-      await StorageService.saveLog(
+      await StorageService.addSingleCheckpoint(
         missionStates.currentMissionId,
         DraftCheckPointData
       );
