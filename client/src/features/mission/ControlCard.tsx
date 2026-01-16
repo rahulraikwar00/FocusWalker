@@ -70,54 +70,36 @@ const TimeFormat = ({ seconds }: { seconds: number }) => {
 
 export const ControlCard = () => {
   const { missionStates, setMissionStates } = useMissionContext();
-  const { triggerToast, settings } = useGlobal();
+  const { triggerToast } = useGlobal();
   const [isCollapsed, setIsCollapsed] = useState(false);
-  const { handleStopMission, handleStartMission, reset, updateMissionStatus } =
-    useRouteLogic();
+  const { handleStopMission, handleStartMission, reset } = useRouteLogic();
   const route = missionStates.route;
   const isActive = missionStates.missionStatus === "active";
   const metrics = missionStates.metrics;
 
+  const [isProcessing, setIsProcessing] = useState(false);
+
+  // const handleToggleMission = async () => {
+  //   if (!route || !missionStates.currentMissionId || isProcessing) return;
+
+  //   setIsProcessing(true);
+  //   try {
+  //     if (isActive) {
+  //       await handleStopMission();
+  //     } else {
+  //       await handleStartMission();
+  //       triggerToast("Tactical: Initiated", "success");
+  //     }
+  //   } finally {
+  //     setIsProcessing(false);
+  //   }
+  // };
+
   const handleToggleMission = async () => {
     if (!route || !missionStates.currentMissionId) return;
-
     if (isActive) {
-      // PAUSE LOGIC
       handleStopMission();
-      await updateMissionStatus("paused", missionStates.currentMissionId);
-      triggerToast("Tactical: Paused", "error");
     } else {
-      // START / RESUME LOGIC
-      const existing = await StorageService.getFullMission(
-        missionStates.currentMissionId
-      );
-
-      const speedMs = (settings.speedKmh * 1000) / 3600;
-
-      // ✅ FIX: Calculate totals directly from the route object to avoid stale state
-      const totalDist = route.distance;
-      const totalTime = route.duration / speedMs;
-
-      if (!existing) {
-        const initialMission: MissionState = {
-          ...missionStates,
-          checkPoints: missionStates.checkPoints,
-          timeStamp: Date.now().toLocaleString(),
-        };
-        await StorageService.saveMission(initialMission);
-      } else {
-        await updateMissionStatus("active", missionStates.currentMissionId);
-
-        // Ensure DB is updated with totals even on resume
-        await StorageService.updateMission(missionStates.currentMissionId, {
-          metrics: {
-            ...missionStates.metrics,
-            totalDist: totalDist,
-            totalTime: totalTime,
-          },
-        });
-      }
-
       handleStartMission();
       triggerToast("Tactical: Initiated", "success");
     }

@@ -10,7 +10,10 @@ import {
 } from "@/lib/utils";
 import { useGlobal } from "./contexts/GlobalContext";
 import { useMissionContext, MissionState } from "./contexts/MissionContext";
-import { StorageService } from "@/lib/storageService";
+import {
+  saveMissionStatesToStorage,
+  StorageService,
+} from "@/lib/storageService";
 import { CheckPointData } from "@/types/types";
 const METERS_PER_STEP = 0.72; // Average step length in meters
 // const BREAK_DURATION = 25; //in min
@@ -49,13 +52,19 @@ export function useRouteLogic() {
   const { breakDuration, isWakeLockEnabled, speedKmh } = useGlobal().settings;
   const animRef = useRef<number>(0);
   const lastTimeRef = useRef<number>(0);
-  const progressRef = useRef(0);
+  const progressRef = useRef(missionStates.metrics.progress || 0);
+  const { user } = useGlobal();
 
   const isActive = missionStates.missionStatus === "active";
-  const missionid = missionStates.currentMissionId;
 
   // Speed converted to meters per second
   const speedMs = (speedKmh * 1000) / 3600;
+
+  useEffect(() => {
+    if (missionStates.metrics.progress > 0) {
+      progressRef.current = missionStates.metrics.progress;
+    }
+  }, []); // Run once on mount
 
   useEffect(() => {
     const requestLock = async () => {
@@ -414,75 +423,95 @@ export function useRouteLogic() {
     },
     [fetchRoute, setMissionStates]
   );
-  // Safe Animation Loop
   useEffect(() => {
-    if (!isActive || !missionStates.route || !missionStates.route.rawLine)
-      return;
-    console.log("start animation..");
+    if (missionStates.metrics.progress > 0) {
+      progressRef.current = missionStates.metrics.progress;
+      console.log("HUD: Progress Synced from DB ->", progressRef.current);
+    }
+  }, [missionStates.currentMissionId]);
+
+  useEffect(() => {
+    const { route } = missionStates;
+    if (!isActive || !route?.rawLine) return;
 
     const frame = (time: number) => {
+      // 1. Calculate Time Delta
       if (!lastTimeRef.current) lastTimeRef.current = time;
       const delta = (time - lastTimeRef.current) / 1000;
       lastTimeRef.current = time;
 
-      const routeData = missionStates.route!;
-      const routeDist = routeData.distance || 1;
-
-      progressRef.current = Math.min(
+      // 2. Advance Progress
+      const routeDist = route.distance || 1;
+      const newProgress = Math.min(
         progressRef.current + (delta * speedMs) / routeDist,
         1
       );
+      progressRef.current = newProgress;
 
-      const dDone = progressRef.current * routeDist;
+      const dDone = newProgress * routeDist;
 
       try {
-        // Turf.js uses [lng, lat]
-        const pt = along(lineString(routeData.rawLine), dDone / 1000, {
+        // 3. Calculate New Coordinates
+        const pt = along(lineString(route.rawLine), dDone / 1000, {
           units: "kilometers",
         });
         const [lng, lat] = pt.geometry.coordinates;
 
-        // Update Global State
+        // 4. Atomic State Update (prev => ...)
+        // This avoids re-triggering the effect when missionStates changes
         setMissionStates((prev) => ({
           ...prev,
-          position: {
-            ...prev.position,
-            current: [lat, lng], // Map to [Lat, Lng]
-          },
+          position: { ...prev.position, current: [lat, lng] },
           metrics: {
             ...prev.metrics,
-            progress: Math.floor(progressRef.current),
+            progress: newProgress, // Use the raw float for internal logic
             distDone: Math.floor(dDone),
             steps: Math.floor(dDone / METERS_PER_STEP),
-            timeLeft: Math.ceil(
-              (routeData.duration || 0) * (1 - progressRef.current)
-            ),
+            timeLeft: Math.ceil((route.duration || 0) * (1 - newProgress)),
           },
         }));
+
+        // 5. Loop or Finish
+        if (newProgress < 1) {
+          animRef.current = requestAnimationFrame(frame);
+        } else {
+          completeMission();
+        }
       } catch (e) {
         console.error("Animation Point Error:", e);
       }
+    };
 
-      if (progressRef.current < 1) {
-        animRef.current = requestAnimationFrame(frame);
-      } else {
-        setMissionStates({
-          ...missionStates,
-          missionStatus: "finished",
-        });
-        reset("finished"); // Ensure reset clears local refs too
-        confetti();
-      }
+    const completeMission = () => {
+      setMissionStates((prev) => ({ ...prev, missionStatus: "finished" }));
+      reset("finished");
+      confetti();
     };
 
     animRef.current = requestAnimationFrame(frame);
+
     return () => {
       if (animRef.current) cancelAnimationFrame(animRef.current);
       lastTimeRef.current = 0;
     };
   }, [isActive, missionStates.route, speedMs, setMissionStates]);
-
+  // Note: missionStates.route is a dependency, but missionStates itself is NOT.
   const handleStartMission = async () => {
+    const existing = await StorageService.getFullMission(
+      missionStates.currentMissionId
+    );
+    if (!existing) {
+      const initialMission = {
+        ...missionStates,
+        timeStamp: new Date().toISOString(),
+      };
+      saveMissionStatesToStorage(initialMission);
+    } else {
+      await StorageService.updateMission(missionStates.currentMissionId, {
+        metrics: { ...missionStates.metrics },
+        missionStatus: "active",
+      });
+    }
     // 1. Hardware Feedback
     triggerTactilePulse("double");
     setMissionStates({
@@ -498,23 +527,11 @@ export function useRouteLogic() {
       ...missionStates,
       missionStatus: "paused",
     });
+
+    saveMissionStatesToStorage(missionStates);
     cancelAnimationFrame(animRef.current);
     lastTimeRef.current = 0;
   };
-
-  const updateMissionStatus = async (
-    status: MissionState["missionStatus"],
-    missionId: string
-  ) => {
-    if (!missionId) return;
-
-    const partialData = {
-      missionStatus: status,
-    };
-    await StorageService.updateMission(missionId, partialData);
-  };
-
-  const { user } = useGlobal();
 
   const reset = useCallback(
     async (type: "finished" | "paused") => {
@@ -586,6 +603,6 @@ export function useRouteLogic() {
     handleStartMission,
     removePoint,
     getLocalityName,
-    updateMissionStatus,
+    // updateMissionStatus,
   };
 }
