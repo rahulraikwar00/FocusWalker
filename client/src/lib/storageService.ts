@@ -39,7 +39,6 @@ export const StorageService = {
   },
 
   async updateMission(id: string, updates: Partial<MissionState>) {
-    console.log("updating");
     const existing = (await metaStore.getItem<MissionState>(id)) || {};
     return await metaStore.setItem(id, { ...existing, ...updates });
   },
@@ -94,3 +93,14 @@ export const StorageService = {
 export type DetailedMission = Omit<MissionState, "checkPoints"> & {
   checkPoints: CheckPointData[];
 };
+
+export function saveMissionStatesToStorage(missionstatet: MissionState) {
+  StorageService.saveMission(missionstatet);
+  console.log("saving curretn state to mission");
+}
+
+export function loadMissionStatesfromStorage() {
+  const missionStates = StorageService.getActiveMission();
+  console.log("loading mission from Storeage ");
+  return missionStates;
+}

@@ -47,7 +47,7 @@ export interface MissionState {
   };
   searchQuery: string;
   route: ActiveRoute | null; // Changed from [] to any[] for flexibility
-  checkPoints: [number, number][] | null; // Changed from [] to any[] for
+  checkPoints: [number, number][] | null; // Changed from [] to any
   timeStamp: string;
 }
 
@@ -92,7 +92,6 @@ export const MissionContextProvider = ({
   useEffect(() => {
     const hydrate = async () => {
       const active = await StorageService.getActiveMission(); // The method we discussed
-      console.log("acive mission", active);
       if (active) {
         setMissionStates(active);
       }
@@ -100,7 +99,7 @@ export const MissionContextProvider = ({
     };
     hydrate();
   }, []);
-
+  console.log("acive mission", missionStates);
   useEffect(() => {
     if (!isInitialized || missionStates.missionStatus === "idle") return;
     StorageService.saveMission(missionStates);
