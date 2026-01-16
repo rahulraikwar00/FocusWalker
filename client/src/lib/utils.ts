@@ -1,6 +1,6 @@
 import { clsx, type ClassValue } from "clsx";
 import { twMerge } from "tailwind-merge";
-import type { CheckPointData, RouteData } from "../types/types";
+import type { CheckPointData } from "../types/types";
 
 interface TacticalSettings {
   speed: number;
@@ -55,121 +55,6 @@ export const triggerTactilePulse = (
       navigator.vibrate(200);
       break;
   }
-};
-
-// ###############################################
-// STORAGE SECTION
-// ###############################################
-
-import localforage from "localforage";
-
-// Bucket 1: Summaries for the Sidebar
-const indexStore = localforage.createInstance({
-  name: "FocusWalker",
-  storeName: "mission_index",
-});
-
-// Bucket 2: Heavy logs and Photos
-const detailStore = localforage.createInstance({
-  name: "FocusWalker",
-  storeName: "mission_details",
-});
-
-export const StorageService = {
-  /* =============================
-      ROUTE SUMMARY (INDEX STORE)
-     ============================= */
-
-  async saveRouteSummary(route: RouteData, missionId: string) {
-    const { logs, ...summary } = route;
-    return await indexStore.setItem(`route_${missionId}`, summary);
-  },
-
-  async getAllSummaries() {
-    const summaries: RouteData[] = [];
-    await indexStore.iterate((value: RouteData) => {
-      summaries.push(value);
-    });
-    // Sorting by date (assuming your RouteData has a date field)
-    // is usually helpful for a history list
-    return summaries.reverse();
-  },
-
-  async removeRouteSummary(missionId: string) {
-    try {
-      // FIX: Must use the same key format as saveRouteSummary
-      const summaryKey = `route_${missionId}`;
-      const detailKey = `logs_${missionId}`;
-
-      // 1. Remove from the Index (Sidebar)
-      await indexStore.removeItem(summaryKey);
-
-      // 2. Remove from the Details (Heavy Logs/Photos)
-      // This is crucial to prevent "Ghost Data" taking up storage
-      await detailStore.removeItem(detailKey);
-
-      console.log(`Mission ${missionId} purged successfully.`);
-      return true;
-    } catch (error) {
-      console.error("Failed to delete mission:", error);
-      return false;
-    }
-  },
-  /* =============================
-           LOG STORAGE
-     ============================= */
-
-  async saveAllLogs(missionId: string, logs: CheckPointData[]) {
-    return await detailStore.setItem(`logs_${missionId}`, logs);
-  },
-
-  async saveLog(missionId: string, log: CheckPointData) {
-    const key = `logs_${missionId}`;
-    const existingLogs =
-      (await detailStore.getItem<CheckPointData[]>(key)) ?? [];
-    existingLogs.push(log);
-    return await detailStore.setItem(key, existingLogs);
-  },
-
-  /* =============================
-           FULL ROUTE LOADER
-     ============================= */
-
-  async getFullRoute(missionId: string): Promise<RouteData | null> {
-    // Key is: route_123
-    const summary = await indexStore.getItem<RouteData>(`route_${missionId}`);
-
-    if (!summary) return null;
-
-    const logs =
-      (await detailStore.getItem<CheckPointData[]>(`logs_${missionId}`)) ?? [];
-
-    return { ...summary, logs };
-  },
-
-  async getRouteSummary(missionId: string) {
-    return await indexStore.getItem<RouteData>(`route_${missionId}`);
-  },
-
-  async UpdateRouteSummary(missionId: string, updates: {}) {
-    try {
-      const summaryKey = `route_${missionId}`;
-
-      // FIX: Use indexStore instead of localforage to stay in the same database
-      const existingData: any = (await indexStore.getItem(summaryKey)) || {};
-
-      const updatedData = {
-        ...existingData,
-        ...updates,
-      };
-
-      await indexStore.setItem(summaryKey, updatedData);
-      return true;
-    } catch (error) {
-      console.error("Failed to update route summary:", error);
-      return false;
-    }
-  },
 };
 
 // ###############################################

@@ -5,15 +5,13 @@ import { lineString } from "@turf/helpers";
 import along from "@turf/along";
 import {
   getMissionId,
-  StorageService,
   toggleStayAwake,
   triggerTactilePulse,
 } from "@/lib/utils";
 import { useGlobal } from "./contexts/GlobalContext";
-import { useMap } from "react-leaflet";
 import { useMissionContext, MissionState } from "./contexts/MissionContext";
-import { start } from "repl";
-import { User } from "lucide-react";
+import { StorageService } from "@/lib/storageService";
+import { CheckPointData } from "@/types/types";
 const METERS_PER_STEP = 0.72; // Average step length in meters
 // const BREAK_DURATION = 25; //in min
 
@@ -129,7 +127,7 @@ export function useRouteLogic() {
           // 2. Calculate tactical "Tent" checkpoints
           const line = lineString(r.geometry.coordinates);
           const tents = calculateTents(line, r.distance).map(
-            (t) => [t.latlng.lat, t.latlng.lng] as [number, number] // Cast to Tuple
+            (t) => [t.coords.lat, t.coords.lng] as [number, number] // Cast to Tuple
           );
 
           setMissionStates((prev) => ({
@@ -146,6 +144,7 @@ export function useRouteLogic() {
               totalTime: r.distance / speedMs,
             },
           }));
+
           // 4. PRE-GENERATE MISSION ID (Optional but recommended)
           // You can store this in a ref or state so it's ready when they click "START"
           const startFingerprint = `${start.lat.toFixed(4)},${start.lng.toFixed(
@@ -179,8 +178,6 @@ export function useRouteLogic() {
         ...prev,
         currentMissionId: newId,
       }));
-
-      console.log("Tactical ID Synchronized:", newId);
     }
   }, [
     missionStates.position.start,
@@ -201,10 +198,9 @@ export function useRouteLogic() {
           units: "kilometers",
         });
         const [lng, lat] = pt.geometry.coordinates;
-
         tents.push({
-          id: `tent-${accumulatedDistance}`,
-          latlng: new L.LatLng(lat, lng),
+          checkPointId: `tent-${accumulatedDistance}`,
+          coords: new L.LatLng(lat, lng),
           distanceMark: accumulatedDistance,
         });
 
@@ -273,7 +269,6 @@ export function useRouteLogic() {
 
         // Call this OUTSIDE the setter
         fetchRoute(startLatLng, endLatLng);
-
         setMissionStates((prev) => ({
           ...prev,
           position: { ...prev.position, end: clickedCoord },
@@ -507,20 +502,16 @@ export function useRouteLogic() {
     lastTimeRef.current = 0;
   };
 
-  interface UpdateMissionStatusProps {
-    status: "active" | "paused" | "finished" | "reset";
-    missionId: string;
-  }
   const updateMissionStatus = async (
-    status: UpdateMissionStatusProps["status"],
+    status: MissionState["missionStatus"],
     missionId: string
   ) => {
     if (!missionId) return;
 
     const partialData = {
-      status,
+      missionStatus: status,
     };
-    await StorageService.UpdateRouteSummary(missionId, partialData);
+    await StorageService.updateMission(missionId, partialData);
   };
 
   const { user } = useGlobal();
@@ -531,9 +522,9 @@ export function useRouteLogic() {
       // We use the 'missionStates' variable directly from the component scope
       const missionid = missionStates.currentMissionId;
       if (missionid && type === "paused") {
-        StorageService.removeRouteSummary(missionid);
+        alert("you are about to remove allData of this mission");
+        StorageService.deleteMission(missionid);
       }
-
       // 2. Capture the location from the Hook, not the state
       const currentPos = user.location
         ? (user.location as [number, number])
@@ -545,7 +536,7 @@ export function useRouteLogic() {
           return {
             ...prev,
             missionStatus: "idle",
-            currentMissionId: null,
+            currentMissionId: "",
             position: {
               end: null,
               current: currentPos,
@@ -566,7 +557,7 @@ export function useRouteLogic() {
           return {
             ...prev,
             missionStatus: "finished",
-            currentMissionId: null,
+            currentMissionId: "",
             route: null,
             checkPoints: null,
           };
