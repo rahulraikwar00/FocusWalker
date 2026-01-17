@@ -438,22 +438,23 @@ export const DestinationSelector = ({ onSelectDestination }: any) => {
                       exit={{ height: 0, opacity: 0 }}
                       className="px-4 pb-4"
                     >
-                      <p className="text-xs leading-relaxed text-[var(--text-secondary)] mb-4 pb-4 border-t border-[var(--hud-border)] pt-3">
+                      <p className="text-xs leading-relaxed text-(--text-secondary) mb-4 pb-4 border-t border-(--hud-border) pt-3">
                         {dest.desc}
                       </p>
                       <div className="flex gap-2">
-                        <button
+                        <Button
                           onClick={(e: any) => {
                             e.stopPropagation();
+                            toggle();
                             onSelectDestination(dest);
                           }}
-                          className="flex-1 py-3 bg-[var(--accent-primary)] text-black rounded-lg text-xs font-black uppercase tracking-tighter hover:scale-[1.02] active:scale-95 transition-transform"
+                          className="flex-1 py-3 bg-(--accent-primary) text-black rounded-lg text-xs font-black uppercase tracking-tighter hover:scale-[1.02] active:scale-95 transition-transform"
                         >
                           Lock Coordinates
-                        </button>
-                        <button className="p-3 bg-[var(--hud-bg)] border border-[var(--hud-border)] text-[var(--text-primary)] rounded-lg hover:bg-white/5">
+                        </Button>
+                        {/* <Button className="p-3 bg-[var(--hud-bg)] border border-[var(--hud-border)] text-[var(--text-primary)] rounded-lg hover:bg-white/5">
                           <Compass size={18} />
-                        </button>
+                        </Button> */}
                       </div>
                     </motion.div>
                   )}

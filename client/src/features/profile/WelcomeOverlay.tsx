@@ -119,7 +119,7 @@ export const WelcomeOverlay = ({ onComplete }: any) => {
   const currentStep = steps[step];
 
   return (
-    <div className="fixed inset-0 z-[9999] bg-[var(--bg-page)] flex flex-col items-center p-6 pb-12 overflow-hidden transition-colors duration-700">
+    <div className="fixed inset-0 z-9999 bg-[var(--bg-page)] flex flex-col items-center p-6 pb-12 overflow-hidden transition-colors duration-700">
       {/* Tactical Ambience */}
       <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
         <div className="w-[600px] h-[600px] border border-[var(--hud-border)] rounded-full animate-pulse opacity-20" />

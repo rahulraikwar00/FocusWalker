@@ -23,6 +23,14 @@ export const CameraCapture: React.FC<CameraCaptureProps> = ({ onCapture }) => {
         videoRef.current?.play().catch((e) => console.error("Play error:", e));
       };
     }
+    return () => {
+      if (stream) {
+        stream.getTracks().forEach((track) => {
+          track.stop();
+          console.log("Camera track stopped due to unmount");
+        });
+      }
+    };
   }, [stream]);
 
   // 2. Initialize device list
@@ -57,7 +65,7 @@ export const CameraCapture: React.FC<CameraCaptureProps> = ({ onCapture }) => {
 
   const startCamera = async (
     index: number,
-    availableDevices: MediaDeviceInfo[]
+    availableDevices: MediaDeviceInfo[],
   ) => {
     // Clean up old stream
     if (stream) {

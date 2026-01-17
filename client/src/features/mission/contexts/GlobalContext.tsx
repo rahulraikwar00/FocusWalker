@@ -112,7 +112,7 @@ export function GlobalProvider({ children }: { children: ReactNode }) {
         settings: { ...prev.settings, ...updates },
       }));
     },
-    []
+    [],
   );
   const resetApp = useCallback(() => {
     localStorage.clear();
@@ -129,7 +129,7 @@ export function GlobalProvider({ children }: { children: ReactNode }) {
   useEffect(() => {
     localStorage.setItem(
       "onboarding_complete",
-      (!state.showWelcome).toString()
+      (!state.showWelcome).toString(),
     );
   }, [state.showWelcome]);
 
@@ -138,6 +138,7 @@ export function GlobalProvider({ children }: { children: ReactNode }) {
   }, []);
 
   const triggerToast = useCallback((msg: string, type: ToastType = "info") => {
+    console.log("tyring to trigger the toast");
     // Clear existing timer so toasts don't cut each other off
     if (toastTimerRef.current) clearTimeout(toastTimerRef.current);
 
@@ -183,7 +184,7 @@ export function GlobalProvider({ children }: { children: ReactNode }) {
       triggerToast,
       toggleTheme,
       completeOnboarding,
-    ]
+    ],
   );
 
   return (
