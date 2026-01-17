@@ -77,24 +77,6 @@ export const ControlCard = () => {
   const isActive = missionStates.missionStatus === "active";
   const metrics = missionStates.metrics;
 
-  const [isProcessing, setIsProcessing] = useState(false);
-
-  // const handleToggleMission = async () => {
-  //   if (!route || !missionStates.currentMissionId || isProcessing) return;
-
-  //   setIsProcessing(true);
-  //   try {
-  //     if (isActive) {
-  //       await handleStopMission();
-  //     } else {
-  //       await handleStartMission();
-  //       triggerToast("Tactical: Initiated", "success");
-  //     }
-  //   } finally {
-  //     setIsProcessing(false);
-  //   }
-  // };
-
   const handleToggleMission = async () => {
     if (!route || !missionStates.currentMissionId) return;
     if (isActive) {
@@ -129,7 +111,7 @@ export const ControlCard = () => {
         setMissionStates((prev) => ({ ...prev, currentMissionId: id }));
 
         const saved = await StorageService.getFullMission(
-          missionStates.currentMissionId
+          missionStates.currentMissionId,
         );
         if (
           saved?.missionStatus === "paused" ||
@@ -155,25 +137,29 @@ export const ControlCard = () => {
         className="bg-hud  backdrop-blur-2xl border border-hud rounded-[2.5rem] pointer-events-auto overflow-hidden shadow-[0_-20px_50px_-12px_rgba(0,0,0,0.5)]"
       >
         {/* CLOCK SECTION */}
+        {/* CLOCK SECTION */}
         <div
-          className="px-8 pb-3 text-center mt-3"
+          className="px-4 sm:px-8 pb-3 text-center mt-3 w-full max-w-full overflow-hidden"
           onClick={() => setIsCollapsed(!isCollapsed)}
         >
-          <div className="flex flex-col items-center">
-            <span className="text-[8px] font-black tracking-[0.3em] text-(--accent-primary) uppercase mb-1 flex items-center gap-2">
+          <div className="flex flex-col items-center w-full">
+            <span className="text-[8px] font-black tracking-[0.2em] sm:tracking-[0.3em] text-(--accent-primary) uppercase mb-1 flex items-center gap-2 whitespace-nowrap">
               <Timer size={10} className={isActive ? "animate-pulse" : ""} />
-              {isActive ? "T-MINUS TO EXTRACTION" : "SYSTEM STANDBY"}
+              {isActive
+                ? "STAY FOCUSED, STAY BRIGHT"
+                : "TAKE A BREATH — WE'RE READY"}
             </span>
 
             <div
               className={`relative z-10 ${getFontSize(
-                metrics.timeLeft
+                metrics.timeLeft,
               )} transition-all duration-300 flex items-center justify-center`}
             >
               <TimeFormat seconds={metrics.timeLeft} />
             </div>
+
             {/* PROGRESS GAUGE */}
-            <div className="w-full mt-3 px-2">
+            <div className="w-full mt-3 px-1 sm:px-2">
               <div className="flex justify-between items-end mb-1.5 opacity-60">
                 <span className="text-[8px] font-bold text-(--text-primary) uppercase">
                   Progress
@@ -182,11 +168,13 @@ export const ControlCard = () => {
                   {(metrics.progress * 100).toFixed(0)}%
                 </span>
               </div>
-              <div className="relative flex gap-0.5 h-1.5 w-full">
+
+              {/* The container now prevents overflow */}
+              <div className="relative flex gap-0.5 h-1.5 w-full min-w-0">
                 {[...Array(20)].map((_, i) => (
                   <div
                     key={i}
-                    className="relative flex-1 h-full bg-(--text-secondary)/10 rounded-[1px]"
+                    className="relative flex-1 min-w-[2px] h-full bg-(--text-secondary)/10 rounded-[px]"
                   >
                     {metrics.progress > i / 20 && (
                       <motion.div
@@ -228,7 +216,7 @@ export const ControlCard = () => {
                   unit="Steps"
                 />
                 <StatItem
-                  label="Potential"
+                  label="Camps"
                   value={XpCalculator({
                     distance: metrics.distDone,
                     steps: metrics.steps || 0,
@@ -252,8 +240,8 @@ export const ControlCard = () => {
                   {isActive
                     ? "PAUSE FOCUS"
                     : metrics.progress > 0
-                    ? "RESUME"
-                    : "START FOCUS"}
+                      ? "RESUME"
+                      : "START FOCUS"}
                 </Button>
 
                 {/* RESET BUTTON (Smart Component) */}

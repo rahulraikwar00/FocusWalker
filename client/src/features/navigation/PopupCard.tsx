@@ -1,9 +1,7 @@
 import { CheckPointData } from "@/types/types";
-import { useEffect, useState } from "react";
-import { GiCampingTent } from "react-icons/gi";
+import { useState } from "react";
+import { GiCampingTent, GiCheckMark } from "react-icons/gi";
 import { CameraCapture } from "../mission/CameraCapture";
-
-import { getMissionId } from "@/lib/utils";
 import { useGlobal } from "../mission/contexts/GlobalContext";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
@@ -16,6 +14,7 @@ interface PopUpCardProps {
   handleMarkerClick: (id: string | null) => void;
   locality: string;
 }
+
 export const PopUpcard = ({
   index,
   tent,
@@ -24,46 +23,26 @@ export const PopUpcard = ({
 }: PopUpCardProps) => {
   const [note, setNote] = useState("");
   const [isSaving, setIsSaving] = useState(false);
-  const [visitCount, setVisitCount] = useState(0);
+  const [isDone, setIsDone] = useState(false);
   const [cameraCaptureData, setcameraCaptureData] = useState<string>();
-  const { missionStates, setMissionStates } = useMissionContext();
 
+  const { missionStates, setMissionStates } = useMissionContext();
   const { triggerToast } = useGlobal();
 
   const userLocation = tent.coords ?? { lat: 0, lng: 0 };
   const close = () => handleMarkerClick(null);
 
-  const handleCameraAction = (photoBase64: string) => {
-    setcameraCaptureData(photoBase64);
-    console.log("Photo received in PopUpcard");
-  };
-
   const handleSave = async () => {
-    if (!missionStates.currentMissionId) {
-      console.warn("Mission ID missing, cannot save");
-      return;
-    }
-
+    if (!missionStates.currentMissionId) return;
     setIsSaving(true);
 
-    // export interface CheckPointData {
-    //   checkPointId: string;
-    //   missionId: string; // <--- The "Foreign Key" connecting to MissionState.currentMissionId
-    //   label: string;
-    //   note: string;
-    //   timestamp: string;
-    //   distanceMark: number;
-    //   photo?: string | null;
-    //   coords?: L.LatLng | null;
-    //   picture?: string;
-    // }
     const DraftCheckPointData: CheckPointData = {
-      checkPointId: `${missionStates.currentMissionId}${tent.id}`,
+      checkPointId: `${missionStates.currentMissionId}_WP${index}`,
       missionId: missionStates.currentMissionId,
-      label: locality,
-      note,
+      label: locality || "Point of Interest",
+      note: note.trim(),
       timestamp: new Date().toISOString(),
-      distanceMark: 12012,
+      distanceMark: tent.distanceMark || 0,
       picture: cameraCaptureData,
     };
 
@@ -72,93 +51,118 @@ export const PopUpcard = ({
         missionStates.currentMissionId,
         DraftCheckPointData
       );
-      triggerToast("Successfully saved diary...", "success");
-      close();
-      setMissionStates({
-        ...missionStates,
-        missionStatus: "active",
-      });
+      setIsDone(true);
+      triggerToast("Intel Logged", "success");
+
+      setTimeout(() => {
+        close();
+        setMissionStates((prev) => ({ ...prev, missionStatus: "active" }));
+      }, 1000);
     } catch (error) {
-      console.log(error);
-      triggerToast("Error saving progress", "error");
+      triggerToast("Log Failed", "error");
     } finally {
       setIsSaving(false);
     }
   };
 
-  const handleContentClick = (e: React.MouseEvent) => {
-    e.stopPropagation(); // This stops the click from reaching the map
-  };
   return (
     <div
-      onClick={handleContentClick}
-      onMouseDown={handleContentClick}
-      className="glass-card flex flex-col w-60 overflow-hidden shadow-2xl border border-(--hud-border) bg-(--hud-bg) backdrop-blur-xl"
+      onClick={(e) => e.stopPropagation()}
+      onMouseDown={(e) => e.stopPropagation()}
+      className="glass-card flex flex-col w-64 overflow-hidden border-hud-border shadow-2xl animate-in fade-in zoom-in duration-300"
     >
-      {/* Header */}
-      <div className="relative h-24 flex items-center justify-center bg-(--accent-glow)">
-        <GiCampingTent
-          size={40}
-          className={`mb-1 transition-all ${
-            isSaving ? "animate-pulse text-white" : "text-tactical"
-          }`}
-        />
-        <span className="absolute bottom-3 text-[8px] tracking-widest uppercase text-tactical/60">
-          {isSaving ? "Saving progress…" : `Visit ${visitCount + 1}`}
+      {/* Dynamic Header */}
+      <div className="relative h-24 flex flex-col items-center justify-center bg-(--accent-glow) overflow-hidden">
+        {/* Subtle grid overlay for tactical feel */}
+        <div className="absolute inset-0 opacity-10 paper-ruled pointer-events-none" />
+
+        {isDone ? (
+          <GiCheckMark size={32} className="text-tactical animate-bounce" />
+        ) : (
+          <GiCampingTent
+            size={38}
+            className={`transition-all duration-500 ${
+              isSaving ? "animate-pulse opacity-50" : "text-tactical"
+            }`}
+          />
+        )}
+        <span className="mt-2 text-[9px] font-black uppercase tracking-[0.3em] text-tactical">
+          {isSaving
+            ? "Syncing..."
+            : isDone
+            ? "Waypoint Secured"
+            : `Waypoint ${index}`}
         </span>
       </div>
 
-      {/* Content */}
-      <div className="p-5 flex flex-col gap-4">
-        <div className="flex justify-between items-end">
-          <div>
-            <span className="text-[9px] tracking-widest uppercase text-tactical/60">
-              Journey Update
-            </span>
-            <h3 className="text-[14px] font-black uppercase">
-              Waypoint {index}
-            </h3>
+      {/* Main Content */}
+      <div className="p-4 flex flex-col gap-3">
+        <div className="flex justify-between items-start">
+          <div className="max-w-[60%]">
+            <h4 className="text-[10px] uppercase font-bold text-(--text-secondary) tracking-widest leading-none mb-1">
+              Locality
+            </h4>
+            <p className="text-[12px] font-black uppercase truncate text-(--text-primary)">
+              {locality.split(",")[0]}
+            </p>
           </div>
-          <span className="text-[8px] font-mono text-tactical/40">
-            {userLocation.lat.toFixed(4)} / {userLocation.lng.toFixed(4)}
-          </span>
+          <div className="text-right">
+            <p className="text-[8px] font-mono text-(--text-secondary)">
+              {userLocation.lat.toFixed(4)}° N
+            </p>
+            <p className="text-[8px] font-mono text-(--text-secondary)">
+              {userLocation.lng.toFixed(4)}° E
+            </p>
+          </div>
         </div>
 
-        {/* Notes */}
-        <Textarea
-          placeholder="What did you notice here?"
-          value={note}
-          onChange={(e) => setNote(e.target.value)}
-          disabled={isSaving}
-          className="w-full h-20 rounded-xl bg-(--bg-primary)/5 p-3 text-[13px] focus:outline-none resize-none"
-        />
+        {/* Observation Log */}
+        <div className="relative">
+          <Textarea
+            placeholder="Log your observations..."
+            value={note}
+            onChange={(e) => setNote(e.target.value)}
+            disabled={isSaving || isDone}
+            className="w-full h-20 rounded-xl bg-(--text-primary)/5 border-none p-3 text-[12px] text-(--text-primary) placeholder:opacity-30 focus:ring-1 focus:ring-tactical transition-all resize-none shadow-inner"
+          />
+        </div>
 
-        {/* FIX 1: Pass the function directly so it receives the base64 argument */}
-        {!cameraCaptureData ? (
-          <CameraCapture onCapture={handleCameraAction} />
-        ) : (
-          <div className="relative animate-in fade-in zoom-in duration-300">
-            <img
-              src={cameraCaptureData}
-              alt="Preview"
-              className="w-full h-24 object-cover rounded-lg border border-white/10"
-            />
-            <button
-              onClick={() => setcameraCaptureData(undefined)}
-              className="absolute -top-2 -right-2 bg-red-500 text-white rounded-full w-5 h-5 text-[10px] flex items-center justify-center"
-            >
-              ✕
-            </button>
-          </div>
-        )}
+        {/* Intel Capture (Camera) */}
+        <div className="w-full">
+          {!cameraCaptureData ? (
+            <div className="rounded-xl border border-dashed border-hud-border hover:bg-(--accent-glow) transition-colors">
+              <CameraCapture onCapture={setcameraCaptureData} />
+            </div>
+          ) : (
+            <div className="relative rounded-xl overflow-hidden border border-hud-border group">
+              <img
+                src={cameraCaptureData}
+                alt="Intel"
+                className="w-full h-24 object-cover grayscale-[30%] group-hover:grayscale-0 transition-all"
+              />
+              <button
+                onClick={() => setcameraCaptureData(undefined)}
+                className="absolute top-1 right-1 bg-red-500 text-white rounded-full w-5 h-5 text-[10px] flex items-center justify-center shadow-lg"
+              >
+                ✕
+              </button>
+            </div>
+          )}
+        </div>
 
-        {/* Action */}
+        {/* Submit Action */}
         <Button
           onClick={handleSave}
-          disabled={isSaving}
-          className="btn-primary w-full py-3 text-[11px] uppercase tracking-widest"
+          disabled={isSaving || isDone}
+          className="btn-primary w-full py-4 text-[10px] uppercase tracking-[0.2em] h-auto flex items-center justify-center gap-2"
         >
-          {isSaving ? "Recording…" : "Log Progress"}
+          {isSaving ? (
+            <div className="w-3 h-3 border-2 border-black/20 border-t-black rounded-full animate-spin" />
+          ) : isDone ? (
+            "Verified"
+          ) : (
+            "Log Waypoint"
+          )}
         </Button>
       </div>
     </div>

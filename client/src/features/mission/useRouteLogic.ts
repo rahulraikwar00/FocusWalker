@@ -116,7 +116,7 @@ export function useRouteLogic() {
 
       try {
         const res = await fetch(
-          `https://router.project-osrm.org/route/v1/walking/${start.lng},${start.lat};${end.lng},${end.lat}?overview=full&geometries=geojson`
+          `https://router.project-osrm.org/route/v1/walking/${start.lng},${start.lat};${end.lng},${end.lat}?overview=full&geometries=geojson`,
         );
         const data = await res.json();
 
@@ -126,7 +126,7 @@ export function useRouteLogic() {
           // 1. Process the route data using your helper
           const newRoute: ActiveRoute = {
             path: r.geometry.coordinates.map(
-              (c: any) => [c[1], c[0]] as [number, number]
+              (c: any) => [c[1], c[0]] as [number, number],
             ),
             rawLine: r.geometry.coordinates,
             distance: r.distance,
@@ -136,7 +136,7 @@ export function useRouteLogic() {
           // 2. Calculate tactical "Tent" checkpoints
           const line = lineString(r.geometry.coordinates);
           const tents = calculateTents(line, r.distance).map(
-            (t) => [t.coords.lat, t.coords.lng] as [number, number] // Cast to Tuple
+            (t) => [t.coords.lat, t.coords.lng] as [number, number], // Cast to Tuple
           );
 
           setMissionStates((prev) => ({
@@ -157,11 +157,11 @@ export function useRouteLogic() {
           // 4. PRE-GENERATE MISSION ID (Optional but recommended)
           // You can store this in a ref or state so it's ready when they click "START"
           const startFingerprint = `${start.lat.toFixed(4)},${start.lng.toFixed(
-            4
+            4,
           )}`;
           const endFingerprint = `${end.lat.toFixed(4)},${end.lng.toFixed(4)}`;
           console.log(
-            `Tactical ID Ready: OP_${startFingerprint}_${endFingerprint}`
+            `Tactical ID Ready: OP_${startFingerprint}_${endFingerprint}`,
           );
         }
       } catch (err) {
@@ -170,7 +170,7 @@ export function useRouteLogic() {
         setIsLoadingRoute(false);
       }
     },
-    [speedMs, setMissionStates]
+    [speedMs, setMissionStates],
   );
 
   useEffect(() => {
@@ -217,7 +217,7 @@ export function useRouteLogic() {
       }
       return tents;
     },
-    [speedMs]
+    [speedMs],
   );
 
   //locacality name using lat lng
@@ -284,7 +284,7 @@ export function useRouteLogic() {
         }));
       }
     },
-    [isActive, missionStates.position, fetchRoute, setMissionStates]
+    [isActive, missionStates.position, fetchRoute, setMissionStates],
   );
   // Inside useRouteLogic.ts
 
@@ -337,8 +337,8 @@ export function useRouteLogic() {
       try {
         const res = await fetch(
           `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(
-            query
-          )}&limit=5`
+            query,
+          )}&limit=5`,
         );
         const data = await res.json();
         return data.map((item: any) => ({
@@ -349,7 +349,7 @@ export function useRouteLogic() {
         return [];
       }
     },
-    [isActive]
+    [isActive],
   );
 
   interface SearchResult {
@@ -384,7 +384,7 @@ export function useRouteLogic() {
         }
       });
     },
-    [fetchRoute, setMissionStates] // Proper dependencies
+    [fetchRoute, setMissionStates], // Proper dependencies
   );
 
   const handleDestinationSelect = useCallback(
@@ -402,7 +402,7 @@ export function useRouteLogic() {
         // 3. Fail if we have absolutely no way to know where we are
         if (!effectiveStart) {
           console.error(
-            "Navigation Error: No coordinates available to initialize start."
+            "Navigation Error: No coordinates available to initialize start.",
           );
           return prev;
         }
@@ -421,7 +421,7 @@ export function useRouteLogic() {
         };
       });
     },
-    [fetchRoute, setMissionStates]
+    [fetchRoute, setMissionStates],
   );
   useEffect(() => {
     if (missionStates.metrics.progress > 0) {
@@ -444,7 +444,7 @@ export function useRouteLogic() {
       const routeDist = route.distance || 1;
       const newProgress = Math.min(
         progressRef.current + (delta * speedMs) / routeDist,
-        1
+        1,
       );
       progressRef.current = newProgress;
 
@@ -498,7 +498,7 @@ export function useRouteLogic() {
   // Note: missionStates.route is a dependency, but missionStates itself is NOT.
   const handleStartMission = async () => {
     const existing = await StorageService.getFullMission(
-      missionStates.currentMissionId
+      missionStates.currentMissionId,
     );
     if (!existing) {
       const initialMission = {
@@ -533,60 +533,108 @@ export function useRouteLogic() {
     lastTimeRef.current = 0;
   };
 
+  // const reset = useCallback(
+  //   async (type: "finished" | "paused") => {
+  //     // 1. Move Side Effects OUT of the state setter
+  //     // We use the 'missionStates' variable directly from the component scope
+  //     const missionid = missionStates.currentMissionId;
+  //     if (missionid && type === "paused") {
+  //       alert("you are about to remove allData of this mission");
+  //       StorageService.deleteMission(missionid);
+  //     }
+  //     // 2. Capture the location from the Hook, not the state
+  //     const currentPos = user.location
+  //       ? (user.location as [number, number])
+  //       : null;
+
+  //     // 3. Perform the State Update (Purely for updating data)
+  //     setMissionStates((prev) => {
+  //       if (type === "paused") {
+  //         return {
+  //           ...prev,
+  //           missionStatus: "idle",
+  //           currentMissionId: "",
+  //           position: {
+  //             end: null,
+  //             current: currentPos,
+  //             start: currentPos, // Set start to the user's current location
+  //           },
+  //           metrics: {
+  //             steps: 0,
+  //             progress: 0,
+  //             distDone: 0,
+  //             totalDist: 0,
+  //             timeLeft: 0,
+  //             totalTime: 0,
+  //           },
+  //           route: null,
+  //           checkPoints: null,
+  //         };
+  //       } else {
+  //         return {
+  //           ...prev,
+  //           missionStatus: "finished",
+  //           currentMissionId: "",
+  //           route: null,
+  //           checkPoints: null,
+  //         };
+  //       }
+  //     });
+
+  //     // Reset refs
+  //     progressRef.current = 0;
+  //     lastTimeRef.current = 0;
+  //   },
+  //   // ADD dependencies here so the function knows when location or ID changes
+  //   [setMissionStates, user.location, missionStates.currentMissionId]
+  // );
+
   const reset = useCallback(
     async (type: "finished" | "paused") => {
-      // 1. Move Side Effects OUT of the state setter
-      // We use the 'missionStates' variable directly from the component scope
-      const missionid = missionStates.currentMissionId;
-      if (missionid && type === "paused") {
-        alert("you are about to remove allData of this mission");
-        StorageService.deleteMission(missionid);
-      }
-      // 2. Capture the location from the Hook, not the state
-      const currentPos = user.location
-        ? (user.location as [number, number])
-        : null;
+      const missionId = missionStates.currentMissionId;
 
-      // 3. Perform the State Update (Purely for updating data)
-      setMissionStates((prev) => {
-        if (type === "paused") {
-          return {
-            ...prev,
-            missionStatus: "idle",
-            currentMissionId: "",
-            position: {
-              end: null,
-              current: currentPos,
-              start: currentPos, // Set start to the user's current location
-            },
-            metrics: {
-              steps: 0,
-              progress: 0,
-              distDone: 0,
-              totalDist: 0,
-              timeLeft: 0,
-              totalTime: 0,
-            },
-            route: null,
-            checkPoints: null,
-          };
-        } else {
-          return {
-            ...prev,
-            missionStatus: "finished",
-            currentMissionId: "",
-            route: null,
-            checkPoints: null,
-          };
+      // --- CASE 1: ABORT/PAUSE (Hard Reset) ---
+      if (type === "paused") {
+        if (missionId) {
+          await StorageService.deleteMission(missionId);
         }
-      });
 
-      // Reset refs
-      progressRef.current = 0;
+        const currentPos = user.location
+          ? (user.location as [number, number])
+          : null;
+
+        setMissionStates((prev) => ({
+          ...prev,
+          missionStatus: "idle",
+          currentMissionId: "",
+          position: { start: currentPos, current: currentPos, end: null },
+          metrics: {
+            steps: 0,
+            progress: 0,
+            distDone: 0,
+            totalDist: 0,
+            timeLeft: 0,
+            totalTime: 0,
+          },
+          route: null, // Clear map
+          checkPoints: null, // Clear map
+        }));
+
+        progressRef.current = 0;
+      }
+
+      // --- CASE 2: FINISHED (Appreciation State) ---
+      else {
+        setMissionStates((prev) => ({
+          ...prev,
+          missionStatus: "finished",
+          currentMissionId: "",
+        }));
+      }
       lastTimeRef.current = 0;
+      if (animRef.current) cancelAnimationFrame(animRef.current);
     },
-    // ADD dependencies here so the function knows when location or ID changes
-    [setMissionStates, user.location, missionStates.currentMissionId]
+    [setMissionStates, user.location, missionStates.currentMissionId],
   );
 
   return {

@@ -1,11 +1,14 @@
 import React, { Suspense, useEffect, useState } from "react";
-import { Switch, Route } from "wouter";
+import { Switch, Route, Redirect } from "wouter";
 import { queryClient } from "./lib/queryClient";
 import { QueryClientProvider } from "@tanstack/react-query";
 import { Toaster } from "@/components/ui/toaster";
 import NotFound from "@/pages/not-found";
 import InstallButton from "./components/shared/PWAInstallButton";
-import { GlobalProvider } from "./features/mission/contexts/GlobalContext";
+import {
+  GlobalProvider,
+  useGlobal,
+} from "./features/mission/contexts/GlobalContext";
 import { DrawerProvider } from "./features/mission/contexts/DrawerContext";
 import { GlobalSideSheet } from "./features/profile/GlobalSideSheet";
 import { MissionContextProvider } from "./features/mission/contexts/MissionContext";
@@ -14,6 +17,7 @@ import { MissionContextProvider } from "./features/mission/contexts/MissionConte
 const FocusTacticalMap = React.lazy(() => import("@/pages/FocusTacticalMap"));
 
 import { HomePage } from "./pages/HomePage";
+import { AnimatePresence, motion } from "framer-motion";
 
 const AppLoading = () => (
   <div className="flex h-screen w-screen items-center justify-center bg-background text-muted-foreground">
@@ -22,11 +26,21 @@ const AppLoading = () => (
 );
 
 function Router() {
+  const [hasSeenHome] = useState(() => {
+    return localStorage.getItem("onboarding_complete") === "true";
+  });
   return (
     <Switch>
       <Route path="/">
         <Suspense fallback={<AppLoading />}>
-          <HomePage />
+          {/* If they've seen it, send them to /app immediately */}
+          {hasSeenHome ? (
+            <Redirect to="/app" />
+          ) : (
+            <Suspense fallback={<AppLoading />}>
+              <HomePage />
+            </Suspense>
+          )}
         </Suspense>
       </Route>
       <Route path="/app">
@@ -46,7 +60,7 @@ function App() {
   useEffect(() => {
     // 1. Initial Check: Is the app currently running in "Standalone" mode?
     const checkStandalone = window.matchMedia(
-      "(display-mode: standalone)"
+      "(display-mode: standalone)",
     ).matches;
     setIsInstalled(checkStandalone);
 
@@ -76,14 +90,48 @@ function App() {
     };
   }, []);
 
+  function GlobalToast() {
+    const { toast, setUI } = useGlobal();
+
+    return (
+      <AnimatePresence>
+        {toast.show && (
+          <motion.div
+            initial={{ y: 50, opacity: 0 }}
+            animate={{ y: 0, opacity: 1 }}
+            exit={{ y: 20, opacity: 0 }}
+            // Ensure z-index is HIGHER than your map and HUD (z-2000+)
+            className="fixed bottom-32 left-1/2 -translate-x-1/2 z-[3000] pointer-events-none"
+          >
+            <div
+              className={`px-6 py-3 rounded-2xl border backdrop-blur-xl shadow-2xl flex items-center gap-3
+            ${
+              toast.type === "success"
+                ? "bg-green-500/10 border-green-500/50 text-green-400"
+                : toast.type === "error"
+                  ? "bg-red-500/10 border-red-500/50 text-red-400"
+                  : "bg-hud border-(--accent-primary)/30 text-(--accent-primary)"
+            }`}
+            >
+              <div className="w-1.5 h-1.5 rounded-full bg-current animate-pulse" />
+              <span className="text-[10px] font-black uppercase tracking-[0.2em]">
+                {toast.msg}
+              </span>
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+    );
+  }
+
   return (
     <QueryClientProvider client={queryClient}>
       {/* Wrap everything with your new contexts */}
       <GlobalProvider>
+        <Toaster />
         <MissionContextProvider>
           <DrawerProvider>
             <GlobalSideSheet />
-            <Toaster />
             <Router />
           </DrawerProvider>
         </MissionContextProvider>

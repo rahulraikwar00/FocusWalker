@@ -85,7 +85,7 @@ export const StorageService = {
 
   async deleteMission(id: string) {
     await metaStore.removeItem(id);
-    await logStore.removeItem(id);
+    // await logStore.removeItem(id);
     return true;
   },
 };
