@@ -30,26 +30,15 @@ function Router() {
     return localStorage.getItem("onboarding_complete") === "true";
   });
   return (
-    <Switch>
-      <Route path="/">
-        <Suspense fallback={<AppLoading />}>
-          {/* If they've seen it, send them to /app immediately */}
-          {hasSeenHome ? (
-            <Redirect to="/app" />
-          ) : (
-            <Suspense fallback={<AppLoading />}>
-              <HomePage />
-            </Suspense>
-          )}
-        </Suspense>
-      </Route>
-      <Route path="/app">
-        <Suspense fallback={<AppLoading />}>
-          <FocusTacticalMap />
-        </Suspense>
-      </Route>
-      <Route component={NotFound} />
-    </Switch>
+    <Suspense fallback={<AppLoading />}>
+      <Switch>
+        <Route path="/">
+          {hasSeenHome ? <Redirect to="/app" /> : <HomePage />}
+        </Route>
+        <Route path="/app" component={FocusTacticalMap} />
+        <Route component={NotFound} />
+      </Switch>
+    </Suspense>
   );
 }
 
